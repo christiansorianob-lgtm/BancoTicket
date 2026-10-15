@@ -1,9 +1,10 @@
 # Puesta en marcha y despliegue
 
-## 1. Supabase (una vez)
-1. En el panel de Supabase: **SQL Editor → New query**, pegar todo `supabase/migrations/0001_esquema.sql` y ejecutar.
-2. **Authentication → Sign In / Providers → Email**: dejar activo; desactivar «Allow new users to sign up» (los usuarios los crea el administrador).
-3. **Project Settings → API**: copiar URL, `anon` y `service_role` a `.env.local` (ver `.env.example`).
+## 1. Supabase (hecho el 2026-10-15)
+Supabase se creó desde Vercel (Storage → Supabase, plan gratis, Washington) y está conectado al proyecto `bancoticket`: Vercel carga solo sus variables.
+- Bajar las variables a local: `vercel env pull .env.local --environment=development` y luego volver a agregar al final las propias de la app (ver `.env.example`).
+- Aplicar una migración nueva: `node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/000X_nombre.sql` (en una transacción: si falla, no cambia nada).
+- En Supabase → **Authentication → Sign In / Providers**: desactivar «Allow new users to sign up» (los usuarios los crea el administrador).
 
 ## 2. Variables locales
 Copiar `.env.example` a `.env.local` y completar. `FIRMA_LECTURA_SECRETO` y `CRON_SECRET`: textos largos aleatorios, por ejemplo:
