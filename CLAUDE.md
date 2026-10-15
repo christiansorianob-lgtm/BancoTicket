@@ -23,3 +23,5 @@ Next.js (App Router, TypeScript) + Tailwind 4 + Supabase (Postgres, Auth, Storag
 ## Entorno
 Windows; la ruta del proyecto tiene un espacio (`C:\PROYECTOS WEB\BANCOTICKET`): usar comillas en comandos.
 `tiquetes-ejemplo/` contiene fotos reales con nombres y cédulas: está en `.gitignore` y no se sube.
+
+@AGENTS.md

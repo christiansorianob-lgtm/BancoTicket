@@ -257,19 +257,20 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_accion text := coalesce(nullif(current_setting('app.accion', true), ''), lower(tg_op));
   v_motivo text := nullif(current_setting('app.motivo', true), '');
+  v_usuario uuid := coalesce(auth.uid(), nullif(current_setting('app.usuario', true), '')::uuid);
 begin
   if tg_op = 'INSERT' then
-    insert into historial (tabla, registro_id, accion, valor_nuevo, motivo)
-    values (tg_table_name, new.id, case when v_accion = 'insert' then 'crear' else v_accion end, to_jsonb(new), v_motivo);
+    insert into historial (tabla, registro_id, accion, valor_nuevo, motivo, usuario_id)
+    values (tg_table_name, new.id, case when v_accion = 'insert' then 'crear' else v_accion end, to_jsonb(new), v_motivo, v_usuario);
     return new;
   elsif tg_op = 'UPDATE' then
     if to_jsonb(new) = to_jsonb(old) then return new; end if;
-    insert into historial (tabla, registro_id, accion, valor_anterior, valor_nuevo, motivo)
-    values (tg_table_name, new.id, case when v_accion = 'update' then 'editar' else v_accion end, to_jsonb(old), to_jsonb(new), v_motivo);
+    insert into historial (tabla, registro_id, accion, valor_anterior, valor_nuevo, motivo, usuario_id)
+    values (tg_table_name, new.id, case when v_accion = 'update' then 'editar' else v_accion end, to_jsonb(old), to_jsonb(new), v_motivo, v_usuario);
     return new;
   else
-    insert into historial (tabla, registro_id, accion, valor_anterior, motivo)
-    values (tg_table_name, old.id, case when v_accion = 'delete' then 'eliminar' else v_accion end, to_jsonb(old), v_motivo);
+    insert into historial (tabla, registro_id, accion, valor_anterior, motivo, usuario_id)
+    values (tg_table_name, old.id, case when v_accion = 'delete' then 'eliminar' else v_accion end, to_jsonb(old), v_motivo, v_usuario);
     return old;
   end if;
 end;
@@ -313,8 +314,6 @@ begin
           tp.imagen_ruta, tp.origen, tp.cargado_en, tp.confirmado_en, auth.uid())
   returning id into nuevo_id;
 
-  insert into notificaciones (usuario_id, titulo, cuerpo, enlace)
-  values (tp.comprador_id, 'Tiquete aprobado', 'Tiquete ' || tp.numero || ' aprobado.', '/mis-tiquetes');
 
   return nuevo_id;
 end;
@@ -336,8 +335,6 @@ begin
   returning * into tp;
   if not found then raise exception 'El tiquete no está pendiente'; end if;
 
-  insert into notificaciones (usuario_id, titulo, cuerpo, enlace)
-  values (tp.comprador_id, 'Tiquete rechazado', 'Tiquete ' || tp.numero || ': ' || p_motivo, '/mis-tiquetes');
 end;
 $$;
 
@@ -365,6 +362,53 @@ begin
      and (not p_solo_sin_precio or precio_tonelada is null);
   get diagnostics n = row_count;
   return n;
+end;
+$$;
+
+-- Edición libre del administrador: solo cambia las claves presentes en p (null borra el valor).
+create or replace function editar_tiquete(p_id uuid, p jsonb, p_motivo text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not es_admin() then raise exception 'Solo un administrador'; end if;
+  perform fijar_contexto(case when p ? 'precio_tonelada' and (select count(*) from jsonb_object_keys(p)) = 1 then 'precio' else 'editar' end, p_motivo);
+  update tiquetes set
+         extractora_id = case when p ? 'extractora_id' then (p->>'extractora_id')::uuid else extractora_id end,
+         numero = case when p ? 'numero' then (p->>'numero') else numero end,
+         comprador_id = case when p ? 'comprador_id' then (p->>'comprador_id')::uuid else comprador_id end,
+         bascula = case when p ? 'bascula' then (p->>'bascula') else bascula end,
+         fecha_entrada = case when p ? 'fecha_entrada' then (p->>'fecha_entrada')::timestamptz else fecha_entrada end,
+         peso_bruto_kg = case when p ? 'peso_bruto_kg' then (p->>'peso_bruto_kg')::integer else peso_bruto_kg end,
+         tara_kg = case when p ? 'tara_kg' then (p->>'tara_kg')::integer else tara_kg end,
+         neto_impreso_kg = case when p ? 'neto_impreso_kg' then (p->>'neto_impreso_kg')::integer else neto_impreso_kg end,
+         placa = case when p ? 'placa' then (p->>'placa') else placa end,
+         conductor = case when p ? 'conductor' then (p->>'conductor') else conductor end,
+         precio_tonelada = case when p ? 'precio_tonelada' then (p->>'precio_tonelada')::numeric else precio_tonelada end,
+         estado = case when p ? 'estado' then (p->>'estado')::estado_tiquete else estado end,
+         precio_asignado_por = case when p ? 'precio_tonelada' then auth.uid() else precio_asignado_por end,
+         precio_asignado_en  = case when p ? 'precio_tonelada' then now() else precio_asignado_en end
+   where id = p_id;
+  if not found then raise exception 'Tiquete no encontrado'; end if;
+end;
+$$;
+
+create or replace function editar_pendiente(p_id uuid, p jsonb, p_motivo text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not es_admin() then raise exception 'Solo un administrador'; end if;
+  perform fijar_contexto('editar', p_motivo);
+  update tiquetes_pendientes set
+         extractora_id = case when p ? 'extractora_id' then (p->>'extractora_id')::uuid else extractora_id end,
+         numero = case when p ? 'numero' then (p->>'numero') else numero end,
+         comprador_id = case when p ? 'comprador_id' then (p->>'comprador_id')::uuid else comprador_id end,
+         bascula = case when p ? 'bascula' then (p->>'bascula') else bascula end,
+         fecha_entrada = case when p ? 'fecha_entrada' then (p->>'fecha_entrada')::timestamptz else fecha_entrada end,
+         peso_bruto_kg = case when p ? 'peso_bruto_kg' then (p->>'peso_bruto_kg')::integer else peso_bruto_kg end,
+         tara_kg = case when p ? 'tara_kg' then (p->>'tara_kg')::integer else tara_kg end,
+         neto_impreso_kg = case when p ? 'neto_impreso_kg' then (p->>'neto_impreso_kg')::integer else neto_impreso_kg end,
+         placa = case when p ? 'placa' then (p->>'placa') else placa end,
+         conductor = case when p ? 'conductor' then (p->>'conductor') else conductor end
+   where id = p_id;
+  if not found then raise exception 'Tiquete no encontrado'; end if;
 end;
 $$;
 
@@ -426,15 +470,35 @@ begin
          dispositivo = left(p_dispositivo, 300)
    where id = a.id;
 
-  insert into notificaciones (usuario_id, titulo, cuerpo, enlace)
-  select p.id, initcap(a.tipo::text) || ' ' || case when p_acepta then 'confirmado' else 'en disputa' end,
-         (select nombre from perfiles where id = a.comprador_id) || ' — $' || a.monto,
-         '/admin/anticipos'
-    from perfiles p where p.rol = 'admin' and p.activo;
 
   return nuevo;
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Registro de tiquetes subidos por el comprador. Solo la llama el servidor
+-- (service_role) después de verificar la firma de la lectura.
+-- ---------------------------------------------------------------------------
+create or replace function registrar_pendiente(p jsonb, p_usuario uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  nuevo_id uuid;
+begin
+  perform set_config('app.usuario', p_usuario::text, true);
+  insert into tiquetes_pendientes (extractora_id, numero, comprador_id, bascula, fecha_entrada,
+      peso_bruto_kg, tara_kg, neto_impreso_kg, placa, conductor, imagen_ruta, origen,
+      requiere_revision, motivo_revision, datos_leidos, confirmado_en)
+  values ((p->>'extractora_id')::uuid, p->>'numero', p_usuario, p->>'bascula', (p->>'fecha_entrada')::timestamptz,
+      (p->>'peso_bruto_kg')::integer, (p->>'tara_kg')::integer, (p->>'neto_impreso_kg')::integer,
+      p->>'placa', p->>'conductor', p->>'imagen_ruta', (p->>'origen')::origen_foto,
+      coalesce((p->>'requiere_revision')::boolean, false), p->>'motivo_revision', p->'datos_leidos', now())
+  returning id into nuevo_id;
+  return nuevo_id;
+end;
+$$;
+
+revoke execute on function registrar_pendiente from public, anon, authenticated;
+grant execute on function registrar_pendiente to service_role;
 
 -- ---------------------------------------------------------------------------
 -- Saldos (no se guardan: se calculan)
@@ -517,10 +581,10 @@ create policy notif_leer   on notificaciones for update using (usuario_id = auth
 create policy notif_admin  on notificaciones for insert with check (es_admin());
 
 -- Funciones solo para usuarios con sesión
-revoke execute on function aprobar_tiquete, rechazar_tiquete, asignar_precio_bloque,
+revoke execute on function aprobar_tiquete, rechazar_tiquete, asignar_precio_bloque, editar_tiquete, editar_pendiente,
   generar_enlace_anticipo, ver_anticipo_por_enlace, responder_anticipo,
   buscar_duplicado, posibles_duplicados from public, anon;
-grant execute on function aprobar_tiquete, rechazar_tiquete, asignar_precio_bloque,
+grant execute on function aprobar_tiquete, rechazar_tiquete, asignar_precio_bloque, editar_tiquete, editar_pendiente,
   generar_enlace_anticipo, ver_anticipo_por_enlace, responder_anticipo,
   buscar_duplicado, posibles_duplicados to authenticated;
 

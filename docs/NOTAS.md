@@ -2,5 +2,6 @@
 
 | Fecha | Qué se hizo |
 |---|---|
+| 2026-10-15 | Fase 1 construida: Next.js 16.4 + Supabase. Comprador: ingreso, cámara guiada con semáforo, lectura con Claude Haiku 5.5 firmada (HMAC), confirmación en modo lectura, duplicados, galería marcada para revisión, mis tiquetes, extracto, confirmación de anticipos/pagos por enlace. Admin: saldos, cola de pendientes (aprobar/rechazar/corregir), precio en bloque e individual, edición libre con motivo, anticipos y pagos con enlace + WhatsApp, usuarios, extractoras con plantilla, formatos no reconocidos, historial. Avisos en la app + correo Brevo; borrado de fotos a 6 meses (cron). Pendiente: aplicar el SQL en Supabase y probar con tiquetes reales; ajustar umbrales de la cámara. |
 | 2026-10-15 | Decisiones: correo con Brevo, IA (Haiku 5.5) para todos los tiquetes, ingreso con usuario y contraseña, pagos como movimiento aparte («Pago»). |
 | 2026-10-15 | Se creó el proyecto: propuesta de arquitectura (`docs/ARQUITECTURA.md`), esquema SQL con RLS (`supabase/migrations/0001_esquema.sql`), CLAUDE.md y .gitignore. El comprador no inserta tiquetes directo: pasan por `/api/tiquetes` con lectura firmada. Pendiente: respuestas a las preguntas abiertas y crear el proyecto de Supabase. |
