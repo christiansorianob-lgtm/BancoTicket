@@ -1,0 +1,32 @@
+# dependencias
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# entorno y claves
+.env
+.env*.local
+.env.*
+!.env.example
+.vercel
+
+# fotos reales de tiquetes (traen nombres y cédulas)
+tiquetes-ejemplo/
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# sistema y editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
