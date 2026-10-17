@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
-import { analizarCuadro, type Verificacion } from "@/lib/camara/analisis";
+import { analizarCuadro, textoDeLado, type Verificacion } from "@/lib/camara/analisis";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
@@ -229,12 +229,23 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
   );
 }
 
-/** Marco guía en fracciones del video: apaisado para tiquetes horizontales, vertical para los altos. */
-function calcularMarco(vw: number, vh: number, horizontal: boolean) {
-  const proporcion = horizontal ? 1.75 : 1 / 1.4;
-  const ancho = Math.min(vw * 0.94, vh * 0.94 * proporcion);
-  const alto = ancho / proporcion;
-  return { x: (vw - ancho) / 2 / vw, y: (vh - alto) / 2 / vh, w: ancho / vw, h: alto / vh };
+type Marco = { x: number; y: number; w: number; h: number };
+
+// Márgenes del marco sobre la pantalla: arriba queda el aviso y abajo el disparador.
+const MARGEN = { izq: 0.04, der: 0.04, arriba: 0.11, abajo: 0.19 };
+
+/**
+ * El video llena la pantalla (object-cover). El marco ocupa casi toda la pantalla, en
+ * la orientación que tenga el celular; aquí se traduce a fracciones del video.
+ */
+function marcoEnVideo(vw: number, vh: number, cw: number, ch: number): Marco {
+  const s = Math.max(cw / vw, ch / vh);
+  const offX = (cw - vw * s) / 2, offY = (ch - vh * s) / 2;
+  const rx = MARGEN.izq * cw, ry = MARGEN.arriba * ch;
+  const rw = cw * (1 - MARGEN.izq - MARGEN.der), rh = ch * (1 - MARGEN.arriba - MARGEN.abajo);
+  const x = Math.max(0, (rx - offX) / s), y = Math.max(0, (ry - offY) / s);
+  const w = Math.min(vw - x, rw / s), h = Math.min(vh - y, rh / s);
+  return { x: x / vw, y: y / vh, w: w / vw, h: h / vh };
 }
 
 /**
@@ -242,7 +253,7 @@ function calcularMarco(vw: number, vh: number, horizontal: boolean) {
  * La vista previa suele ser el centro de la foto: se recorta el mismo marco sobre ella.
  * Si el navegador no lo permite o la orientación no coincide, se usa el cuadro del video.
  */
-async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: ReturnType<typeof calcularMarco>): Promise<HTMLCanvasElement> {
+async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: Marco): Promise<HTMLCanvasElement> {
   let fuente: CanvasImageSource = v;
   let fw = v.videoWidth, fh = v.videoHeight;
   try {
@@ -258,9 +269,9 @@ async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: ReturnT
   const pv = v.videoWidth / v.videoHeight;
   const vw = Math.min(fw, fh * pv), vh = vw / pv;
   const ox = (fw - vw) / 2, oy = (fh - vh) / 2;
-  // Margen de 3 % por si la vista previa no coincide exactamente con la foto.
-  const mx = Math.max(0, m.x - 0.03), my = Math.max(0, m.y - 0.03);
-  const mw = Math.min(1 - mx, m.w + 0.06), mh = Math.min(1 - my, m.h + 0.06);
+  // Margen de 2 % por si la vista previa no coincide exactamente con la foto.
+  const mx = Math.max(0, m.x - 0.02), my = Math.max(0, m.y - 0.02);
+  const mw = Math.min(1 - mx, m.w + 0.04), mh = Math.min(1 - my, m.h + 0.04);
   const c = document.createElement("canvas");
   c.width = Math.round(mw * vw);
   c.height = Math.round(mh * vh);
@@ -268,23 +279,42 @@ async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: ReturnT
   return c;
 }
 
+/** Si el texto del tiquete quedó de lado, gira la foto 90° para que la lectura sea más fácil. */
+function enderezar(c: HTMLCanvasElement): HTMLCanvasElement {
+  const escala = 320 / Math.max(c.width, c.height);
+  const p = document.createElement("canvas");
+  p.width = Math.round(c.width * escala);
+  p.height = Math.round(c.height * escala);
+  const pctx = p.getContext("2d", { willReadFrequently: true })!;
+  pctx.drawImage(c, 0, 0, p.width, p.height);
+  if (!textoDeLado(pctx.getImageData(0, 0, p.width, p.height))) return c;
+  const r = document.createElement("canvas");
+  r.width = c.height;
+  r.height = c.width;
+  const ctx = r.getContext("2d")!;
+  ctx.translate(r.width / 2, r.height / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.drawImage(c, -c.width / 2, -c.height / 2);
+  return r;
+}
+
 function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b: Blob) => void; onCancelar: () => void; onCamaraNativa: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
-  const [horizontal, setHorizontal] = useState(true);
-  const [tamano, setTamano] = useState<{ w: number; h: number } | null>(null);
+  const contenedor = useRef<HTMLDivElement>(null);
+  const flujoRef = useRef<MediaStream | null>(null);
   const [verificaciones, setVerificaciones] = useState<Verificacion[]>([]);
   const [estables, setEstables] = useState(0);
   const [errorCamara, setErrorCamara] = useState<string | null>(null);
   const [capturando, setCapturando] = useState(false);
-  const horizontalRef = useRef(horizontal);
-  const flujoRef = useRef<MediaStream | null>(null);
-  useEffect(() => { horizontalRef.current = horizontal; }, [horizontal]);
 
   useEffect(() => {
     let flujo: MediaStream | null = null;
     let temporizador: ReturnType<typeof setInterval> | undefined;
     const lienzo = document.createElement("canvas");
     const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
+    // Sin desplazamiento de la página mientras la cámara ocupa la pantalla.
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     (async () => {
       try {
@@ -301,11 +331,10 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
         v.srcObject = flujo;
         await v.play();
         temporizador = setInterval(() => {
-          if (!v.videoWidth) return;
-          // El celular puede girar: se lee el tamaño real del video en cada cuadro.
-          setTamano((t) => (t?.w === v.videoWidth && t?.h === v.videoHeight ? t : { w: v.videoWidth, h: v.videoHeight }));
-          // Solo se analiza lo que está dentro del marco.
-          const m = calcularMarco(v.videoWidth, v.videoHeight, horizontalRef.current);
+          const caja = contenedor.current;
+          if (!v.videoWidth || !caja) return;
+          // Solo se analiza lo que está dentro del marco (sigue al celular si gira).
+          const m = marcoEnVideo(v.videoWidth, v.videoHeight, caja.clientWidth, caja.clientHeight);
           const sx = m.x * v.videoWidth, sy = m.y * v.videoHeight, sw = m.w * v.videoWidth, sh = m.h * v.videoHeight;
           const escala = 320 / Math.max(sw, sh);
           lienzo.width = Math.round(sw * escala);
@@ -323,20 +352,19 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
     return () => {
       clearInterval(temporizador);
       flujo?.getTracks().forEach((t) => t.stop());
+      document.body.style.overflow = overflowAnterior;
     };
   }, []);
 
   const lista = estables >= CUADROS_ESTABLES;
   const primerAviso = verificaciones.find((v) => !v.ok);
-  const marco = tamano ? calcularMarco(tamano.w, tamano.h, horizontal) : null;
 
   async function capturar() {
-    const v = video.current;
-    if (!v) return;
+    const v = video.current, caja = contenedor.current;
+    if (!v || !caja || !flujoRef.current) return;
     setCapturando(true);
-    // Se recorta al marco: el tiquete aprovecha toda la resolución de la foto.
-    const m = calcularMarco(v.videoWidth, v.videoHeight, horizontal);
-    const c = await fotoDelSensor(flujoRef.current!, v, m);
+    const m = marcoEnVideo(v.videoWidth, v.videoHeight, caja.clientWidth, caja.clientHeight);
+    const c = enderezar(await fotoDelSensor(flujoRef.current, v, m));
     onCaptura(await reducirImagen(c, 2000));
   }
 
@@ -351,44 +379,44 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <button className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${horizontal ? "bg-primario text-white" : "bg-white text-suave"}`} onClick={() => { setHorizontal(true); setEstables(0); }}>
-          Tiquete horizontal
+    <div ref={contenedor} className="fixed inset-0 z-50 h-dvh w-screen overflow-hidden bg-black">
+      <video ref={video} playsInline muted className="absolute inset-0 h-full w-full object-cover" />
+
+      {/* Marco: casi toda la pantalla, en la orientación del celular */}
+      <div
+        className={`pointer-events-none absolute rounded-xl border-4 shadow-[0_0_0_9999px_rgb(0_0_0/0.4)] transition-colors ${lista ? "border-emerald-400" : "border-red-500/90"}`}
+        style={{ left: `${MARGEN.izq * 100}%`, right: `${MARGEN.der * 100}%`, top: `${MARGEN.arriba * 100}%`, bottom: `${MARGEN.abajo * 100}%` }}
+      />
+
+      {/* Barra superior: cerrar, aviso y cámara normal */}
+      <div className="absolute inset-x-0 top-0 flex items-center gap-2 p-3">
+        <button className="flex size-11 shrink-0 items-center justify-center rounded-full bg-black/50 text-white" onClick={onCancelar} aria-label="Cerrar cámara">
+          <XCircle className="size-6" />
         </button>
-        <button className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${!horizontal ? "bg-primario text-white" : "bg-white text-suave"}`} onClick={() => { setHorizontal(false); setEstables(0); }}>
-          Tiquete vertical
+        <p className={`min-w-0 flex-1 rounded-full px-3 py-2 text-center text-sm font-bold text-white ${lista ? "bg-emerald-600/90" : "bg-red-600/90"}`}>
+          {lista ? "Lista: toque el botón" : (primerAviso?.aviso ?? "Acomodando la cámara…")}
+        </p>
+      </div>
+
+      {/* Barra inferior: disparador grande al alcance del pulgar */}
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+        <ul className="flex w-24 flex-wrap gap-1" aria-label="Verificaciones">
+          {verificaciones.map((v) => (
+            <li key={v.clave} title={v.clave} className={`size-3 rounded-full ${v.ok ? "bg-emerald-400" : "bg-red-500"}`} />
+          ))}
+        </ul>
+        <button
+          className={`flex size-20 shrink-0 items-center justify-center rounded-full border-4 border-white transition ${lista ? "bg-white/90" : "bg-white/25"} disabled:opacity-60`}
+          disabled={!lista || capturando}
+          onClick={capturar}
+          aria-label="Tomar foto"
+        >
+          {capturando ? <Loader2 className="size-8 animate-spin text-primario" /> : <Camera className={`size-8 ${lista ? "text-primario" : "text-white"}`} />}
+        </button>
+        <button className="w-24 text-right text-xs font-semibold text-white underline" onClick={onCamaraNativa}>
+          Usar cámara normal
         </button>
       </div>
-      <div className="relative overflow-hidden rounded-2xl bg-black">
-        <video ref={video} playsInline muted className="block h-auto w-full" />
-        {marco && (
-          <div
-            className={`pointer-events-none absolute rounded-lg border-4 shadow-[0_0_0_9999px_rgb(0_0_0/0.45)] ${lista ? "border-emerald-400" : "border-red-500/90"}`}
-            style={{ left: `${marco.x * 100}%`, top: `${marco.y * 100}%`, width: `${marco.w * 100}%`, height: `${marco.h * 100}%` }}
-          />
-        )}
-        <div className={`absolute inset-x-3 top-3 rounded-xl px-3 py-2 text-center text-sm font-bold text-white ${lista ? "bg-emerald-600/90" : "bg-red-600/90"}`}>
-          {lista ? "Lista: puede tomar la foto" : (primerAviso?.aviso ?? "Acomodando la cámara…")}
-        </div>
-      </div>
-      <p className="text-center text-xs text-suave">Ponga el tiquete dentro del marco. Puede sostener el celular vertical u horizontal.</p>
-      <ul className="grid grid-cols-3 gap-1 text-xs">
-        {verificaciones.map((v) => (
-          <li key={v.clave} className={`flex items-center gap-1 rounded-lg px-2 py-1 font-medium ${v.ok ? "bg-ok-suave text-ok" : "bg-error-suave text-error"}`}>
-            <span className={`size-2 rounded-full ${v.ok ? "bg-ok" : "bg-error"}`} /> {v.clave[0].toUpperCase() + v.clave.slice(1)}
-          </li>
-        ))}
-      </ul>
-      <div className="grid grid-cols-[1fr_2fr] gap-2">
-        <button className="boton-secundario" onClick={onCancelar}>Cancelar</button>
-        <button className="boton-primario py-4 text-lg" disabled={!lista || capturando} onClick={capturar}>
-          <Camera className="size-6" /> {capturando ? "Procesando…" : "Tomar foto"}
-        </button>
-      </div>
-      <button className="w-full text-sm font-medium text-suave underline" onClick={onCamaraNativa}>
-        ¿No logra el verde o no enfoca? Usar la cámara normal del celular
-      </button>
     </div>
   );
 }

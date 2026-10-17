@@ -11,7 +11,7 @@ export const UMBRALES = {
   nitidezMin: 90, // varianza del laplaciano
   papelMin: 0.45, // fracción del marco ocupada por el tiquete
   bordeMax: 0.92, // si el papel cubre todo el borde del marco, el tiquete se sale
-  orientacion: 1.35, // dominio de gradientes horizontales sobre verticales
+  deLado: 1.35, // dominio de gradientes horizontales sobre verticales = texto de lado
 };
 
 export function analizarCuadro(img: ImageData): Verificacion[] {
@@ -44,16 +44,14 @@ export function analizarCuadro(img: ImageData): Verificacion[] {
   for (let y = 0; y < h; y++) bordePapel += papel[y * w] + papel[y * w + w - 1];
   const fraccionBorde = bordePapel / (2 * (w + h));
 
-  // Nitidez y orientación en la zona central.
-  let sumaL = 0, sumaL2 = 0, cuenta = 0, gx = 0, gy = 0;
+  // Nitidez en la zona central.
+  let sumaL = 0, sumaL2 = 0, cuenta = 0;
   const x0 = Math.floor(w * 0.2), x1 = Math.floor(w * 0.8), y0 = Math.floor(h * 0.2), y1 = Math.floor(h * 0.8);
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const i = y * w + x;
       const l = 4 * lum[i] - lum[i - 1] - lum[i + 1] - lum[i - w] - lum[i + w];
       sumaL += l; sumaL2 += l * l; cuenta++;
-      gx += Math.abs(lum[i + 1] - lum[i - 1]);
-      gy += Math.abs(lum[i + w] - lum[i - w]);
     }
   }
   const media = sumaL / cuenta;
@@ -65,7 +63,24 @@ export function analizarCuadro(img: ImageData): Verificacion[] {
     { clave: "reflejos", ok: saturados / n <= u.reflejoMax, aviso: "Hay brillo sobre el papel: inclina un poco el tiquete" },
     { clave: "distancia", ok: fraccionPapel >= u.papelMin, aviso: "Acércate: el tiquete debe llenar el marco" },
     { clave: "encuadre", ok: fraccionBorde <= u.bordeMax, aviso: "Aléjate un poco: el tiquete debe verse completo dentro del marco" },
-    { clave: "orientacion", ok: gx <= gy * u.orientacion, aviso: "Gira el tiquete: el texto debe verse derecho" },
     { clave: "enfoque", ok: nitidez >= u.nitidezMin, aviso: "Imagen borrosa: sostén el celular quieto" },
   ];
+}
+
+/**
+ * El celular se puede sostener como sea: si el texto quedó de lado (las líneas van de
+ * arriba abajo), la foto se gira antes de enviarla. Compara gradientes en la zona central.
+ */
+export function textoDeLado(img: ImageData): boolean {
+  const { width: w, height: h, data } = img;
+  const lum = (i: number) => 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+  let gx = 0, gy = 0;
+  for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y++) {
+    for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x++) {
+      const i = y * w + x;
+      gx += Math.abs(lum(i + 1) - lum(i - 1));
+      gy += Math.abs(lum(i + w) - lum(i - w));
+    }
+  }
+  return gx > gy * UMBRALES.deLado;
 }
