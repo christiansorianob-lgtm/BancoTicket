@@ -1,5 +1,5 @@
 /**
- * Análisis en vivo de un cuadro de video reducido (≈320 px). Todo corre en el
+ * Análisis en vivo de la zona del marco guía, reducida (≈320 px). Todo corre en el
  * navegador; los umbrales son de partida y se ajustan con tiquetes reales.
  */
 export type Verificacion = { clave: string; ok: boolean; aviso: string };
@@ -9,9 +9,8 @@ export const UMBRALES = {
   brilloMax: 205,
   reflejoMax: 0.035, // fracción de píxeles casi blancos saturados
   nitidezMin: 90, // varianza del laplaciano
-  papelMin: 0.3, // fracción del cuadro ocupada por el tiquete
-  papelMax: 0.93,
-  bordeMax: 0.6, // fracción del borde del cuadro cubierta por papel
+  papelMin: 0.45, // fracción del marco ocupada por el tiquete
+  bordeMax: 0.92, // si el papel cubre todo el borde del marco, el tiquete se sale
   orientacion: 1.35, // dominio de gradientes horizontales sobre verticales
 };
 
@@ -64,8 +63,8 @@ export function analizarCuadro(img: ImageData): Verificacion[] {
   return [
     { clave: "luz", ok: brillo >= u.brilloMin && brillo <= u.brilloMax, aviso: brillo < u.brilloMin ? "Poca luz" : "Demasiada luz" },
     { clave: "reflejos", ok: saturados / n <= u.reflejoMax, aviso: "Hay brillo sobre el papel: inclina un poco el tiquete" },
-    { clave: "distancia", ok: fraccionPapel >= u.papelMin && fraccionPapel <= u.papelMax, aviso: fraccionPapel < u.papelMin ? "Acércate" : "Aléjate" },
-    { clave: "encuadre", ok: fraccionBorde <= u.bordeMax, aviso: "El tiquete debe verse completo dentro del marco" },
+    { clave: "distancia", ok: fraccionPapel >= u.papelMin, aviso: "Acércate: el tiquete debe llenar el marco" },
+    { clave: "encuadre", ok: fraccionBorde <= u.bordeMax, aviso: "Aléjate un poco: el tiquete debe verse completo dentro del marco" },
     { clave: "orientacion", ok: gx <= gy * u.orientacion, aviso: "Gira el tiquete: el texto debe verse derecho" },
     { clave: "enfoque", ok: nitidez >= u.nitidezMin, aviso: "Imagen borrosa: sostén el celular quieto" },
   ];

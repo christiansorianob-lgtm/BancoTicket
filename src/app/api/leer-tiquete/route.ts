@@ -42,7 +42,10 @@ export async function POST(request: Request) {
   const base = { comprador_id: perfil.id, extractora_id: extractora.id, imagen_ruta: ruta, origen, emitida: Date.now() } as const;
 
   let cruda: LecturaCruda | null = null;
-  try {
+  let motivoFallo = "No se pudo leer la foto";
+  if (!process.env.ANTHROPIC_API_KEY) {
+    motivoFallo = "La lectura automática todavía no está configurada (falta la clave de Anthropic). Envíelo a revisión del administrador";
+  } else try {
     cruda = await lectorConfigurado().leer(
       { base64: bytes.toString("base64"), tipo: imagen.type as (typeof TIPOS)[number] },
       { nombre: extractora.nombre, plantilla: extractora.plantilla ?? {} },
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
 
   const resultado = cruda
     ? aplicarControles(cruda, { placaObligatoria: config.placa_obligatoria })
-    : { ok: false as const, motivo: "No se pudo leer la foto", controles: [], cruda: null };
+    : { ok: false as const, motivo: motivoFallo, controles: [], cruda: null };
 
   if (!resultado.ok) {
     return NextResponse.json({

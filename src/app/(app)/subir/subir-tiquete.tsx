@@ -219,12 +219,24 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
   );
 }
 
+/** Marco guía en fracciones del video: apaisado para tiquetes horizontales, vertical para los altos. */
+function calcularMarco(vw: number, vh: number, horizontal: boolean) {
+  const proporcion = horizontal ? 1.75 : 1 / 1.4;
+  const ancho = Math.min(vw * 0.94, vh * 0.94 * proporcion);
+  const alto = ancho / proporcion;
+  return { x: (vw - ancho) / 2 / vw, y: (vh - alto) / 2 / vh, w: ancho / vw, h: alto / vh };
+}
+
 function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void; onCancelar: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
+  const [horizontal, setHorizontal] = useState(true);
+  const [tamano, setTamano] = useState<{ w: number; h: number } | null>(null);
   const [verificaciones, setVerificaciones] = useState<Verificacion[]>([]);
   const [estables, setEstables] = useState(0);
   const [errorCamara, setErrorCamara] = useState<string | null>(null);
   const [capturando, setCapturando] = useState(false);
+  const horizontalRef = useRef(horizontal);
+  useEffect(() => { horizontalRef.current = horizontal; }, [horizontal]);
 
   useEffect(() => {
     let flujo: MediaStream | null = null;
@@ -243,10 +255,15 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
         await v.play();
         temporizador = setInterval(() => {
           if (!v.videoWidth) return;
-          const escala = 320 / Math.max(v.videoWidth, v.videoHeight);
-          lienzo.width = Math.round(v.videoWidth * escala);
-          lienzo.height = Math.round(v.videoHeight * escala);
-          ctx.drawImage(v, 0, 0, lienzo.width, lienzo.height);
+          // El celular puede girar: se lee el tamaño real del video en cada cuadro.
+          setTamano((t) => (t?.w === v.videoWidth && t?.h === v.videoHeight ? t : { w: v.videoWidth, h: v.videoHeight }));
+          // Solo se analiza lo que está dentro del marco.
+          const m = calcularMarco(v.videoWidth, v.videoHeight, horizontalRef.current);
+          const sx = m.x * v.videoWidth, sy = m.y * v.videoHeight, sw = m.w * v.videoWidth, sh = m.h * v.videoHeight;
+          const escala = 320 / Math.max(sw, sh);
+          lienzo.width = Math.round(sw * escala);
+          lienzo.height = Math.round(sh * escala);
+          ctx.drawImage(v, sx, sy, sw, sh, 0, 0, lienzo.width, lienzo.height);
           const r = analizarCuadro(ctx.getImageData(0, 0, lienzo.width, lienzo.height));
           setVerificaciones(r);
           setEstables((n) => (r.every((x) => x.ok) ? n + 1 : 0));
@@ -264,15 +281,19 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
 
   const lista = estables >= CUADROS_ESTABLES;
   const primerAviso = verificaciones.find((v) => !v.ok);
+  const marco = tamano ? calcularMarco(tamano.w, tamano.h, horizontal) : null;
 
   async function capturar() {
     const v = video.current;
     if (!v) return;
     setCapturando(true);
+    // Se recorta al marco: el tiquete aprovecha toda la resolución de la foto.
+    const m = calcularMarco(v.videoWidth, v.videoHeight, horizontal);
     const c = document.createElement("canvas");
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext("2d")!.drawImage(v, 0, 0);
-    onCaptura(await reducirImagen(c));
+    c.width = Math.round(m.w * v.videoWidth);
+    c.height = Math.round(m.h * v.videoHeight);
+    c.getContext("2d")!.drawImage(v, m.x * v.videoWidth, m.y * v.videoHeight, c.width, c.height, 0, 0, c.width, c.height);
+    onCaptura(await reducirImagen(c, 1600));
   }
 
   if (errorCamara) {
@@ -286,13 +307,27 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
 
   return (
     <div className="space-y-3">
+      <div className="flex gap-2">
+        <button className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${horizontal ? "bg-primario text-white" : "bg-white text-suave"}`} onClick={() => { setHorizontal(true); setEstables(0); }}>
+          Tiquete horizontal
+        </button>
+        <button className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${!horizontal ? "bg-primario text-white" : "bg-white text-suave"}`} onClick={() => { setHorizontal(false); setEstables(0); }}>
+          Tiquete vertical
+        </button>
+      </div>
       <div className="relative overflow-hidden rounded-2xl bg-black">
-        <video ref={video} playsInline muted className="aspect-[3/4] w-full object-cover" />
-        <div className={`pointer-events-none absolute inset-[7%] rounded-xl border-4 ${lista ? "border-emerald-400" : "border-red-500/80"}`} />
+        <video ref={video} playsInline muted className="block h-auto w-full" />
+        {marco && (
+          <div
+            className={`pointer-events-none absolute rounded-lg border-4 shadow-[0_0_0_9999px_rgb(0_0_0/0.45)] ${lista ? "border-emerald-400" : "border-red-500/90"}`}
+            style={{ left: `${marco.x * 100}%`, top: `${marco.y * 100}%`, width: `${marco.w * 100}%`, height: `${marco.h * 100}%` }}
+          />
+        )}
         <div className={`absolute inset-x-3 top-3 rounded-xl px-3 py-2 text-center text-sm font-bold text-white ${lista ? "bg-emerald-600/90" : "bg-red-600/90"}`}>
           {lista ? "Lista: puede tomar la foto" : (primerAviso?.aviso ?? "Acomodando la cámara…")}
         </div>
       </div>
+      <p className="text-center text-xs text-suave">Ponga el tiquete dentro del marco. Para tiquetes anchos, también puede girar el celular.</p>
       <ul className="grid grid-cols-3 gap-1 text-xs">
         {verificaciones.map((v) => (
           <li key={v.clave} className={`flex items-center gap-1 rounded-lg px-2 py-1 font-medium ${v.ok ? "bg-ok-suave text-ok" : "bg-error-suave text-error"}`}>
