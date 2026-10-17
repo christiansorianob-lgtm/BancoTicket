@@ -2,6 +2,7 @@
 
 | Fecha | Qué se hizo |
 |---|---|
+| 2026-10-17 | **Decisión del usuario:** WhatsApp y correo se abren solos en el dispositivo con el mensaje listo (correo con `mailto:`), sin envío en segundo plano; se retiró Brevo. |
 | 2026-10-17 | Se agrega **proveedor** (migración 0002, aplicada): la IA lo lee, se guarda en pendientes y aprobados, se muestra al comprador y al administrador y se puede corregir. La plantilla JSON por extractora es opcional: la IA lee sin ella. |
 | 2026-10-16 | **Decisión del usuario:** se quita el tipo «Pago»; todo es anticipo y el saldo es la resta (positivo = fondos del comprador, negativo = se le debe). |
 | 2026-10-16 | Cámara a pantalla completa: marco que llena casi toda la pantalla en la orientación del celular (sin botón horizontal/vertical), disparador redondo abajo al centro, foto enderezada si el texto quedó de lado. Se quitó la verificación de orientación en vivo. |

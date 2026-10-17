@@ -5,7 +5,8 @@ import { analizarCuadro, textoDeLado, type Verificacion } from "@/lib/camara/ana
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
-import { BotonWhatsApp, Dato, Mensaje } from "@/components/ui";
+import { Dato, Mensaje } from "@/components/ui";
+import { AvisoContacto } from "@/components/contacto";
 import { enviarARevision, enviarTiquete } from "./acciones";
 
 type Extractora = { id: string; nombre: string };
@@ -23,7 +24,7 @@ type Paso = "elegir" | "camara" | "leyendo" | "resultado" | "enviado" | "revisio
 
 const CUADROS_ESTABLES = 3;
 
-export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { extractoras: Extractora[]; celularAdmin: string | null; nombreComprador: string }) {
+export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreComprador }: { extractoras: Extractora[]; celularAdmin: string | null; correosAdmin: string[]; nombreComprador: string }) {
   const [extractoraId, setExtractoraId] = useState("");
   const [paso, setPaso] = useState<Paso>("elegir");
   const [origen, setOrigen] = useState<"camara" | "galeria">("camara");
@@ -82,8 +83,10 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
           <p className="text-lg font-bold text-profundo">Tiquete recibido</p>
           <p className="text-suave">N° {enviado.numero} de {enviado.extractora} quedó pendiente de aprobación. Le llegará un aviso cuando lo revisen.</p>
         </div>
-        <BotonWhatsApp celular={celularAdmin} texto="Avisar a la administradora"
-          mensaje={`Hola, soy ${nombreComprador}. Subí el tiquete N° ${enviado.numero} de ${enviado.extractora} a BancoTicket para su aprobación.`} />
+        <AvisoContacto contacto={{
+          celular: celularAdmin, correos: correosAdmin, asunto: `BancoTicket: tiquete N° ${enviado.numero} por aprobar`,
+          mensaje: `Hola, soy ${nombreComprador}. Subí el tiquete N° ${enviado.numero} de ${enviado.extractora} a BancoTicket para su aprobación.`,
+        }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Subir otro tiquete</button>
       </div>
     );
@@ -94,8 +97,10 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
       <div className="tarjeta space-y-4 text-center">
         <CheckCircle2 className="mx-auto size-14 text-alerta" />
         <p className="text-suave">La foto pasó a revisión del administrador. Le avisaremos cuando la registre.</p>
-        <BotonWhatsApp celular={celularAdmin} texto="Avisar a la administradora"
-          mensaje={`Hola, soy ${nombreComprador}. Envié a revisión un tiquete de ${extractora?.nombre ?? ""} que la app no pudo leer.`} />
+        <AvisoContacto contacto={{
+          celular: celularAdmin, correos: correosAdmin, asunto: "BancoTicket: tiquete para revisión",
+          mensaje: `Hola, soy ${nombreComprador}. Envié a revisión un tiquete de ${extractora?.nombre ?? ""} que la app no pudo leer.`,
+        }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
       </div>
     );

@@ -1,10 +1,11 @@
 "use client";
 import { useState, useTransition } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { BotonWhatsApp, Mensaje } from "@/components/ui";
+import { Mensaje } from "@/components/ui";
+import { AvisoContacto } from "@/components/contacto";
 import { responderAnticipo } from "./acciones";
 
-export function ResponderAnticipo({ codigo, tipo, monto, nombre, celularAdmin }: { codigo: string; tipo: string; monto: string; nombre: string; celularAdmin: string | null }) {
+export function ResponderAnticipo({ codigo, tipo, monto, nombre, celularAdmin, correosAdmin }: { codigo: string; tipo: string; monto: string; nombre: string; celularAdmin: string | null; correosAdmin: string[] }) {
   const [disputa, setDisputa] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [resultado, setResultado] = useState<"confirmado" | "en_disputa" | null>(null);
@@ -29,7 +30,7 @@ export function ResponderAnticipo({ codigo, tipo, monto, nombre, celularAdmin }:
         <Mensaje tono={resultado === "confirmado" ? "ok" : "alerta"}>
           {resultado === "confirmado" ? `Listo: confirmó que recibió este ${tipo}.` : "Quedó registrado como «en disputa». La administradora lo revisará."}
         </Mensaje>
-        <BotonWhatsApp celular={celularAdmin} texto="Avisar a la administradora por WhatsApp" mensaje={texto} />
+        <AvisoContacto contacto={{ celular: celularAdmin, correos: correosAdmin, asunto: `BancoTicket: ${tipo} ${resultado === "confirmado" ? "confirmado" : "en disputa"}`, mensaje: texto }} />
       </div>
     );
   }

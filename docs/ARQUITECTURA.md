@@ -133,3 +133,6 @@ Las fotos subidas por galería **ya no** quedan marcadas para revisión. La marc
 
 ### Cambio (2026-10-16): sin tipo «Pago»
 Todo dinero entregado al comprador se registra como **anticipo**; el saldo es la resta (anticipos confirmados − valor de tiquetes). Positivo: el comprador tiene fondos; negativo: se le debe. La columna `anticipos.tipo` queda en la base con valor `anticipo` por defecto, sin uso en la app.
+
+### Cambio (2026-10-17): avisos desde el dispositivo
+No hay correo automático (se retiró Brevo). Tras cada acción que avisa a otra persona, la app abre **WhatsApp** con el mensaje escrito y, al volver, el **correo predeterminado del dispositivo** (`mailto:`) con asunto y cuerpo listos; quedan botones de respaldo. El comprador escribe por WhatsApp al administrador más antiguo y por correo a todos los administradores. El aviso dentro de la app (campana) se mantiene.

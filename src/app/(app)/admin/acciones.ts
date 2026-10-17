@@ -8,7 +8,8 @@ import { interpretarFechaTiquete } from "@/lib/fechas";
 import { formatoPesos, kilosDesdeTexto, montoDesdeTexto } from "@/lib/numeros";
 import { normalizarPlaca } from "@/lib/lectura/controles";
 
-export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string };
+/** whatsapp/correo/asunto: aviso que se abre listo en el dispositivo para enviarlo al comprador. */
+export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string; correo?: string; asunto?: string };
 
 const fallo = (error: string): Resultado => ({ ok: false, error });
 
@@ -63,7 +64,7 @@ export async function aprobarTiquete(id: string): Promise<Resultado> {
   const texto = `Su tiquete N° ${tp?.numero} de ${(tp?.extractoras as { nombre?: string } | null)?.nombre ?? ""} fue aprobado.`;
   if (comprador) await avisar([comprador], "Tiquete aprobado", texto, "/mis-tiquetes?estado=vigente");
   revalidatePath("/admin", "layout");
-  return { ok: true, whatsapp: texto, celular: await celularDe(tp?.comprador_id) };
+  return { ok: true, whatsapp: texto, celular: await celularDe(tp?.comprador_id), correo: comprador?.correo, asunto: "BancoTicket: tiquete aprobado" };
 }
 
 export async function rechazarTiquete(id: string, motivo: string): Promise<Resultado> {
@@ -77,7 +78,7 @@ export async function rechazarTiquete(id: string, motivo: string): Promise<Resul
   const comprador = tp ? await perfilDestino(tp.comprador_id) : null;
   if (comprador) await avisar([comprador], "Tiquete rechazado", texto, "/mis-tiquetes?estado=rechazado");
   revalidatePath("/admin", "layout");
-  return { ok: true, whatsapp: texto, celular: await celularDe(tp?.comprador_id) };
+  return { ok: true, whatsapp: texto, celular: await celularDe(tp?.comprador_id), correo: comprador?.correo, asunto: "BancoTicket: tiquete rechazado" };
 }
 
 export async function editarPendiente(id: string, form: FormData): Promise<Resultado> {
@@ -173,6 +174,8 @@ async function enviarEnlace(anticipoId: string): Promise<Resultado> {
     ok: true,
     enlace,
     celular: await celularDe(a?.comprador_id),
+    correo: comprador?.correo,
+    asunto: `BancoTicket: confirme el ${tipo} recibido`,
     whatsapp: `Hola ${comprador?.nombre ?? ""}, le registré un ${tipo} de ${formatoPesos(a?.monto)}. Por favor confírmelo en BancoTicket: ${enlace}`,
   };
 }

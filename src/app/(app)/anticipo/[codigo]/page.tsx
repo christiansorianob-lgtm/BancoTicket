@@ -1,6 +1,6 @@
 import { exigirComprador } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { contactoAdministracion } from "@/lib/avisos";
 import { fecha } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Dato, EstadoChip, Mensaje } from "@/components/ui";
@@ -13,7 +13,7 @@ export default async function ConfirmarAnticipo({ params }: PageProps<"/anticipo
   const supabase = await supabaseServidor();
   const { data } = await supabase.rpc("ver_anticipo_por_enlace", { p_codigo: codigo });
   const a = data?.[0];
-  const { data: admin } = await supabaseAdmin().from("perfiles").select("celular").eq("rol", "admin").eq("activo", true).limit(1).maybeSingle();
+  const admin = await contactoAdministracion();
 
   if (!a) {
     return (
@@ -43,7 +43,7 @@ export default async function ConfirmarAnticipo({ params }: PageProps<"/anticipo
       ) : a.vencido ? (
         <Mensaje tono="error">Este enlace venció. Pida a la administradora que le envíe uno nuevo.</Mensaje>
       ) : (
-        <ResponderAnticipo codigo={codigo} tipo={tipo} monto={formatoPesos(a.monto)} nombre={perfil.nombre} celularAdmin={admin?.celular ?? null} />
+        <ResponderAnticipo codigo={codigo} tipo={tipo} monto={formatoPesos(a.monto)} nombre={perfil.nombre} celularAdmin={admin.celular} correosAdmin={admin.correos} />
       )}
     </div>
   );

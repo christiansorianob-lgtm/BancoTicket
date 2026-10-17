@@ -2,7 +2,8 @@
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { Copy } from "lucide-react";
 import type { Resultado } from "@/app/(app)/admin/acciones";
-import { BotonWhatsApp, Mensaje } from "@/components/ui";
+import { Mensaje } from "@/components/ui";
+import { AvisoContacto } from "@/components/contacto";
 
 /** Formulario que llama una acción de servidor y muestra el resultado (y el botón de WhatsApp si aplica). */
 export function FormAccion({
@@ -56,7 +57,9 @@ export function ResultadoAccion({ resultado }: { resultado: Resultado | null }) 
           </button>
         </div>
       )}
-      {resultado.whatsapp && <BotonWhatsApp celular={resultado.celular} mensaje={resultado.whatsapp} texto="Enviar por WhatsApp" />}
+      {resultado.whatsapp && (
+        <AvisoContacto contacto={{ celular: resultado.celular, correos: resultado.correo ? [resultado.correo] : [], asunto: resultado.asunto ?? "BancoTicket", mensaje: resultado.whatsapp }} />
+      )}
     </div>
   );
 }
