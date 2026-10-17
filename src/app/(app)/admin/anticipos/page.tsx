@@ -23,19 +23,16 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
 
   return (
     <>
-      <h1 className="titulo">Anticipos y pagos</h1>
+      <h1 className="titulo">Anticipos</h1>
       <section className="tarjeta">
         <h2 className="mb-3 font-bold text-profundo">Registrar</h2>
         <FormAccion accion={registrarAnticipo} boton="Registrar y generar enlace" limpiar>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label><span className="etiqueta">Comprador</span>
               <select name="comprador" className="campo" required defaultValue="">
                 <option value="" disabled>Elija</option>
                 {compradores?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
-            </label>
-            <label><span className="etiqueta">Tipo</span>
-              <select name="tipo" className="campo"><option value="anticipo">Anticipo</option><option value="pago">Pago (saldo a favor del comprador)</option></select>
             </label>
             <label><span className="etiqueta">Monto (COP)</span><input name="monto" inputMode="decimal" className="campo" required placeholder="Ej.: 5.000.000" /></label>
             <label><span className="etiqueta">Fecha</span><input name="fecha" type="date" className="campo" defaultValue={hoyColombia()} required /></label>
@@ -59,7 +56,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
               <div>
                 <p className="font-bold text-profundo">{a.comprador?.nombre}</p>
                 <p className="text-xl font-black">{formatoPesos(a.monto)}</p>
-                <p className="text-sm text-suave">{a.tipo === "pago" ? "Pago" : "Anticipo"} del {fecha(a.fecha)} · por {a.registrador?.nombre}</p>
+                <p className="text-sm text-suave">Anticipo del {fecha(a.fecha)} · por {a.registrador?.nombre}</p>
               </div>
               <EstadoChip estado={a.estado} />
             </div>

@@ -14,7 +14,7 @@ export default async function InicioComprador() {
   const supabase = await supabaseServidor();
   const [{ data: saldo }, { data: porConfirmar }, { count: pendientes }, { count: rechazados }] = await Promise.all([
     supabase.from("saldos").select("*").eq("comprador_id", perfil.id).maybeSingle(),
-    supabase.from("anticipos").select("id, tipo, monto, fecha").eq("comprador_id", perfil.id).eq("estado", "pendiente"),
+    supabase.from("anticipos").select("id, monto, fecha").eq("comprador_id", perfil.id).eq("estado", "pendiente"),
     supabase.from("tiquetes_pendientes").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase.from("tiquetes_pendientes").select("id", { count: "exact", head: true }).eq("estado", "rechazado"),
   ]);
@@ -33,7 +33,7 @@ export default async function InicioComprador() {
           <h2 className="mb-2 flex items-center gap-2 font-bold text-alerta"><Wallet className="size-5" /> Por confirmar</h2>
           <ul className="space-y-1 text-sm">
             {porConfirmar!.map((a) => (
-              <li key={a.id}>{a.tipo === "pago" ? "Pago" : "Anticipo"} de {formatoPesos(a.monto)} del {fecha(a.fecha)}</li>
+              <li key={a.id}>Anticipo de {formatoPesos(a.monto)} del {fecha(a.fecha)}</li>
             ))}
           </ul>
           <p className="mt-2 text-xs text-suave">Ábralo desde el enlace que le llegó por WhatsApp o correo.</p>

@@ -18,7 +18,7 @@ export async function responderAnticipo(codigo: string, acepta: boolean, motivo:
   if (error) return { ok: false, error: error.message };
 
   const a = antes?.[0];
-  const tipo = a?.tipo === "pago" ? "Pago" : "Anticipo";
+  const tipo = "Anticipo";
   await avisar(await administradores(), `${tipo} ${acepta ? "confirmado" : "en disputa"}`,
     `${perfil.nombre} ${acepta ? "confirmó" : "marcó como no coincide"} el ${tipo.toLowerCase()} de ${formatoPesos(a?.monto)}${acepta ? "" : `: ${motivo}`}.`,
     "/admin/anticipos");

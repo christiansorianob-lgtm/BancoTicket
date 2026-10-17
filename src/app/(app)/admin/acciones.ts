@@ -148,7 +148,7 @@ export async function asignarPrecioBloque(form: FormData): Promise<Resultado> {
 }
 
 // ---------------------------------------------------------------------------
-// Anticipos y pagos
+// Anticipos
 // ---------------------------------------------------------------------------
 async function celularDe(id: string | undefined) {
   if (!id) return undefined;
@@ -160,9 +160,9 @@ async function enviarEnlace(anticipoId: string): Promise<Resultado> {
   const supabase = await supabaseServidor();
   const { data: codigo, error } = await supabase.rpc("generar_enlace_anticipo", { p_id: anticipoId });
   if (error) return fallo(error.message);
-  const { data: a } = await supabase.from("anticipos").select("tipo, monto, fecha, comprador_id").eq("id", anticipoId).single();
+  const { data: a } = await supabase.from("anticipos").select("monto, fecha, comprador_id").eq("id", anticipoId).single();
   const enlace = `${process.env.NEXT_PUBLIC_APP_URL}/anticipo/${codigo}`;
-  const tipo = a?.tipo === "pago" ? "pago" : "anticipo";
+  const tipo = "anticipo";
   const comprador = a ? await perfilDestino(a.comprador_id) : null;
   if (comprador) {
     await avisar([comprador], `Confirme el ${tipo} recibido`,
@@ -188,7 +188,6 @@ export async function registrarAnticipo(form: FormData): Promise<Resultado> {
   const supabase = await supabaseServidor();
   const { data, error } = await supabase.from("anticipos").insert({
     comprador_id: comprador,
-    tipo: form.get("tipo") === "pago" ? "pago" : "anticipo",
     monto, fecha,
     nota: textoODefecto(form.get("nota")),
   }).select("id").single();

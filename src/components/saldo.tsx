@@ -20,7 +20,7 @@ export function TarjetaSaldo({ fila }: { fila: FilaSaldo | null }) {
         {saldo < 0 ? "Se le debe esta diferencia" : saldo > 0 ? "Fondos disponibles de los anticipos" : "Cuenta al día"}
       </p>
       <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-white/15 pt-3 text-sm">
-        <div><dt className="text-white/70">Anticipos y pagos</dt><dd className="font-semibold">{formatoPesos(fila?.anticipos_confirmados ?? 0)}</dd></div>
+        <div><dt className="text-white/70">Anticipos</dt><dd className="font-semibold">{formatoPesos(fila?.anticipos_confirmados ?? 0)}</dd></div>
         <div><dt className="text-white/70">Tiquetes</dt><dd className="font-semibold">{formatoPesos(fila?.valor_tiquetes ?? 0)}</dd></div>
         <div><dt className="text-white/70">Toneladas</dt><dd className="font-semibold">{formatoToneladas(fila?.toneladas_valoradas ?? 0)}</dd></div>
       </dl>

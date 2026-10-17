@@ -34,7 +34,7 @@ export default async function CuentaComprador({ params, searchParams }: PageProp
             <Link href={`/admin/tiquetes?comprador=${id}&sin_precio=1`} className="tarjeta text-center"><p className="text-2xl font-black text-primario">{sinPrecio ?? 0}</p><p className="text-xs text-suave">Sin precio</p></Link>
           </div>
           <Link href={`/admin/tiquetes?comprador=${id}`} className="boton-secundario w-full">Ver tiquetes</Link>
-          <Link href={`/admin/anticipos`} className="boton-secundario w-full">Anticipos y pagos</Link>
+          <Link href={`/admin/anticipos`} className="boton-secundario w-full">Anticipos</Link>
         </div>
         <div className="space-y-3">
           <form className="tarjeta flex flex-wrap items-end gap-2" method="get">

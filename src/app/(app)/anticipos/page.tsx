@@ -11,7 +11,7 @@ export default async function MisAnticipos() {
   const filas = data ?? [];
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="titulo">Anticipos y pagos recibidos</h1>
+      <h1 className="titulo">Anticipos recibidos</h1>
       <p className="text-sm text-suave">Para confirmar uno pendiente, abra el enlace que le llegó por WhatsApp o correo.</p>
       {filas.length === 0 && <Vacio>No tiene anticipos registrados.</Vacio>}
       <ul className="space-y-3">
@@ -20,7 +20,7 @@ export default async function MisAnticipos() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-lg font-bold text-profundo">{formatoPesos(a.monto)}</p>
-                <p className="text-sm text-suave">{a.tipo === "pago" ? "Pago" : "Anticipo"} del {fecha(a.fecha)}</p>
+                <p className="text-sm text-suave">Anticipo del {fecha(a.fecha)}</p>
               </div>
               <EstadoChip estado={a.estado} />
             </div>

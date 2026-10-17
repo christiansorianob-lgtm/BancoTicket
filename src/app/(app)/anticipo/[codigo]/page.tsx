@@ -23,7 +23,7 @@ export default async function ConfirmarAnticipo({ params }: PageProps<"/anticipo
     );
   }
 
-  const tipo = a.tipo === "pago" ? "pago" : "anticipo";
+  const tipo = "anticipo";
   return (
     <div className="mx-auto max-w-md space-y-4">
       <h1 className="titulo">Confirmar {tipo}</h1>

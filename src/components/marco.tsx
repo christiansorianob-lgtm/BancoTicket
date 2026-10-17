@@ -16,7 +16,7 @@ const ADMIN = [
   { href: "/admin", texto: "Saldos", icono: Home },
   { href: "/admin/pendientes", texto: "Pendientes", icono: ListChecks },
   { href: "/admin/tiquetes", texto: "Tiquetes y precios", icono: Tags },
-  { href: "/admin/anticipos", texto: "Anticipos y pagos", icono: Wallet },
+  { href: "/admin/anticipos", texto: "Anticipos", icono: Wallet },
   { href: "/admin/compradores", texto: "Compradores", icono: Users },
   { href: "/admin/extractoras", texto: "Extractoras", icono: Factory },
   { href: "/admin/formatos", texto: "Formatos", icono: ScanSearch },
