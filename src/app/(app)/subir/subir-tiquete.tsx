@@ -7,6 +7,7 @@ import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
 import { AvisoContacto } from "@/components/contacto";
+import { detalleTiquete } from "@/lib/mensajes";
 import { enviarARevision, enviarTiquete } from "./acciones";
 
 type Extractora = { id: string; nombre: string };
@@ -31,7 +32,7 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
   const [foto, setFoto] = useState<string | null>(null);
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState<{ numero: string; extractora: string } | null>(null);
+  const [enviado, setEnviado] = useState<{ numero: string; extractora: string; detalle: string } | null>(null);
   const [enviando, iniciar] = useTransition();
   const galeria = useRef<HTMLInputElement>(null);
   const camaraNativa = useRef<HTMLInputElement>(null);
@@ -84,8 +85,10 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
           <p className="text-suave">N° {enviado.numero} de {enviado.extractora} quedó pendiente de aprobación. Le llegará un aviso cuando lo revisen.</p>
         </div>
         <AvisoContacto contacto={{
-          celular: celularAdmin, correos: correosAdmin, asunto: `BancoTicket: tiquete N° ${enviado.numero} por aprobar`,
-          mensaje: `Hola, soy ${nombreComprador}. Subí el tiquete N° ${enviado.numero} de ${enviado.extractora} a BancoTicket para su aprobación.`,
+          celular: celularAdmin, correos: correosAdmin, asunto: `BancoTicket: tiquete N° ${enviado.numero} de ${enviado.extractora} por aprobar`,
+          mensaje: `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:
+
+${enviado.detalle}`,
         }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Subir otro tiquete</button>
       </div>
@@ -172,7 +175,7 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
               <button className="boton-primario py-4" disabled={enviando}
                 onClick={() => iniciar(async () => {
                   const r = await enviarTiquete(lectura.token);
-                  if (r.ok) { setEnviado(r); setPaso("enviado"); } else setError(r.error);
+                  if (r.ok) { setEnviado({ ...r, detalle: detalleTiquete({ ...lectura.datos, extractora: r.extractora }) }); setPaso("enviado"); } else setError(r.error);
                 })}>
                 <CheckCircle2 className="size-5" /> {enviando ? "Enviando…" : "Coincide, enviar"}
               </button>

@@ -31,7 +31,7 @@ export default async function Avisos() {
         {filas.map((n) => (
           <li key={n.id} className={`tarjeta p-3 ${n.leida ? "opacity-70" : "border-l-4 border-l-primario"}`}>
             <p className="font-semibold text-profundo">{n.titulo}</p>
-            {n.cuerpo && <p className="text-sm">{n.cuerpo}</p>}
+            {n.cuerpo && <p className="whitespace-pre-line text-sm">{n.cuerpo}</p>}
             <div className="mt-1 flex items-center justify-between text-xs text-suave">
               <span>{fechaHora(n.creado_en)}</span>
               {n.enlace && <Link href={n.enlace} className="font-semibold text-primario">Abrir</Link>}

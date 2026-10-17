@@ -7,6 +7,7 @@ import { avisar, perfilDestino } from "@/lib/avisos";
 import { interpretarFechaTiquete } from "@/lib/fechas";
 import { formatoPesos, kilosDesdeTexto, montoDesdeTexto } from "@/lib/numeros";
 import { normalizarPlaca } from "@/lib/lectura/controles";
+import { detalleTiquete } from "@/lib/mensajes";
 
 /** whatsapp/correo/asunto: aviso que se abre listo en el dispositivo para enviarlo al comprador. */
 export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string; correo?: string; asunto?: string };
@@ -54,31 +55,56 @@ function cambiosTiquete(form: FormData): Record<string, unknown> | string {
 // ---------------------------------------------------------------------------
 // Tiquetes pendientes
 // ---------------------------------------------------------------------------
+const CAMPOS_DETALLE = "numero, comprador_id, fecha_entrada, proveedor, peso_bruto_kg, tara_kg, placa, extractoras(nombre)";
+
+type FilaDetalle = {
+  numero: string; comprador_id: string; fecha_entrada: string; proveedor: string | null;
+  peso_bruto_kg: number; tara_kg: number; placa: string | null; extractoras: { nombre?: string } | null;
+};
+
+function detalleDe(tp: FilaDetalle) {
+  return detalleTiquete({ ...tp, extractora: tp.extractoras?.nombre });
+}
+
 export async function aprobarTiquete(id: string): Promise<Resultado> {
   await exigirAdmin();
   const supabase = await supabaseServidor();
-  const { data: tp } = await supabase.from("tiquetes_pendientes").select("numero, comprador_id, extractoras(nombre)").eq("id", id).single();
+  const { data: tp } = await supabase.from("tiquetes_pendientes").select(CAMPOS_DETALLE).eq("id", id).single<FilaDetalle>();
   const { error } = await supabase.rpc("aprobar_tiquete", { p_id: id });
   if (error) return fallo(error.message);
-  const comprador = tp ? await perfilDestino(tp.comprador_id) : null;
-  const texto = `Su tiquete N° ${tp?.numero} de ${(tp?.extractoras as { nombre?: string } | null)?.nombre ?? ""} fue aprobado.`;
-  if (comprador) await avisar([comprador], "Tiquete aprobado", texto, "/mis-tiquetes?estado=vigente");
+  if (!tp) return { ok: true };
+  const comprador = await perfilDestino(tp.comprador_id);
+  const extractora = tp.extractoras?.nombre ?? "";
+  if (comprador) await avisar([comprador], "Tiquete aprobado", `Su tiquete N° ${tp.numero} de ${extractora} fue aprobado.`, "/mis-tiquetes?estado=vigente");
   revalidatePath("/admin", "layout");
-  return { ok: true, whatsapp: texto, celular: await celularDe(tp?.comprador_id), correo: comprador?.correo, asunto: "BancoTicket: tiquete aprobado" };
+  return {
+    ok: true,
+    whatsapp: `Hola ${comprador?.nombre ?? ""}, su tiquete fue APROBADO en BancoTicket:\n\n${detalleDe(tp)}`,
+    celular: await celularDe(tp.comprador_id),
+    correo: comprador?.correo,
+    asunto: `BancoTicket: tiquete N° ${tp.numero} de ${extractora} aprobado`,
+  };
 }
 
 export async function rechazarTiquete(id: string, motivo: string): Promise<Resultado> {
   await exigirAdmin();
   if (!motivo.trim()) return fallo("Escriba el motivo del rechazo");
   const supabase = await supabaseServidor();
-  const { data: tp } = await supabase.from("tiquetes_pendientes").select("numero, comprador_id, extractoras(nombre)").eq("id", id).single();
+  const { data: tp } = await supabase.from("tiquetes_pendientes").select(CAMPOS_DETALLE).eq("id", id).single<FilaDetalle>();
   const { error } = await supabase.rpc("rechazar_tiquete", { p_id: id, p_motivo: motivo.trim() });
   if (error) return fallo(error.message);
-  const texto = `Su tiquete N° ${tp?.numero} de ${(tp?.extractoras as { nombre?: string } | null)?.nombre ?? ""} fue rechazado. Motivo: ${motivo.trim()}`;
-  const comprador = tp ? await perfilDestino(tp.comprador_id) : null;
-  if (comprador) await avisar([comprador], "Tiquete rechazado", texto, "/mis-tiquetes?estado=rechazado");
+  if (!tp) return { ok: true };
+  const comprador = await perfilDestino(tp.comprador_id);
+  const extractora = tp.extractoras?.nombre ?? "";
+  if (comprador) await avisar([comprador], "Tiquete rechazado", `Su tiquete N° ${tp.numero} de ${extractora} fue rechazado. Motivo: ${motivo.trim()}`, "/mis-tiquetes?estado=rechazado");
   revalidatePath("/admin", "layout");
-  return { ok: true, whatsapp: texto, celular: await celularDe(tp?.comprador_id), correo: comprador?.correo, asunto: "BancoTicket: tiquete rechazado" };
+  return {
+    ok: true,
+    whatsapp: `Hola ${comprador?.nombre ?? ""}, su tiquete fue RECHAZADO en BancoTicket.\nMotivo: ${motivo.trim()}\n\n${detalleDe(tp)}`,
+    celular: await celularDe(tp.comprador_id),
+    correo: comprador?.correo,
+    asunto: `BancoTicket: tiquete N° ${tp.numero} de ${extractora} rechazado`,
+  };
 }
 
 export async function editarPendiente(id: string, form: FormData): Promise<Resultado> {
