@@ -127,3 +127,6 @@ Se guardan en la tabla `configuracion` para no inventar respuestas:
 | Pagos al comprador | **Movimiento aparte «Pago»** (`anticipos.tipo = 'pago'`): suma al saldo y se confirma con enlace igual que un anticipo |
 
 Siguen pendientes (con valor por defecto en `configuracion`): número de tiquete de Oleoflores, nombre exacto de «Lukeoil», efecto de la evaluación de calidad, fecha para filtros de precio (entrada), vigencia del enlace (48 h), si el comprador ve toneladas sin precio (sí), quién crea extractoras (admin) y si la placa es obligatoria (sí).
+
+### Cambio (2026-10-16)
+Las fotos subidas por galería **ya no** quedan marcadas para revisión. La marca de revisión la pone solo la lectura: cuando la IA reporta campos con algún carácter dudoso (`campos_dudosos`) o la placa tiene un formato inusual. Los controles duros (número, fecha, pesos, bruto − tara = neto impreso) siguen pidiendo repetir la foto o enviar a revisión manual.

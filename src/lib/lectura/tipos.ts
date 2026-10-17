@@ -12,6 +12,9 @@ export const LecturaCruda = z.object({
   conductor: z.string().nullable(),
   bascula: z.string().nullable(),
   observaciones: z.string().nullable().describe("Problemas de lectura: borroso, tapado por sello, girado, etc."),
+  campos_dudosos: z
+    .array(z.enum(["numero_tiquete", "fecha_entrada", "peso_bruto_kg", "tara_kg", "peso_neto_impreso_kg", "placa"]))
+    .describe("Campos que no se leyeron con total certeza (cualquier carácter dudoso). Vacío solo si todo es 100 % seguro."),
 });
 export type LecturaCruda = z.infer<typeof LecturaCruda>;
 
@@ -27,10 +30,11 @@ export type DatosTiquete = {
   bascula: string | null;
 };
 
-export type Control = { nombre: string; ok: boolean; mensaje: string };
+/** dudoso: el dato pasó pero el administrador debe verificarlo. */
+export type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 
 export type ResultadoLectura =
-  | { ok: true; datos: DatosTiquete; controles: Control[]; cruda: LecturaCruda }
+  | { ok: true; datos: DatosTiquete; controles: Control[]; cruda: LecturaCruda; dudosos: string[] }
   | { ok: false; motivo: string; controles: Control[]; cruda: LecturaCruda | null };
 
 export type PlantillaExtractora = {

@@ -84,7 +84,8 @@ export async function POST(request: Request) {
     ok: true,
     datos: resultado.datos,
     controles: resultado.controles,
+    dudosos: resultado.dudosos,
     posiblesDuplicados: parecidos ?? [],
-    token: firmar({ ...base, tipo: "lectura", datos: resultado.datos }),
+    token: firmar({ ...base, tipo: "lectura", datos: resultado.datos, dudosos: resultado.dudosos }),
   });
 }

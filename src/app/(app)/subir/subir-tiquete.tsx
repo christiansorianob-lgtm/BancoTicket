@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
 import { analizarCuadro, type Verificacion } from "@/lib/camara/analisis";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
@@ -9,13 +9,13 @@ import { BotonWhatsApp, Dato, Mensaje } from "@/components/ui";
 import { enviarARevision, enviarTiquete } from "./acciones";
 
 type Extractora = { id: string; nombre: string };
-type Control = { nombre: string; ok: boolean; mensaje: string };
+type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 type Datos = {
   numero: string; fecha_entrada: string; peso_bruto_kg: number; tara_kg: number;
   neto_impreso_kg: number | null; placa: string | null; conductor: string | null; bascula: string | null;
 };
 type Lectura =
-  | { ok: true; datos: Datos; controles: Control[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
+  | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
   | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[] }
   | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined };
 
@@ -33,6 +33,7 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
   const [enviado, setEnviado] = useState<{ numero: string; extractora: string } | null>(null);
   const [enviando, iniciar] = useTransition();
   const galeria = useRef<HTMLInputElement>(null);
+  const camaraNativa = useRef<HTMLInputElement>(null);
 
   const extractora = extractoras.find((e) => e.id === extractoraId);
 
@@ -63,11 +64,11 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
     }
   }
 
-  async function desdeGaleria(archivo: File | undefined) {
+  async function desdeArchivo(archivo: File | undefined, desde: "camara" | "galeria") {
     if (!archivo) return;
     try {
       const img = await imagenDesdeArchivo(archivo);
-      await leer(await reducirImagen(img), "galeria");
+      await leer(await reducirImagen(img, 2000), desde);
     } catch {
       setError("No se pudo abrir la imagen");
     }
@@ -101,7 +102,13 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
   }
 
   if (paso === "camara") {
-    return <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("elegir")} />;
+    return (
+      <>
+        <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("elegir")} onCamaraNativa={() => camaraNativa.current?.click()} />
+        <input ref={camaraNativa} type="file" accept="image/*" capture="environment" className="hidden"
+          onChange={(e) => { desdeArchivo(e.target.files?.[0], "camara"); e.target.value = ""; }} />
+      </>
+    );
   }
 
   if (paso === "leyendo") {
@@ -134,8 +141,8 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
             )}
             <ul className="space-y-1 text-sm">
               {lectura.controles.map((c) => (
-                <li key={c.nombre} className={`flex items-start gap-1.5 ${c.ok ? "text-ok" : "text-error"}`}>
-                  {c.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" /> : <XCircle className="mt-0.5 size-4 shrink-0" />} {c.mensaje}
+                <li key={c.nombre} className={`flex items-start gap-1.5 ${!c.ok ? "text-error" : c.dudoso ? "text-alerta" : "text-ok"}`}>
+                  {!c.ok ? <XCircle className="mt-0.5 size-4 shrink-0" /> : c.dudoso ? <AlertTriangle className="mt-0.5 size-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 size-4 shrink-0" />} {c.mensaje}
                 </li>
               ))}
             </ul>
@@ -147,6 +154,9 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
         {lectura.ok ? (
           <>
             <Mensaje tono="alerta">Compare estos datos con el tiquete que tiene en la mano. No se pueden editar: si algo no coincide, tome otra foto.</Mensaje>
+            {lectura.dudosos.length > 0 && (
+              <Mensaje tono="alerta">Puede enviarlo, pero llegará marcado para que el administrador verifique: {lectura.dudosos.join(", ")}. Si prefiere, tome otra foto más nítida.</Mensaje>
+            )}
             {lectura.posiblesDuplicados.length > 0 && (
               <Mensaje tono="alerta">
                 Posible duplicado: ya hay un tiquete con la misma placa a la misma hora ({lectura.posiblesDuplicados.map((p) => `${p.extractora} N° ${p.numero}`).join(", ")}).
@@ -210,9 +220,9 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
         </div>
         <div className="border-t border-borde pt-3">
           <button className="w-full text-sm font-medium text-suave underline disabled:opacity-50" disabled={!extractoraId} onClick={() => galeria.current?.click()}>
-            <ImageUp className="mr-1 inline size-4" /> Subir desde la galería (queda para revisión)
+            <ImageUp className="mr-1 inline size-4" /> Subir una foto desde la galería
           </button>
-          <input ref={galeria} type="file" accept="image/*" className="hidden" onChange={(e) => { desdeGaleria(e.target.files?.[0]); e.target.value = ""; }} />
+          <input ref={galeria} type="file" accept="image/*" className="hidden" onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />
         </div>
       </div>
     </div>
@@ -227,7 +237,38 @@ function calcularMarco(vw: number, vh: number, horizontal: boolean) {
   return { x: (vw - ancho) / 2 / vw, y: (vh - alto) / 2 / vh, w: ancho / vw, h: alto / vh };
 }
 
-function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void; onCancelar: () => void }) {
+/**
+ * Foto a la resolución del sensor (ImageCapture), no del video de vista previa.
+ * La vista previa suele ser el centro de la foto: se recorta el mismo marco sobre ella.
+ * Si el navegador no lo permite o la orientación no coincide, se usa el cuadro del video.
+ */
+async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: ReturnType<typeof calcularMarco>): Promise<HTMLCanvasElement> {
+  let fuente: CanvasImageSource = v;
+  let fw = v.videoWidth, fh = v.videoHeight;
+  try {
+    const IC = (window as unknown as { ImageCapture?: new (t: MediaStreamTrack) => { takePhoto(): Promise<Blob> } }).ImageCapture;
+    if (IC) {
+      const foto = await createImageBitmap(await new IC(flujo.getVideoTracks()[0]).takePhoto(), { imageOrientation: "from-image" });
+      const mismaOrientacion = (foto.width >= foto.height) === (v.videoWidth >= v.videoHeight);
+      if (mismaOrientacion && foto.width > v.videoWidth) { fuente = foto; fw = foto.width; fh = foto.height; }
+    }
+  } catch { /* se usa el video */ }
+
+  // Zona de la foto que corresponde a la vista previa (recorte centrado con la proporción del video).
+  const pv = v.videoWidth / v.videoHeight;
+  const vw = Math.min(fw, fh * pv), vh = vw / pv;
+  const ox = (fw - vw) / 2, oy = (fh - vh) / 2;
+  // Margen de 3 % por si la vista previa no coincide exactamente con la foto.
+  const mx = Math.max(0, m.x - 0.03), my = Math.max(0, m.y - 0.03);
+  const mw = Math.min(1 - mx, m.w + 0.06), mh = Math.min(1 - my, m.h + 0.06);
+  const c = document.createElement("canvas");
+  c.width = Math.round(mw * vw);
+  c.height = Math.round(mh * vh);
+  c.getContext("2d")!.drawImage(fuente, ox + mx * vw, oy + my * vh, c.width, c.height, 0, 0, c.width, c.height);
+  return c;
+}
+
+function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b: Blob) => void; onCancelar: () => void; onCamaraNativa: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [horizontal, setHorizontal] = useState(true);
   const [tamano, setTamano] = useState<{ w: number; h: number } | null>(null);
@@ -236,6 +277,7 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
   const [errorCamara, setErrorCamara] = useState<string | null>(null);
   const [capturando, setCapturando] = useState(false);
   const horizontalRef = useRef(horizontal);
+  const flujoRef = useRef<MediaStream | null>(null);
   useEffect(() => { horizontalRef.current = horizontal; }, [horizontal]);
 
   useEffect(() => {
@@ -247,9 +289,14 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
     (async () => {
       try {
         flujo = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
           audio: false,
         });
+        flujoRef.current = flujo;
+        // Enfoque continuo donde el navegador lo permite (Chrome en Android).
+        await flujo.getVideoTracks()[0]
+          .applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] })
+          .catch(() => {});
         const v = video.current!;
         v.srcObject = flujo;
         await v.play();
@@ -289,17 +336,15 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
     setCapturando(true);
     // Se recorta al marco: el tiquete aprovecha toda la resolución de la foto.
     const m = calcularMarco(v.videoWidth, v.videoHeight, horizontal);
-    const c = document.createElement("canvas");
-    c.width = Math.round(m.w * v.videoWidth);
-    c.height = Math.round(m.h * v.videoHeight);
-    c.getContext("2d")!.drawImage(v, m.x * v.videoWidth, m.y * v.videoHeight, c.width, c.height, 0, 0, c.width, c.height);
-    onCaptura(await reducirImagen(c, 1600));
+    const c = await fotoDelSensor(flujoRef.current!, v, m);
+    onCaptura(await reducirImagen(c, 2000));
   }
 
   if (errorCamara) {
     return (
       <div className="space-y-3">
         <Mensaje tono="error">{errorCamara}</Mensaje>
+        <button className="boton-primario w-full" onClick={onCamaraNativa}><Camera className="size-5" /> Usar la cámara normal del celular</button>
         <button className="boton-secundario w-full" onClick={onCancelar}>Volver</button>
       </div>
     );
@@ -327,7 +372,7 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
           {lista ? "Lista: puede tomar la foto" : (primerAviso?.aviso ?? "Acomodando la cámara…")}
         </div>
       </div>
-      <p className="text-center text-xs text-suave">Ponga el tiquete dentro del marco. Para tiquetes anchos, también puede girar el celular.</p>
+      <p className="text-center text-xs text-suave">Ponga el tiquete dentro del marco. Puede sostener el celular vertical u horizontal.</p>
       <ul className="grid grid-cols-3 gap-1 text-xs">
         {verificaciones.map((v) => (
           <li key={v.clave} className={`flex items-center gap-1 rounded-lg px-2 py-1 font-medium ${v.ok ? "bg-ok-suave text-ok" : "bg-error-suave text-error"}`}>
@@ -341,6 +386,9 @@ function CamaraGuiada({ onCaptura, onCancelar }: { onCaptura: (b: Blob) => void;
           <Camera className="size-6" /> {capturando ? "Procesando…" : "Tomar foto"}
         </button>
       </div>
+      <button className="w-full text-sm font-medium text-suave underline" onClick={onCamaraNativa}>
+        ¿No logra el verde o no enfoca? Usar la cámara normal del celular
+      </button>
     </div>
   );
 }

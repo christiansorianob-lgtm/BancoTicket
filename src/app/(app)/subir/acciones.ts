@@ -25,8 +25,9 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
       extractora_id: l.extractora_id,
       imagen_ruta: l.imagen_ruta,
       origen: l.origen,
-      requiere_revision: l.origen === "galeria",
-      motivo_revision: l.origen === "galeria" ? "Subido por galería: revisar" : null,
+      // Solo va a revisión si la IA no está 100 % segura de algún dato (no por venir de la galería).
+      requiere_revision: l.dudosos.length > 0,
+      motivo_revision: l.dudosos.length > 0 ? `Verificar: ${l.dudosos.join(", ")}` : null,
       datos_leidos: l.datos,
     },
   });
@@ -38,7 +39,7 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
   const { data: ext } = await db.from("extractoras").select("nombre").eq("id", l.extractora_id).single();
   const extractora = ext?.nombre ?? "";
   await avisar(await administradores(), "Tiquete por aprobar",
-    `${perfil.nombre} subió el tiquete N° ${l.datos.numero} de ${extractora}${l.origen === "galeria" ? " (subido por galería: revisar)" : ""}.`,
+    `${perfil.nombre} subió el tiquete N° ${l.datos.numero} de ${extractora}${l.dudosos.length ? ` (verificar: ${l.dudosos.join(", ")})` : ""}.`,
     "/admin/pendientes");
   await avisar([{ id: perfil.id, correo: perfil.correo, nombre: perfil.nombre }], "Tiquete recibido",
     `Recibimos su tiquete N° ${l.datos.numero} de ${extractora}. Queda pendiente de aprobación.`, "/mis-tiquetes");

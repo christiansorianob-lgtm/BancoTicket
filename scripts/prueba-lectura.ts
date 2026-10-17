@@ -2,6 +2,7 @@
 import { kilosDesdeTexto, montoDesdeTexto } from "../src/lib/numeros";
 import { interpretarFechaTiquete } from "../src/lib/fechas";
 import { aplicarControles } from "../src/lib/lectura/controles";
+import type { LecturaCruda } from "../src/lib/lectura/tipos";
 
 let fallos = 0;
 const igual = (nombre: string, real: unknown, esperado: unknown) => {
@@ -27,7 +28,7 @@ igual("Oleoflores", interpretarFechaTiquete("14-octubre-2026 08:34:30"), "2026-1
 igual("Lukeoil", interpretarFechaTiquete("08-09-2026 13:27:50"), "2026-09-08T13:27:50-05:00");
 igual("fecha inválida", interpretarFechaTiquete("31/02/2026"), null);
 
-const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, bascula: null, observaciones: null };
+const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, bascula: null, observaciones: null, campos_dudosos: [] as LecturaCruda["campos_dudosos"] };
 const r1 = aplicarControles({ ...base, peso_bruto_kg: "2,070", tara_kg: "680", peso_neto_impreso_kg: "1,390" }, { placaObligatoria: true });
 igual("Palnorte controles ok", r1.ok, true);
 igual("Palnorte neto", r1.ok && r1.datos.peso_bruto_kg - r1.datos.tara_kg, 1390);
@@ -37,6 +38,13 @@ const r3 = aplicarControles({ ...base, peso_bruto_kg: "6,320", tara_kg: "3,130",
 igual("neto impreso no cuadra", r3.ok, false);
 const r4 = aplicarControles({ ...base, placa: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("placa obligatoria faltante", r4.ok, false);
+
+const r5 = aplicarControles({ ...base, placa: "284DAF", peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
+igual("placa 284DAF aceptada sin dudas", r5.ok && r5.dudosos, []);
+const r6 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["numero_tiquete", "tara_kg"] }, { placaObligatoria: true });
+igual("IA con dudas: pasa pero marcado", r6.ok && r6.dudosos, ["número", "tara"]);
+const r7 = aplicarControles({ ...base, placa: "X1", peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
+igual("placa rara: pasa pero marcada", r7.ok && r7.dudosos, ["placa"]);
 
 console.log(fallos ? `\n${fallos} prueba(s) fallaron` : "\nTodas las pruebas pasaron");
 process.exit(fallos ? 1 : 0);

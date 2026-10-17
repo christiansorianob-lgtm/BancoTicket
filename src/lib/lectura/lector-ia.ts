@@ -19,7 +19,7 @@ Sinónimos de los campos:
 - Báscula: solo si está impresa.
 
 La foto puede venir girada, con firmas o sellos encima, reflejos u otros papeles debajo: lee solo el tiquete.
-Si un campo no se ve o no se puede leer con certeza, devuélvelo como null y explica en "observaciones". Nunca inventes valores.
+Si un campo no se ve, devuélvelo como null. Si se ve pero algún carácter es dudoso (borroso, tapado, 6/8/9, 1/7, 0/8, 5/6), da tu mejor lectura y agrega ese campo a "campos_dudosos". "campos_dudosos" solo puede quedar vacío si estás 100 % seguro de cada carácter. Nunca inventes valores; explica los problemas en "observaciones".
 Si la imagen no es un tiquete de báscula, es_tiquete = false.`;
 
 export class LectorIA implements LectorTiquete {
@@ -33,7 +33,7 @@ export class LectorIA implements LectorTiquete {
     const respuesta = await this.cliente.messages.parse({
       model: MODELO,
       max_tokens: 4000,
-      output_config: { effort: "low", format: zodOutputFormat(LecturaCruda) },
+      output_config: { effort: "medium", format: zodOutputFormat(LecturaCruda) },
       system: INSTRUCCIONES,
       messages: [
         {
