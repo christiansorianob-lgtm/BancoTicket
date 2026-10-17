@@ -12,7 +12,7 @@ type Extractora = { id: string; nombre: string };
 type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 type Datos = {
   numero: string; fecha_entrada: string; peso_bruto_kg: number; tara_kg: number;
-  neto_impreso_kg: number | null; placa: string | null; conductor: string | null; bascula: string | null;
+  neto_impreso_kg: number | null; placa: string | null; conductor: string | null; proveedor: string | null; bascula: string | null;
 };
 type Lectura =
   | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
@@ -135,6 +135,7 @@ export function SubirTiquete({ extractoras, celularAdmin, nombreComprador }: { e
                 <Dato etiqueta="Peso bruto">{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
                 <Dato etiqueta="Tara">{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
                 <Dato etiqueta="Peso neto">{formatoToneladas((lectura.datos.peso_bruto_kg - lectura.datos.tara_kg) / 1000)}</Dato>
+                {lectura.datos.proveedor && <Dato etiqueta="Proveedor">{lectura.datos.proveedor}</Dato>}
                 {lectura.datos.conductor && <Dato etiqueta="Conductor">{lectura.datos.conductor}</Dato>}
                 {lectura.datos.bascula && <Dato etiqueta="Báscula">{lectura.datos.bascula}</Dato>}
               </dl>

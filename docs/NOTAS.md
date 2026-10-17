@@ -2,6 +2,7 @@
 
 | Fecha | Qué se hizo |
 |---|---|
+| 2026-10-17 | Se agrega **proveedor** (migración 0002, aplicada): la IA lo lee, se guarda en pendientes y aprobados, se muestra al comprador y al administrador y se puede corregir. La plantilla JSON por extractora es opcional: la IA lee sin ella. |
 | 2026-10-16 | **Decisión del usuario:** se quita el tipo «Pago»; todo es anticipo y el saldo es la resta (positivo = fondos del comprador, negativo = se le debe). |
 | 2026-10-16 | Cámara a pantalla completa: marco que llena casi toda la pantalla en la orientación del celular (sin botón horizontal/vertical), disparador redondo abajo al centro, foto enderezada si el texto quedó de lado. Se quitó la verificación de orientación en vivo. |
 | 2026-10-16 | Segunda prueba: la foto llegó a 1015×580 px y borrosa (vista previa del video); la IA no leyó número ni fecha y leyó mal el neto (4.690 por 4.990). Cambios: foto a resolución del sensor (ImageCapture) recortada al marco, 2000 px; opción de cámara normal del celular; la IA marca `campos_dudosos`. **Decisión del usuario:** la galería ya no manda a revisión; un tiquete va marcado para revisión solo si la IA no está 100 % segura de algún dato (o la placa tiene formato raro). Placa: se acepta cualquier combinación de 5–7 letras y números (ej. 284DAF). |

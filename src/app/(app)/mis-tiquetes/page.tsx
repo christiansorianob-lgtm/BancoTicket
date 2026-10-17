@@ -59,6 +59,7 @@ export default async function MisTiquetes({ searchParams }: PageProps<"/mis-tiqu
                   <Dato etiqueta="Peso neto">{formatoToneladas(netoKg / 1000)}</Dato>
                 )}
                 <Dato etiqueta="Placa">{t.placa ?? "—"}</Dato>
+                {t.proveedor && <Dato etiqueta="Proveedor">{t.proveedor}</Dato>}
                 {estado === "vigente" && <Dato etiqueta="Precio / t">{conPrecio ? formatoPesos(t.precio_tonelada) : "Sin precio"}</Dato>}
                 {estado === "vigente" && <Dato etiqueta="Valor">{conPrecio ? formatoPesos(t.valor) : "—"}</Dato>}
               </dl>

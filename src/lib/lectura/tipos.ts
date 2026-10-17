@@ -10,6 +10,7 @@ export const LecturaCruda = z.object({
   peso_neto_impreso_kg: z.string().nullable().describe("Peso neto impreso, si existe"),
   placa: z.string().nullable(),
   conductor: z.string().nullable(),
+  proveedor: z.string().nullable().describe("Proveedor impreso (quien vende la fruta), tal como aparece"),
   bascula: z.string().nullable(),
   observaciones: z.string().nullable().describe("Problemas de lectura: borroso, tapado por sello, girado, etc."),
   campos_dudosos: z
@@ -27,6 +28,7 @@ export type DatosTiquete = {
   neto_impreso_kg: number | null;
   placa: string | null;
   conductor: string | null;
+  proveedor: string | null;
   bascula: string | null;
 };
 

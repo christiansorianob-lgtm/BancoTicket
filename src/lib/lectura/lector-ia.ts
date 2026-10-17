@@ -15,6 +15,7 @@ Sinónimos de los campos:
 - Peso neto: "Peso neto", "Total kilos".
 - Placa: "Placa vehículo", "Placa", "Vehículo".
 - Conductor: "Conductor" (puede venir vacío).
+- Proveedor: "Proveedor" (empresa o persona que vende la fruta, ej. "INVERSIONES AGROPALNORT S.A.S."). No confundir con la extractora ni con el conductor.
 - Fecha: "Fecha de entrada", "Fecha entrada", "Fecha y hora: Entrada", "Fecha". Incluye la hora si aparece.
 - Báscula: solo si está impresa.
 

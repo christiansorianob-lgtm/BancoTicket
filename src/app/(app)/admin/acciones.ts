@@ -21,7 +21,7 @@ function textoODefecto(v: FormDataEntryValue | null) {
 function cambiosTiquete(form: FormData): Record<string, unknown> | string {
   const c: Record<string, unknown> = {};
   for (const clave of ["extractora_id", "comprador_id"]) if (form.has(clave)) c[clave] = form.get(clave);
-  for (const clave of ["numero", "bascula", "conductor"]) if (form.has(clave)) c[clave] = textoODefecto(form.get(clave));
+  for (const clave of ["numero", "bascula", "conductor", "proveedor"]) if (form.has(clave)) c[clave] = textoODefecto(form.get(clave));
   if (form.has("numero") && !c.numero) return "El número es obligatorio";
   if (form.has("placa")) c.placa = normalizarPlaca(String(form.get("placa")));
   if (form.has("fecha_entrada")) {

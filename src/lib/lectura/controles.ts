@@ -85,6 +85,7 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
       neto_impreso_kg: netoImpreso,
       placa,
       conductor: cruda.conductor?.trim() || null,
+      proveedor: cruda.proveedor?.trim().replace(/\s+/g, " ") || null,
       bascula: cruda.bascula?.trim() || null,
     },
   };

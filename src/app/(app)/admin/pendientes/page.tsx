@@ -41,6 +41,7 @@ export default async function Pendientes() {
                 <Dato etiqueta="Comprador">{t.perfiles?.nombre}</Dato>
                 <Dato etiqueta="Fecha de entrada">{fechaHora(t.fecha_entrada)}</Dato>
                 <Dato etiqueta="Placa">{t.placa ?? "—"}</Dato>
+                <Dato etiqueta="Proveedor">{t.proveedor ?? "—"}</Dato>
                 <Dato etiqueta="Bruto">{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>
                 <Dato etiqueta="Tara">{formatoToneladas(t.tara_kg / 1000)}</Dato>
                 <Dato etiqueta="Neto">{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
