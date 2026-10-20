@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
-import { analizarCuadro, textoDeLado, type Verificacion } from "@/lib/camara/analisis";
+import { analizarCuadro, nitidezDeFoto, textoDeLado, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
@@ -24,7 +24,8 @@ type Lectura = { extractora?: { id: string; nombre: string } | null } & (
 
 type Paso = "inicio" | "camara" | "leyendo" | "resultado" | "enviado" | "revision";
 
-const CUADROS_ESTABLES = 3;
+// Todo en verde durante 5 cuadros seguidos (~1,5 s) antes de permitir la foto.
+const CUADROS_ESTABLES = 5;
 
 /**
  * El comprador solo toma la foto: la cámara se abre de una vez y la IA reconoce la
@@ -75,12 +76,21 @@ export function SubirTiquete({ celularAdmin, correosAdmin, nombreComprador }: { 
 
   async function desdeArchivo(archivo: File | undefined, desde: "camara" | "galeria") {
     if (!archivo) return;
+    let img: ImageBitmap;
     try {
-      const img = await imagenDesdeArchivo(archivo);
-      await leer(await reducirImagen(img, 2000), desde);
+      img = await imagenDesdeArchivo(archivo);
     } catch {
       setError("No se pudo abrir la imagen");
+      setPaso("inicio");
+      return;
     }
+    // Misma exigencia de nitidez que la cámara guiada.
+    if (nitidezDeFoto(img) < 1) {
+      setError("La foto está borrosa y no se podría leer bien. Tómela de nuevo con el celular quieto y el tiquete enfocado.");
+      setPaso("inicio");
+      return;
+    }
+    await leer(await reducirImagen(img, 2000), desde);
   }
 
   if (paso === "enviado" && enviado) {
@@ -117,9 +127,12 @@ export function SubirTiquete({ celularAdmin, correosAdmin, nombreComprador }: { 
   if (paso === "camara") {
     return (
       <>
-        <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("inicio")} onCamaraNativa={() => camaraNativa.current?.click()} />
+        <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("inicio")}
+          onCamaraNativa={() => camaraNativa.current?.click()} onGaleria={() => galeria.current?.click()} />
         <input ref={camaraNativa} type="file" accept="image/*" capture="environment" className="hidden"
           onChange={(e) => { desdeArchivo(e.target.files?.[0], "camara"); e.target.value = ""; }} />
+        <input ref={galeria} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />
       </>
     );
   }
@@ -304,13 +317,17 @@ function enderezar(c: HTMLCanvasElement): HTMLCanvasElement {
   return r;
 }
 
-function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b: Blob) => void; onCancelar: () => void; onCamaraNativa: () => void }) {
+function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
+  onCaptura: (b: Blob) => void; onCancelar: () => void; onCamaraNativa: () => void; onGaleria: () => void;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const contenedor = useRef<HTMLDivElement>(null);
   const flujoRef = useRef<MediaStream | null>(null);
   const [verificaciones, setVerificaciones] = useState<Verificacion[]>([]);
+  const [nitidez, setNitidez] = useState(0);
   const [estables, setEstables] = useState(0);
   const [errorCamara, setErrorCamara] = useState<string | null>(null);
+  const [avisoFoto, setAvisoFoto] = useState<string | null>(null);
   const [capturando, setCapturando] = useState(false);
 
   useEffect(() => {
@@ -336,19 +353,23 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
         const v = video.current!;
         v.srcObject = flujo;
         await v.play();
+        let previo: Float32Array | null = null;
         temporizador = setInterval(() => {
           const caja = contenedor.current;
           if (!v.videoWidth || !caja) return;
           // Solo se analiza lo que está dentro del marco (sigue al celular si gira).
           const m = marcoEnVideo(v.videoWidth, v.videoHeight, caja.clientWidth, caja.clientHeight);
           const sx = m.x * v.videoWidth, sy = m.y * v.videoHeight, sw = m.w * v.videoWidth, sh = m.h * v.videoHeight;
-          const escala = 320 / Math.max(sw, sh);
-          lienzo.width = Math.round(sw * escala);
-          lienzo.height = Math.round(sh * escala);
-          ctx.drawImage(v, sx, sy, sw, sh, 0, 0, lienzo.width, lienzo.height);
-          const r = analizarCuadro(ctx.getImageData(0, 0, lienzo.width, lienzo.height));
-          setVerificaciones(r);
-          setEstables((n) => (r.every((x) => x.ok) ? n + 1 : 0));
+          // A 640 px el desenfoque se nota; a menos resolución una imagen borrosa parece nítida.
+          const escala = Math.min(1, UMBRALES.ladoAnalisis / Math.max(sw, sh));
+          const ancho = Math.round(sw * escala), alto = Math.round(sh * escala);
+          if (lienzo.width !== ancho || lienzo.height !== alto) { lienzo.width = ancho; lienzo.height = alto; previo = null; }
+          ctx.drawImage(v, sx, sy, sw, sh, 0, 0, ancho, alto);
+          const r = analizarCuadro(ctx.getImageData(0, 0, ancho, alto), previo);
+          previo = r.lum;
+          setVerificaciones(r.verificaciones);
+          setNitidez(r.nitidez);
+          setEstables((n) => (r.verificaciones.every((x) => x.ok) ? n + 1 : 0));
         }, 300);
       } catch {
         setErrorCamara("No se pudo abrir la cámara. Revise el permiso de cámara del navegador.");
@@ -369,8 +390,16 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
     const v = video.current, caja = contenedor.current;
     if (!v || !caja || !flujoRef.current) return;
     setCapturando(true);
+    setAvisoFoto(null);
     const m = marcoEnVideo(v.videoWidth, v.videoHeight, caja.clientWidth, caja.clientHeight);
     const c = enderezar(await fotoDelSensor(flujoRef.current, v, m));
+    // Última revisión: la foto que se va a enviar debe estar nítida.
+    if (nitidezDeFoto(c) < 1) {
+      setAvisoFoto("La foto salió borrosa. Sostenga el celular quieto, espere a que enfoque y tómela de nuevo.");
+      setEstables(0);
+      setCapturando(false);
+      return;
+    }
     onCaptura(await reducirImagen(c, 2000));
   }
 
@@ -399,18 +428,24 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
         <button className="flex size-11 shrink-0 items-center justify-center rounded-full bg-black/50 text-white" onClick={onCancelar} aria-label="Cerrar cámara">
           <XCircle className="size-6" />
         </button>
-        <p className={`min-w-0 flex-1 rounded-full px-3 py-2 text-center text-sm font-bold text-white ${lista ? "bg-emerald-600/90" : "bg-red-600/90"}`}>
-          {lista ? "Lista: toque el botón" : (primerAviso?.aviso ?? "Acomodando la cámara…")}
+        <p className={`min-w-0 flex-1 rounded-full px-3 py-2 text-center text-sm font-bold text-white ${avisoFoto ? "bg-red-600/90" : lista ? "bg-emerald-600/90" : "bg-red-600/90"}`}>
+          {avisoFoto ?? (lista ? "Lista: toque el botón" : (primerAviso?.aviso ?? "Acomodando la cámara…"))}
         </p>
       </div>
 
-      {/* Barra inferior: disparador grande al alcance del pulgar */}
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
-        <ul className="flex w-24 flex-wrap gap-1" aria-label="Verificaciones">
-          {verificaciones.map((v) => (
-            <li key={v.clave} title={v.clave} className={`size-3 rounded-full ${v.ok ? "bg-emerald-400" : "bg-red-500"}`} />
-          ))}
-        </ul>
+      {/* Barra inferior: nitidez, galería, disparador grande al alcance del pulgar y cámara normal */}
+      <div className="absolute inset-x-0 bottom-0 space-y-3 px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="mx-auto flex max-w-sm items-center gap-2 text-xs font-semibold text-white">
+          <span className="shrink-0">Nitidez</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25" role="meter" aria-label="Nitidez" aria-valuenow={Math.round(Math.min(nitidez, 1.5) * 100)} aria-valuemin={0} aria-valuemax={150}>
+            <div className={`h-full rounded-full transition-all ${nitidez >= 1 ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${Math.min(nitidez / 1.5, 1) * 100}%` }} />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+        <button className="flex w-24 flex-col items-center gap-1 text-xs font-semibold text-white" onClick={onGaleria} aria-label="Subir desde la galería">
+          <span className="flex size-11 items-center justify-center rounded-full bg-black/50"><ImageUp className="size-6" /></span>
+          Galería
+        </button>
         <button
           className={`flex size-20 shrink-0 items-center justify-center rounded-full border-4 border-white transition ${lista ? "bg-white/90" : "bg-white/25"} disabled:opacity-60`}
           disabled={!lista || capturando}
@@ -422,6 +457,7 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa }: { onCaptura: (b
         <button className="w-24 text-right text-xs font-semibold text-white underline" onClick={onCamaraNativa}>
           Usar cámara normal
         </button>
+        </div>
       </div>
     </div>
   );
