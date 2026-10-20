@@ -4,8 +4,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 type Destino = { id: string; correo: string; nombre: string };
 
 /**
- * Aviso dentro de la app (campana). WhatsApp y correo no se envían desde el servidor:
- * se abren en el dispositivo de quien hace la acción, con el mensaje listo (ver contacto.tsx).
+ * Aviso dentro de la app (campana). WhatsApp no se envía desde el servidor: se abre en el
+ * dispositivo de quien hace la acción, con el mensaje listo (ver contacto.tsx).
  */
 export async function avisar(destinos: Destino[], titulo: string, cuerpo: string, enlace?: string) {
   if (destinos.length === 0) return;
@@ -25,11 +25,8 @@ export async function perfilDestino(id: string): Promise<Destino | null> {
   return data;
 }
 
-/**
- * A quién escribe un comprador: el correo va a todos los administradores (un correo admite
- * varios destinatarios); el WhatsApp, que abre un solo chat, al administrador más antiguo.
- */
-export async function contactoAdministracion(): Promise<{ celular: string | null; correos: string[] }> {
-  const { data } = await supabaseAdmin().from("perfiles").select("celular, correo").eq("rol", "admin").eq("activo", true).order("creado_en");
-  return { celular: data?.[0]?.celular ?? null, correos: (data ?? []).map((a) => a.correo).filter(Boolean) };
+/** A quién escribe un comprador por WhatsApp (abre un solo chat): el administrador más antiguo. */
+export async function contactoAdministracion(): Promise<{ celular: string | null }> {
+  const { data } = await supabaseAdmin().from("perfiles").select("celular").eq("rol", "admin").eq("activo", true).order("creado_en").limit(1);
+  return { celular: data?.[0]?.celular ?? null };
 }

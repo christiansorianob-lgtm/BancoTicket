@@ -11,8 +11,8 @@ import { normalizarPlaca } from "@/lib/lectura/controles";
 import { detalleTiquete } from "@/lib/mensajes";
 import { aprenderDeFoto } from "@/lib/lectura/aprender-guardar";
 
-/** whatsapp/correo/asunto: aviso que se abre listo en el dispositivo para enviarlo al comprador. */
-export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string; correo?: string; asunto?: string };
+/** whatsapp: aviso que se abre listo en WhatsApp para enviarlo al comprador. */
+export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string };
 
 const fallo = (error: string): Resultado => ({ ok: false, error });
 
@@ -83,8 +83,6 @@ export async function aprobarTiquete(id: string): Promise<Resultado> {
     ok: true,
     whatsapp: `Hola ${comprador?.nombre ?? ""}, su tiquete fue APROBADO en BancoTicket:\n\n${detalleDe(tp)}`,
     celular: await celularDe(tp.comprador_id),
-    correo: comprador?.correo,
-    asunto: `BancoTicket: tiquete N° ${tp.numero} de ${extractora} aprobado`,
   };
 }
 
@@ -104,8 +102,6 @@ export async function rechazarTiquete(id: string, motivo: string): Promise<Resul
     ok: true,
     whatsapp: `Hola ${comprador?.nombre ?? ""}, su tiquete fue RECHAZADO en BancoTicket.\nMotivo: ${motivo.trim()}\n\n${detalleDe(tp)}`,
     celular: await celularDe(tp.comprador_id),
-    correo: comprador?.correo,
-    asunto: `BancoTicket: tiquete N° ${tp.numero} de ${extractora} rechazado`,
   };
 }
 
@@ -202,8 +198,6 @@ async function enviarEnlace(anticipoId: string): Promise<Resultado> {
     ok: true,
     enlace,
     celular: await celularDe(a?.comprador_id),
-    correo: comprador?.correo,
-    asunto: `BancoTicket: confirme el ${tipo} recibido`,
     whatsapp: `Hola ${comprador?.nombre ?? ""}, le registré un ${tipo} de ${formatoPesos(a?.monto)}. Por favor confírmelo en BancoTicket: ${enlace}`,
   };
 }

@@ -142,3 +142,6 @@ Al entrar a «Subir» se abre la cámara de una vez. La IA recibe la lista de ex
 
 ### Cambio (2026-10-20): extractoras aprendidas desde una foto
 El administrador ya no escribe plantillas. En «Extractoras» sube la foto de un tiquete y la IA (Claude Opus 5.5, con respaldo de modelo) valida que sea un tiquete, identifica la extractora (NIT, razón social, nombres impresos) y aprende el formato. Una extractora puede tener varios formatos (`formatos_extractora`, migración 0003). La lectura del comprador reconoce la extractora primero por NIT (9 dígitos base) y luego por el nombre que devuelve la IA. Desde «Formatos no reconocidos» se puede aprender un formato con la misma foto.
+
+### Cambio (2026-10-20): solo WhatsApp
+El correo con `mailto:` no abría el cliente de correo en los dispositivos de prueba; por decisión del usuario se quitó. Tras cada acción que avisa a otra persona solo se abre WhatsApp con el mensaje listo (más el aviso dentro de la app).

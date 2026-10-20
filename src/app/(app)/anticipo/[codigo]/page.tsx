@@ -43,7 +43,7 @@ export default async function ConfirmarAnticipo({ params }: PageProps<"/anticipo
       ) : a.vencido ? (
         <Mensaje tono="error">Este enlace venció. Pida a la administradora que le envíe uno nuevo.</Mensaje>
       ) : (
-        <ResponderAnticipo codigo={codigo} tipo={tipo} monto={formatoPesos(a.monto)} nombre={perfil.nombre} celularAdmin={admin.celular} correosAdmin={admin.correos} />
+        <ResponderAnticipo codigo={codigo} tipo={tipo} monto={formatoPesos(a.monto)} nombre={perfil.nombre} celularAdmin={admin.celular} />
       )}
     </div>
   );

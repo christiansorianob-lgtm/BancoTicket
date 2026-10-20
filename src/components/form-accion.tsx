@@ -58,7 +58,7 @@ export function ResultadoAccion({ resultado }: { resultado: Resultado | null }) 
         </div>
       )}
       {resultado.whatsapp && (
-        <AvisoContacto contacto={{ celular: resultado.celular, correos: resultado.correo ? [resultado.correo] : [], asunto: resultado.asunto ?? "BancoTicket", mensaje: resultado.whatsapp }} />
+        <AvisoContacto contacto={{ celular: resultado.celular, mensaje: resultado.whatsapp }} />
       )}
     </div>
   );

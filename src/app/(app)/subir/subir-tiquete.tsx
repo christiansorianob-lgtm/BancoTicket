@@ -31,7 +31,7 @@ const CUADROS_ESTABLES = 3;
  * El comprador solo toma la foto: la cámara se abre de una vez y la IA reconoce la
  * extractora y lee el tiquete. Él compara los datos con el papel y confirma.
  */
-export function SubirTiquete({ celularAdmin, correosAdmin, nombreComprador }: { celularAdmin: string | null; correosAdmin: string[]; nombreComprador: string }) {
+export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: string | null; nombreComprador: string }) {
   const [paso, setPaso] = useState<Paso>("camara");
   const [origen, setOrigen] = useState<"camara" | "galeria">("camara");
   const [foto, setFoto] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export function SubirTiquete({ celularAdmin, correosAdmin, nombreComprador }: { 
           <p className="text-suave">N° {enviado.numero} de {enviado.extractora} quedó pendiente de aprobación. Le llegará un aviso cuando lo revisen.</p>
         </div>
         <AvisoContacto contacto={{
-          celular: celularAdmin, correos: correosAdmin, asunto: `BancoTicket: tiquete N° ${enviado.numero} de ${enviado.extractora} por aprobar`,
+          celular: celularAdmin,
           mensaje: `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:\n\n${enviado.detalle}`,
         }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Subir otro tiquete</button>
@@ -116,7 +116,7 @@ export function SubirTiquete({ celularAdmin, correosAdmin, nombreComprador }: { 
         <CheckCircle2 className="mx-auto size-14 text-alerta" />
         <p className="text-suave">La foto pasó a revisión del administrador. Le avisaremos cuando la registre.</p>
         <AvisoContacto contacto={{
-          celular: celularAdmin, correos: correosAdmin, asunto: "BancoTicket: tiquete para revisión",
+          celular: celularAdmin,
           mensaje: `Hola, soy ${nombreComprador}. Envié a revisión un tiquete${nombreExtractora ? ` de ${nombreExtractora}` : ""} que la app no pudo leer.`,
         }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
