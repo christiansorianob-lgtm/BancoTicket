@@ -10,57 +10,56 @@ import { AvisoContacto } from "@/components/contacto";
 import { detalleTiquete } from "@/lib/mensajes";
 import { enviarARevision, enviarTiquete } from "./acciones";
 
-type Extractora = { id: string; nombre: string };
 type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 type Datos = {
   numero: string; fecha_entrada: string; peso_bruto_kg: number; tara_kg: number;
   neto_impreso_kg: number | null; placa: string | null; conductor: string | null; proveedor: string | null; bascula: string | null;
 };
-/** El tiquete parece de otra extractora: lo que dice el logo y, si está registrada, cuál es. */
-type OtraExtractora = { detectada: string | null; sugeridaId: string | null; sugeridaNombre: string | null };
-type Lectura = { otraExtractora?: OtraExtractora | null } & (
+/** extractora: la que detectó la IA entre las registradas (null si no la reconoció). */
+type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
   | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[] }
   | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined }
 );
 
-type Paso = "elegir" | "camara" | "leyendo" | "resultado" | "enviado" | "revision";
+type Paso = "inicio" | "camara" | "leyendo" | "resultado" | "enviado" | "revision";
 
 const CUADROS_ESTABLES = 3;
 
-export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreComprador }: { extractoras: Extractora[]; celularAdmin: string | null; correosAdmin: string[]; nombreComprador: string }) {
-  const [extractoraId, setExtractoraId] = useState("");
-  const [paso, setPaso] = useState<Paso>("elegir");
+/**
+ * El comprador solo toma la foto: la cámara se abre de una vez y la IA reconoce la
+ * extractora y lee el tiquete. Él compara los datos con el papel y confirma.
+ */
+export function SubirTiquete({ celularAdmin, correosAdmin, nombreComprador }: { celularAdmin: string | null; correosAdmin: string[]; nombreComprador: string }) {
+  const [paso, setPaso] = useState<Paso>("camara");
   const [origen, setOrigen] = useState<"camara" | "galeria">("camara");
   const [foto, setFoto] = useState<string | null>(null);
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState<{ numero: string; extractora: string; detalle: string } | null>(null);
   const [enviando, iniciar] = useTransition();
-  const [aceptoOtraExtractora, setAceptoOtraExtractora] = useState(false);
-  const [ultimaFoto, setUltimaFoto] = useState<{ blob: Blob; desde: "camara" | "galeria" } | null>(null);
   const galeria = useRef<HTMLInputElement>(null);
   const camaraNativa = useRef<HTMLInputElement>(null);
 
-  const extractora = extractoras.find((e) => e.id === extractoraId);
+  const nombreExtractora = lectura?.extractora?.nombre ?? "";
 
   function reiniciar() {
     if (foto) URL.revokeObjectURL(foto);
-    setUltimaFoto(null);
     setFoto(null); setLectura(null); setError(null); setEnviado(null);
-    setPaso("elegir");
+    setPaso("camara");
   }
 
-  async function leer(blob: Blob, desde: "camara" | "galeria", conExtractora = extractoraId) {
-    setUltimaFoto({ blob, desde });
-    setAceptoOtraExtractora(false);
+  function repetirFoto() {
+    setPaso(origen === "camara" ? "camara" : "inicio");
+  }
+
+  async function leer(blob: Blob, desde: "camara" | "galeria") {
     setOrigen(desde);
     setFoto(URL.createObjectURL(blob));
     setPaso("leyendo");
     setError(null);
     const form = new FormData();
     form.set("imagen", new File([blob], blob.type === "image/webp" ? "tiquete.webp" : "tiquete.jpg", { type: blob.type }));
-    form.set("extractora_id", conExtractora);
     form.set("origen", desde);
     try {
       const r = await fetch("/api/leer-tiquete", { method: "POST", body: form });
@@ -70,7 +69,7 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
       setPaso("resultado");
     } catch (e) {
       setError((e as Error).message);
-      setPaso("elegir");
+      setPaso("inicio");
     }
   }
 
@@ -94,9 +93,7 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
         </div>
         <AvisoContacto contacto={{
           celular: celularAdmin, correos: correosAdmin, asunto: `BancoTicket: tiquete N° ${enviado.numero} de ${enviado.extractora} por aprobar`,
-          mensaje: `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:
-
-${enviado.detalle}`,
+          mensaje: `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:\n\n${enviado.detalle}`,
         }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Subir otro tiquete</button>
       </div>
@@ -110,7 +107,7 @@ ${enviado.detalle}`,
         <p className="text-suave">La foto pasó a revisión del administrador. Le avisaremos cuando la registre.</p>
         <AvisoContacto contacto={{
           celular: celularAdmin, correos: correosAdmin, asunto: "BancoTicket: tiquete para revisión",
-          mensaje: `Hola, soy ${nombreComprador}. Envié a revisión un tiquete de ${extractora?.nombre ?? ""} que la app no pudo leer.`,
+          mensaje: `Hola, soy ${nombreComprador}. Envié a revisión un tiquete${nombreExtractora ? ` de ${nombreExtractora}` : ""} que la app no pudo leer.`,
         }} />
         <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
       </div>
@@ -120,7 +117,7 @@ ${enviado.detalle}`,
   if (paso === "camara") {
     return (
       <>
-        <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("elegir")} onCamaraNativa={() => camaraNativa.current?.click()} />
+        <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("inicio")} onCamaraNativa={() => camaraNativa.current?.click()} />
         <input ref={camaraNativa} type="file" accept="image/*" capture="environment" className="hidden"
           onChange={(e) => { desdeArchivo(e.target.files?.[0], "camara"); e.target.value = ""; }} />
       </>
@@ -136,42 +133,6 @@ ${enviado.detalle}`,
     );
   }
 
-  if (paso === "resultado" && lectura?.otraExtractora && !aceptoOtraExtractora) {
-    const otra = lectura.otraExtractora;
-    return (
-      <div className="space-y-4">
-        <div className="tarjeta space-y-3">
-          {foto && <img src={foto} alt="Foto del tiquete" className="w-full rounded-xl border border-borde" />}
-          <Mensaje tono="alerta">
-            <span className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0" />
-              <span>
-                Este tiquete no parece ser de <b>{extractora?.nombre}</b>
-                {otra.detectada ? <>: el logo o encabezado dice <b>«{otra.detectada}»</b></> : ""}. ¿Qué desea hacer?
-              </span>
-            </span>
-          </Mensaje>
-        </div>
-        <div className="grid gap-2">
-          {otra.sugeridaId && (
-            <button className="boton-primario" onClick={() => {
-              setExtractoraId(otra.sugeridaId!);
-              if (ultimaFoto) leer(ultimaFoto.blob, ultimaFoto.desde, otra.sugeridaId!);
-            }}>
-              Leerlo como {otra.sugeridaNombre}
-            </button>
-          )}
-          <button className={otra.sugeridaId ? "boton-secundario" : "boton-primario"} onClick={() => setPaso("elegir")}>
-            Elegir otra extractora
-          </button>
-          <button className="boton-secundario" onClick={() => setAceptoOtraExtractora(true)}>
-            Continuar con {extractora?.nombre} (quedará para revisión)
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (paso === "resultado" && lectura) {
     return (
       <div className="space-y-4">
@@ -180,7 +141,7 @@ ${enviado.detalle}`,
           <div className="space-y-3">
             {lectura.datos && (
               <dl className="grid grid-cols-2 gap-3">
-                <Dato etiqueta="Extractora">{extractora?.nombre}</Dato>
+                <Dato etiqueta="Extractora">{nombreExtractora || "—"}</Dato>
                 <Dato etiqueta="N° tiquete">{lectura.datos.numero}</Dato>
                 <Dato etiqueta="Fecha">{fechaHora(lectura.datos.fecha_entrada)}</Dato>
                 <Dato etiqueta="Placa">{lectura.datos.placa ?? "—"}</Dato>
@@ -206,7 +167,7 @@ ${enviado.detalle}`,
 
         {lectura.ok ? (
           <>
-            <Mensaje tono="alerta">Compare estos datos con el tiquete que tiene en la mano. No se pueden editar: si algo no coincide, tome otra foto.</Mensaje>
+            <Mensaje tono="alerta">Compare estos datos, incluida la extractora, con el tiquete que tiene en la mano. No se pueden editar: si algo no coincide, tome otra foto.</Mensaje>
             {lectura.dudosos.length > 0 && (
               <Mensaje tono="alerta">Puede enviarlo, pero llegará marcado para que el administrador verifique: {lectura.dudosos.join(", ")}. Si prefiere, tome otra foto más nítida.</Mensaje>
             )}
@@ -223,7 +184,7 @@ ${enviado.detalle}`,
                 })}>
                 <CheckCircle2 className="size-5" /> {enviando ? "Enviando…" : "Coincide, enviar"}
               </button>
-              <button className="boton-secundario py-4" disabled={enviando} onClick={() => setPaso(origen === "camara" ? "camara" : "elegir")}>
+              <button className="boton-secundario py-4" disabled={enviando} onClick={repetirFoto}>
                 <RotateCcw className="size-5" /> No coincide, tomar otra foto
               </button>
             </div>
@@ -231,7 +192,7 @@ ${enviado.detalle}`,
         ) : lectura.duplicado ? (
           <>
             <Mensaje tono="error">
-              Este tiquete ya está registrado en {extractora?.nombre}: lo registró {lectura.duplicado.quien} el {fechaHora(lectura.duplicado.cuando)} ({lectura.duplicado.estado}).
+              Este tiquete ya está registrado en {nombreExtractora}: lo registró {lectura.duplicado.quien} el {fechaHora(lectura.duplicado.cuando)} ({lectura.duplicado.estado}).
             </Mensaje>
             <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
           </>
@@ -239,7 +200,7 @@ ${enviado.detalle}`,
           <>
             <Mensaje tono="error">No se pudo leer bien el tiquete: {lectura.motivo}. Repita la foto de frente, con buena luz y el tiquete completo.</Mensaje>
             <div className="grid gap-2 sm:grid-cols-2">
-              <button className="boton-primario" onClick={() => setPaso(origen === "camara" ? "camara" : "elegir")}><RotateCcw className="size-5" /> Tomar otra foto</button>
+              <button className="boton-primario" onClick={repetirFoto}><RotateCcw className="size-5" /> Tomar otra foto</button>
               <button className="boton-secundario" disabled={enviando}
                 onClick={() => iniciar(async () => {
                   const r = await enviarARevision(lectura.tokenRevision);
@@ -254,30 +215,17 @@ ${enviado.detalle}`,
     );
   }
 
+  // Inicio: solo si el comprador cerró la cámara, o si hubo un error.
   return (
     <div className="space-y-4">
       {error && <Mensaje tono="error">{error}</Mensaje>}
       <div className="tarjeta space-y-4">
-        <div>
-          <label htmlFor="extractora" className="etiqueta">1. ¿En qué extractora entregó la fruta?</label>
-          <select id="extractora" className="campo" value={extractoraId} onChange={(e) => setExtractoraId(e.target.value)}>
-            <option value="">Elija la extractora</option>
-            {extractoras.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          {ultimaFoto && extractoraId && (
-            <button className="boton-primario mb-3 w-full" onClick={() => leer(ultimaFoto!.blob, ultimaFoto!.desde)}>
-              Leer la misma foto con {extractora?.nombre}
-            </button>
-          )}
-          <p className="etiqueta">2. Tome la foto del tiquete</p>
-          <button className="boton-primario w-full py-4 text-lg" disabled={!extractoraId} onClick={() => setPaso("camara")}>
-            <Camera className="size-6" /> Abrir cámara
-          </button>
-        </div>
+        <button className="boton-primario w-full py-4 text-lg" onClick={() => setPaso("camara")}>
+          <Camera className="size-6" /> Tomar foto del tiquete
+        </button>
+        <p className="text-center text-sm text-suave">La app reconoce sola la extractora y lee los datos.</p>
         <div className="border-t border-borde pt-3">
-          <button className="w-full text-sm font-medium text-suave underline disabled:opacity-50" disabled={!extractoraId} onClick={() => galeria.current?.click()}>
+          <button className="w-full text-sm font-medium text-suave underline" onClick={() => galeria.current?.click()}>
             <ImageUp className="mr-1 inline size-4" /> Subir una foto desde la galería
           </button>
           <input ref={galeria} type="file" accept="image/*" className="hidden" onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />

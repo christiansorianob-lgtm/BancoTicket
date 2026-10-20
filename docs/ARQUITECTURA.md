@@ -136,3 +136,6 @@ Todo dinero entregado al comprador se registra como **anticipo**; el saldo es la
 
 ### Cambio (2026-10-17): avisos desde el dispositivo
 No hay correo automático (se retiró Brevo). Tras cada acción que avisa a otra persona, la app abre **WhatsApp** con el mensaje escrito y, al volver, el **correo predeterminado del dispositivo** (`mailto:`) con asunto y cuerpo listos; quedan botones de respaldo. El comprador escribe por WhatsApp al administrador más antiguo y por correo a todos los administradores. El aviso dentro de la app (campana) se mantiene.
+
+### Cambio (2026-10-20): el comprador no elige la extractora
+Al entrar a «Subir» se abre la cámara de una vez. La IA recibe la lista de extractoras activas con sus plantillas, identifica la extractora por logo y encabezado (`extractora`, nombre exacto de la lista) y lee con la plantilla de esa extractora. El comprador ve la extractora detectada al confirmar. Si no se reconoce, la foto puede ir a «Formatos no reconocidos» con `extractora_id` nulo y el administrador la elige al registrarla.

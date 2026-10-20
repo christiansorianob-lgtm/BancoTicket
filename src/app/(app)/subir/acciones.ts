@@ -17,7 +17,7 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
     return { ok: false, error: (e as Error).message };
   }
 
-  const aVerificar = [...l.dudosos, ...(l.extractora_impresa ? [`extractora (el tiquete dice ${l.extractora_impresa})`] : [])];
+  const aVerificar = l.dudosos;
   const db = supabaseAdmin();
   const { error } = await db.rpc("registrar_pendiente", {
     p_usuario: perfil.id,
@@ -26,8 +26,7 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
       extractora_id: l.extractora_id,
       imagen_ruta: l.imagen_ruta,
       origen: l.origen,
-      // Va a revisión si la IA no está 100 % segura de algún dato o si el tiquete parece de otra extractora
-      // (no por venir de la galería).
+      // Va a revisión solo si la IA no está 100 % segura de algún dato (no por venir de la galería).
       requiere_revision: aVerificar.length > 0,
       motivo_revision: aVerificar.length > 0 ? `Verificar: ${aVerificar.join(", ")}` : null,
       datos_leidos: l.datos,
