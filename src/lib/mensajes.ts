@@ -9,6 +9,7 @@ export type DetalleTiquete = {
   peso_bruto_kg: number;
   tara_kg: number;
   placa?: string | null;
+  conductor?: string | null;
 };
 
 /** Detalle del tiquete para los mensajes de WhatsApp, correo y avisos (una línea por dato). */
@@ -21,6 +22,7 @@ export function detalleTiquete(t: DetalleTiquete): string {
     t.proveedor && `Proveedor: ${t.proveedor}`,
     `Peso neto: ${formatoToneladas(netoKg / 1000)} (${netoKg.toLocaleString("es-CO")} kg)`,
     t.placa && `Placa: ${t.placa}`,
+    t.conductor && `Conductor: ${t.conductor}`,
   ]
     .filter(Boolean)
     .join("\n");

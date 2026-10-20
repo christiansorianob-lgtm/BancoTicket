@@ -42,6 +42,7 @@ export const AnalisisFormato = z.object({
     peso_neto_kg: z.string().nullable(),
     proveedor: z.string().nullable(),
     placa: z.string().nullable(),
+    conductor: z.string().nullable(),
   }).describe("Los valores de esta foto, tal como están impresos, para que el administrador compruebe lo aprendido"),
 });
 export type AnalisisFormato = z.infer<typeof AnalisisFormato>;

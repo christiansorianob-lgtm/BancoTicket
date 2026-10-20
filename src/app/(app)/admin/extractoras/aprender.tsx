@@ -19,7 +19,7 @@ type Respuesta =
 
 const ETIQUETAS: Record<string, string> = {
   numero: "N° tiquete", fecha_entrada: "Fecha", peso_bruto_kg: "Peso bruto", tara_kg: "Tara",
-  peso_neto_kg: "Peso neto", proveedor: "Proveedor", placa: "Placa",
+  peso_neto_kg: "Peso neto", proveedor: "Proveedor", placa: "Placa", conductor: "Conductor",
 };
 
 /** El administrador solo sube la foto de un tiquete: el sistema aprende la extractora y su formato. */
