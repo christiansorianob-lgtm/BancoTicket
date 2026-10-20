@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
-import { analizarCuadro, nitidezDeFoto, textoDeLado, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
+import { analizarCuadro, nitidezDeFoto, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
@@ -24,8 +24,8 @@ type Lectura = { extractora?: { id: string; nombre: string } | null } & (
 
 type Paso = "inicio" | "camara" | "leyendo" | "resultado" | "enviado" | "revision";
 
-// Todo en verde durante 5 cuadros seguidos (~1,5 s) antes de permitir la foto.
-const CUADROS_ESTABLES = 5;
+// Luz, quietud y enfoque en verde durante 3 cuadros seguidos (~1 s): la foto se toma sola.
+const CUADROS_ESTABLES = 3;
 
 /**
  * El comprador solo toma la foto: la cámara se abre de una vez y la IA reconoce la
@@ -298,25 +298,6 @@ async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: Marco):
   return c;
 }
 
-/** Si el texto del tiquete quedó de lado, gira la foto 90° para que la lectura sea más fácil. */
-function enderezar(c: HTMLCanvasElement): HTMLCanvasElement {
-  const escala = 320 / Math.max(c.width, c.height);
-  const p = document.createElement("canvas");
-  p.width = Math.round(c.width * escala);
-  p.height = Math.round(c.height * escala);
-  const pctx = p.getContext("2d", { willReadFrequently: true })!;
-  pctx.drawImage(c, 0, 0, p.width, p.height);
-  if (!textoDeLado(pctx.getImageData(0, 0, p.width, p.height))) return c;
-  const r = document.createElement("canvas");
-  r.width = c.height;
-  r.height = c.width;
-  const ctx = r.getContext("2d")!;
-  ctx.translate(r.width / 2, r.height / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.drawImage(c, -c.width / 2, -c.height / 2);
-  return r;
-}
-
 function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
   onCaptura: (b: Blob) => void; onCancelar: () => void; onCamaraNativa: () => void; onGaleria: () => void;
 }) {
@@ -369,7 +350,7 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
           previo = r.lum;
           setVerificaciones(r.verificaciones);
           setNitidez(r.nitidez);
-          setEstables((n) => (r.verificaciones.every((x) => x.ok) ? n + 1 : 0));
+          setEstables((n) => (r.verificaciones.every((x) => x.ok || !x.bloquea) ? n + 1 : 0));
         }, 300);
       } catch {
         setErrorCamara("No se pudo abrir la cámara. Revise el permiso de cámara del navegador.");
@@ -384,24 +365,35 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
   }, []);
 
   const lista = estables >= CUADROS_ESTABLES;
-  const primerAviso = verificaciones.find((v) => !v.ok);
+  const primerAviso = verificaciones.find((v) => !v.ok && v.bloquea) ?? verificaciones.find((v) => !v.ok);
+  const esperaHasta = useRef(0);
 
   async function capturar() {
     const v = video.current, caja = contenedor.current;
-    if (!v || !caja || !flujoRef.current) return;
+    if (!v || !caja || !flujoRef.current || capturando) return;
     setCapturando(true);
     setAvisoFoto(null);
     const m = marcoEnVideo(v.videoWidth, v.videoHeight, caja.clientWidth, caja.clientHeight);
-    const c = enderezar(await fotoDelSensor(flujoRef.current, v, m));
-    // Última revisión: la foto que se va a enviar debe estar nítida.
+    // No se gira la foto: la IA lee bien tiquetes de lado y un giro automático equivocado arruinaría una foto buena.
+    const c = await fotoDelSensor(flujoRef.current, v, m);
+    // Revisión decisiva: la foto que se va a enviar, a resolución completa, debe estar nítida.
     if (nitidezDeFoto(c) < 1) {
-      setAvisoFoto("La foto salió borrosa. Sostenga el celular quieto, espere a que enfoque y tómela de nuevo.");
+      setAvisoFoto("La foto salió borrosa. Sostenga el celular quieto: se tomará otra sola.");
       setEstables(0);
+      esperaHasta.current = Date.now() + 1500;
       setCapturando(false);
       return;
     }
     onCaptura(await reducirImagen(c, 2000));
   }
+
+  // Foto automática: apenas se cumplen los mínimos (luz, quieto y enfocado), se toma sola.
+  useEffect(() => {
+    if (!lista || capturando || Date.now() < esperaHasta.current) return;
+    void capturar();
+    // capturar usa refs y el estado actual; basta con reaccionar cuando la cámara queda lista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lista, estables]);
 
   if (errorCamara) {
     return (
@@ -429,7 +421,7 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
           <XCircle className="size-6" />
         </button>
         <p className={`min-w-0 flex-1 rounded-full px-3 py-2 text-center text-sm font-bold text-white ${avisoFoto ? "bg-red-600/90" : lista ? "bg-emerald-600/90" : "bg-red-600/90"}`}>
-          {avisoFoto ?? (lista ? "Lista: toque el botón" : (primerAviso?.aviso ?? "Acomodando la cámara…"))}
+          {capturando ? "Tomando la foto…" : avisoFoto ?? (lista ? "Lista: tomando la foto…" : (primerAviso?.aviso ?? "Acomodando la cámara…"))}
         </p>
       </div>
 
@@ -448,7 +440,7 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
         </button>
         <button
           className={`flex size-20 shrink-0 items-center justify-center rounded-full border-4 border-white transition ${lista ? "bg-white/90" : "bg-white/25"} disabled:opacity-60`}
-          disabled={!lista || capturando}
+          disabled={capturando}
           onClick={capturar}
           aria-label="Tomar foto"
         >

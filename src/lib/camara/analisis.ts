@@ -2,21 +2,22 @@
  * Análisis en vivo de la zona del marco guía, reducida (≈640 px). Todo corre en el
  * navegador; los umbrales son de partida y se ajustan con tiquetes reales.
  */
-export type Verificacion = { clave: string; ok: boolean; aviso: string };
+/** bloquea: si no se cumple, no se toma la foto. Las demás son consejos en pantalla. */
+export type Verificacion = { clave: string; ok: boolean; aviso: string; bloquea: boolean };
 
 export const UMBRALES = {
   brilloMin: 75,
   brilloMax: 205,
   reflejoMax: 0.035, // fracción de píxeles casi blancos saturados
   ladoAnalisis: 640, // px del lado largo para el análisis en vivo (más grande = detecta mejor el desenfoque)
-  // Calibrado con tiquetes reales (2026-10-20): nítidos 328–2.779 a 1000 px y 649–3.333 a 640 px;
-  // la foto borrosa e ilegible de la segunda prueba dio 85 y 233.
-  nitidezMin: 300, // varianza del laplaciano en vivo, a 640 px
+  // Calibrado con tiquetes reales (2026-10-20): nítidos 328–2.779 a 1000 px; la foto borrosa e
+  // ilegible de la segunda prueba dio 85. El video en vivo siempre es menos nítido que la foto
+  // del sensor, así que en vivo se pide poco y la revisión decisiva es la de la foto final.
+  nitidezMin: 120, // varianza del laplaciano en vivo, a 640 px (filtro suave)
   nitidezFotoMin: 200, // varianza del laplaciano de la foto final, a 1000 px (revisión decisiva)
-  movimientoMax: 6, // diferencia media de luz entre cuadros seguidos: más = el celular se mueve
+  movimientoMax: 10, // diferencia media de luz entre cuadros seguidos: más = el celular se mueve
   papelMin: 0.45, // fracción del marco ocupada por el tiquete
   bordeMax: 0.92, // si el papel cubre todo el borde del marco, el tiquete se sale
-  deLado: 1.35, // dominio de gradientes horizontales sobre verticales = texto de lado
 };
 
 function luminancia(img: ImageData): Float32Array {
@@ -85,12 +86,14 @@ export function analizarCuadro(img: ImageData, previo?: Float32Array | null) {
 
   const u = UMBRALES;
   const verificaciones: Verificacion[] = [
-    { clave: "luz", ok: brillo >= u.brilloMin && brillo <= u.brilloMax, aviso: brillo < u.brilloMin ? "Poca luz" : "Demasiada luz" },
-    { clave: "reflejos", ok: saturados / n <= u.reflejoMax, aviso: "Hay brillo sobre el papel: inclina un poco el tiquete" },
-    { clave: "distancia", ok: fraccionPapel >= u.papelMin, aviso: "Acércate: el tiquete debe llenar el marco" },
-    { clave: "encuadre", ok: fraccionBorde <= u.bordeMax, aviso: "Aléjate un poco: el tiquete debe verse completo dentro del marco" },
-    { clave: "quieto", ok: movimiento <= u.movimientoMax, aviso: "Sostén el celular quieto" },
-    { clave: "enfoque", ok: nitidez >= u.nitidezMin, aviso: "Imagen borrosa: espera a que enfoque o acércate un poco" },
+    // Bloquean: sin esto la foto no sirve.
+    { clave: "luz", bloquea: true, ok: brillo >= u.brilloMin && brillo <= u.brilloMax, aviso: brillo < u.brilloMin ? "Poca luz" : "Demasiada luz" },
+    { clave: "quieto", bloquea: true, ok: movimiento <= u.movimientoMax, aviso: "Sostén el celular quieto" },
+    { clave: "enfoque", bloquea: true, ok: nitidez >= u.nitidezMin, aviso: "Imagen borrosa: espera a que enfoque" },
+    // Consejos: la detección del papel es aproximada y no debe impedir la foto.
+    { clave: "reflejos", bloquea: false, ok: saturados / n <= u.reflejoMax, aviso: "Hay brillo sobre el papel: inclina un poco el tiquete" },
+    { clave: "distancia", bloquea: false, ok: fraccionPapel >= u.papelMin, aviso: "Acércate: el tiquete debe llenar el marco" },
+    { clave: "encuadre", bloquea: false, ok: fraccionBorde <= u.bordeMax, aviso: "Aléjate un poco: el tiquete debe verse completo" },
   ];
   return { verificaciones, lum, nitidez: nitidez / u.nitidezMin };
 }
@@ -108,22 +111,4 @@ export function nitidezDeFoto(fuente: CanvasImageSource & { width: number; heigh
   ctx.drawImage(fuente, 0, 0, c.width, c.height);
   const lum = luminancia(ctx.getImageData(0, 0, c.width, c.height));
   return varianzaLaplaciano(lum, c.width, c.height) / UMBRALES.nitidezFotoMin;
-}
-
-/**
- * El celular se puede sostener como sea: si el texto quedó de lado (las líneas van de
- * arriba abajo), la foto se gira antes de enviarla. Compara gradientes en la zona central.
- */
-export function textoDeLado(img: ImageData): boolean {
-  const { width: w, height: h, data } = img;
-  const lum = (i: number) => 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
-  let gx = 0, gy = 0;
-  for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y++) {
-    for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x++) {
-      const i = y * w + x;
-      gx += Math.abs(lum(i + 1) - lum(i - 1));
-      gy += Math.abs(lum(i + w) - lum(i - w));
-    }
-  }
-  return gx > gy * UMBRALES.deLado;
 }
