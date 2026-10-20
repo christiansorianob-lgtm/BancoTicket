@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
+import { registrarConsumo } from "./consumo";
 
 // Aprender un formato pasa pocas veces y debe quedar bien: se usa el modelo más capaz.
 const MODELO = "claude-opus-5-5";
@@ -67,6 +68,7 @@ La foto puede venir girada, con sellos o firmas encima.`;
 export async function analizarFormato(
   imagen: { base64: string; tipo: "image/webp" | "image/jpeg" },
   conocidas: ExtractoraConocida[],
+  usuarioId?: string,
 ): Promise<AnalisisFormato> {
   const cliente = new Anthropic();
   const registradas = conocidas.length
@@ -90,6 +92,8 @@ export async function analizarFormato(
       },
     ],
   });
+  // Solo guarda los tokens que la IA ya informó: no hace llamadas adicionales.
+  await registrarConsumo("aprendizaje", MODELO, respuesta.usage, usuarioId);
 
   if (respuesta.stop_reason === "refusal") throw new Error("La IA no pudo analizar esta imagen");
   if (respuesta.stop_reason === "max_tokens" || !respuesta.parsed_output) throw new Error("Análisis incompleto; intente de nuevo");

@@ -2,6 +2,7 @@
 
 | Fecha | Qué se hizo |
 |---|---|
+| 2026-10-20 | La cámara solo dispara si ve texto impreso (bloques de fondo claro + tinta + bordes; tiquetes 0,31–0,59, no tiquetes 0–0,04, mínimo 0,15). La galería aplica la misma revisión: lo que no parece tiquete no se envía a la IA. Registro de consumo de IA (migración 0004, aplicada) y tarjeta «Consumo de IA este mes» en el panel. **Regla del usuario:** avisar antes de cualquier cambio que aumente el consumo de IA. |
 | 2026-10-20 | **Decisión del usuario:** se quita el correo (mailto no abría el correo predeterminado); solo WhatsApp. |
 | 2026-10-20 | La cámara quedó demasiado exigente: ahora solo bloquean luz, quietud y enfoque en vivo (nitidez 120, movimiento 10); distancia, encuadre y reflejos son consejos. La foto se toma sola al cumplir los mínimos; la revisión decisiva es la nitidez de la foto final (200 a 1000 px), y si falla se reintenta sola. Se quitó el giro automático: la regla de «texto de lado» marcaba también tiquetes derechos (probado con fotos reales). La IA ya no marca un dato como dudoso solo por foto girada o sellos cerca. |
 | 2026-10-20 | Cámara más exigente con la nitidez: análisis en vivo a 640 px, detección de movimiento, 5 cuadros estables y revisión final de la foto a 1000 px (también galería y cámara normal). Umbrales calibrados con tiquetes reales: en vivo 300, foto final 200 (borrosa: 85/233; nítidas ≥ 328/649). Botón de galería y barra de nitidez dentro de la cámara. |

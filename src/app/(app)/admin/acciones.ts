@@ -298,7 +298,7 @@ export async function eliminarFormatoExtractora(formatoId: string): Promise<Resu
 
 /** Desde «Formatos no reconocidos»: aprende la extractora y el formato con la misma foto. */
 export async function aprenderDesdeNoReconocido(formatoId: string): Promise<Resultado> {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await supabaseServidor();
   const { data: f } = await supabase.from("formatos_no_reconocidos").select("imagen_ruta").eq("id", formatoId).single();
   if (!f?.imagen_ruta) return fallo("Esta revisión no tiene foto");
@@ -312,7 +312,7 @@ export async function aprenderDesdeNoReconocido(formatoId: string): Promise<Resu
   const subida = await db.storage.from("tiquetes").upload(ruta, bytes, { contentType: tipo });
   if (subida.error) return fallo("No se pudo copiar la foto");
   try {
-    const r = await aprenderDeFoto({ bytes, tipo, ruta });
+    const r = await aprenderDeFoto({ bytes, tipo, ruta }, admin.id);
     if (!r.ok) {
       await db.storage.from("tiquetes").remove([ruta]);
       return fallo(r.motivo);

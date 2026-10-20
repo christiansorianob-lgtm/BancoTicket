@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { LecturaCruda, type ExtractoraParaLeer, type LectorTiquete } from "./tipos";
+import { registrarConsumo } from "./consumo";
 
 const MODELO = "claude-haiku-5-5";
 
@@ -28,7 +29,7 @@ Extractora: primero identifica qué empresa emitió el tiquete (la que pesa la f
 export class LectorIA implements LectorTiquete {
   private cliente = new Anthropic();
 
-  async leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: ExtractoraParaLeer[]) {
+  async leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: ExtractoraParaLeer[], usuarioId?: string) {
     const lista = JSON.stringify(extractoras);
 
     const respuesta = await this.cliente.messages.parse({
@@ -46,6 +47,8 @@ export class LectorIA implements LectorTiquete {
         },
       ],
     });
+    // Solo guarda los tokens que la IA ya informó: no hace llamadas adicionales.
+    await registrarConsumo("lectura", MODELO, respuesta.usage, usuarioId);
 
     if (respuesta.stop_reason === "refusal") throw new Error("El lector rechazó la imagen");
     if (respuesta.stop_reason === "max_tokens" || !respuesta.parsed_output) throw new Error("Lectura incompleta");

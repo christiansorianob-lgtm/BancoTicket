@@ -19,6 +19,7 @@ Next.js (App Router, TypeScript) + Tailwind 4 + Supabase (Postgres, Auth, Storag
 - Claves (`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`) solo en variables de entorno del servidor; nunca con prefijo `NEXT_PUBLIC_`.
 - Fechas en UTC en la base; se muestran con `America/Bogota` y `es-CO` (usar `src/lib/fechas.ts`).
 - Valores pendientes de decisión van en la tabla `configuracion`, no en el código.
+- **Consumo de IA:** cualquier cambio que agregue llamadas a la IA o aumente sus tokens se consulta con el usuario antes. Cada llamada se registra en `consumo_ia`.
 
 ## Entorno
 Windows; la ruta del proyecto tiene un espacio (`C:\PROYECTOS WEB\BANCOTICKET`): usar comillas en comandos.

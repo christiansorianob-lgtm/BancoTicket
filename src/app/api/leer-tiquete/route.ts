@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     cruda = await lectorConfigurado().leer(
       { base64: bytes.toString("base64"), tipo: imagen.type as (typeof TIPOS)[number] },
       extractoras.map(({ nombre, nit, nombres_impresos, formatos }) => ({ nombre, nit, nombres_impresos, formatos: formatos.map((f) => f.plantilla) })),
+      perfil.id,
     );
   } catch (e) {
     console.error("Fallo de lectura", e);

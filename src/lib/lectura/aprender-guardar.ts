@@ -34,9 +34,9 @@ export async function extractorasConocidas(): Promise<ExtractoraConocida[]> {
  * la extractora (por NIT y nombres) y aprende el formato. Crea la extractora si es nueva y
  * agrega el formato si es distinto a los que ya conocía.
  */
-export async function aprenderDeFoto(foto: { bytes: Buffer; tipo: "image/webp" | "image/jpeg"; ruta: string }): Promise<ResultadoAprendizaje> {
+export async function aprenderDeFoto(foto: { bytes: Buffer; tipo: "image/webp" | "image/jpeg"; ruta: string }, usuarioId?: string): Promise<ResultadoAprendizaje> {
   const conocidas = await extractorasConocidas();
-  const a = await analizarFormato({ base64: foto.bytes.toString("base64"), tipo: foto.tipo }, conocidas);
+  const a = await analizarFormato({ base64: foto.bytes.toString("base64"), tipo: foto.tipo }, conocidas, usuarioId);
   if (!a.es_tiquete) {
     return { ok: false, motivo: a.motivo_rechazo ?? "La imagen no parece un tiquete de báscula. Revise que sea la foto correcta." };
   }

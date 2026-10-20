@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
-import { analizarCuadro, nitidezDeFoto, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
+import { analizarCuadro, nitidezDeFoto, pareceDocumento, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
@@ -84,7 +84,12 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
       setPaso("inicio");
       return;
     }
-    // Misma exigencia de nitidez que la cámara guiada.
+    // Mismas revisiones que la cámara guiada, antes de gastar una lectura de la IA.
+    if (!pareceDocumento(img)) {
+      setError("La imagen no parece un tiquete (no se ve texto impreso). Elija la foto del tiquete.");
+      setPaso("inicio");
+      return;
+    }
     if (nitidezDeFoto(img) < 1) {
       setError("La foto está borrosa y no se podría leer bien. Tómela de nuevo con el celular quieto y el tiquete enfocado.");
       setPaso("inicio");
@@ -377,8 +382,12 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
     // No se gira la foto: la IA lee bien tiquetes de lado y un giro automático equivocado arruinaría una foto buena.
     const c = await fotoDelSensor(flujoRef.current, v, m);
     // Revisión decisiva: la foto que se va a enviar, a resolución completa, debe estar nítida.
-    if (nitidezDeFoto(c) < 1) {
-      setAvisoFoto("La foto salió borrosa. Sostenga el celular quieto: se tomará otra sola.");
+    // Sin texto impreso no se gasta una lectura de la IA.
+    const fallo = !pareceDocumento(c)
+      ? "No se ve un tiquete en la foto. Apunte la cámara al tiquete: se tomará otra sola."
+      : nitidezDeFoto(c) < 1 ? "La foto salió borrosa. Sostenga el celular quieto: se tomará otra sola." : null;
+    if (fallo) {
+      setAvisoFoto(fallo);
       setEstables(0);
       esperaHasta.current = Date.now() + 1500;
       setCapturando(false);

@@ -48,5 +48,5 @@ export type ExtractoraParaLeer = { nombre: string; nit: string | null; nombres_i
 /** Proveedor de lectura intercambiable (IA por API u OCR gratuito). */
 export interface LectorTiquete {
   /** La IA identifica la extractora entre las registradas y lee con el formato que corresponda. */
-  leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: ExtractoraParaLeer[]): Promise<LecturaCruda>;
+  leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: ExtractoraParaLeer[], usuarioId?: string): Promise<LecturaCruda>;
 }

@@ -16,6 +16,9 @@ export const UMBRALES = {
   nitidezMin: 120, // varianza del laplaciano en vivo, a 640 px (filtro suave)
   nitidezFotoMin: 200, // varianza del laplaciano de la foto final, a 1000 px (revisión decisiva)
   movimientoMax: 10, // diferencia media de luz entre cuadros seguidos: más = el celular se mueve
+  // Fracción de bloques con texto impreso (fondo claro + trazos oscuros + bordes). Calibrado con
+  // fotos reales (2026-10-20): tiquetes 0,31–0,59; mantel, teclado, telas y fondos 0–0,04.
+  textoMin: 0.15,
   papelMin: 0.45, // fracción del marco ocupada por el tiquete
   bordeMax: 0.92, // si el papel cubre todo el borde del marco, el tiquete se sale
 };
@@ -42,6 +45,49 @@ function varianzaLaplaciano(lum: Float32Array, w: number, h: number): number {
   if (cuenta === 0) return 0;
   const media = suma / cuenta;
   return suma2 / cuenta - media * media;
+}
+
+/**
+ * ¿Hay un documento impreso? Divide la imagen en bloques de 32 px y cuenta los que tienen
+ * fondo claro (con cualquier tinte), trazos oscuros y bordes nítidos: letras sobre papel.
+ * Devuelve la fracción de bloques con texto. Corre en el celular, sin costo de IA.
+ */
+function fraccionTexto(lum: Float32Array, w: number, h: number): number {
+  const B = 32;
+  const hist = new Uint16Array(256);
+  let total = 0, conTexto = 0;
+  for (let by = 1; by + B < h - 1; by += B) {
+    for (let bx = 1; bx + B < w - 1; bx += B) {
+      total++;
+      hist.fill(0);
+      for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++) hist[Math.min(255, lum[y * w + x] | 0)]++;
+      let acumulado = 0, mediana = 0;
+      while (mediana < 255 && acumulado + hist[mediana] < (B * B) / 2) acumulado += hist[mediana++];
+      if (mediana < 110) continue; // sin fondo claro no es papel
+      let oscuros = 0, bordes = 0;
+      for (let y = by; y < by + B; y++) {
+        for (let x = bx; x < bx + B; x++) {
+          const i = y * w + x;
+          if (lum[i] < mediana - 45) oscuros++;
+          if (Math.abs(4 * lum[i] - lum[i - 1] - lum[i + 1] - lum[i - w] - lum[i + w]) > 60) bordes++;
+        }
+      }
+      const fo = oscuros / (B * B), fb = bordes / (B * B);
+      if (fo > 0.02 && fo < 0.45 && fb > 0.03) conTexto++;
+    }
+  }
+  return total ? conTexto / total : 0;
+}
+
+/** Para la foto final o una imagen de la galería: ¿parece un documento impreso? */
+export function pareceDocumento(fuente: CanvasImageSource & { width: number; height: number }): boolean {
+  const escala = Math.min(1, UMBRALES.ladoAnalisis / Math.max(fuente.width, fuente.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(fuente.width * escala);
+  c.height = Math.round(fuente.height * escala);
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(fuente, 0, 0, c.width, c.height);
+  return fraccionTexto(luminancia(ctx.getImageData(0, 0, c.width, c.height)), c.width, c.height) >= UMBRALES.textoMin;
 }
 
 /**
@@ -87,6 +133,7 @@ export function analizarCuadro(img: ImageData, previo?: Float32Array | null) {
   const u = UMBRALES;
   const verificaciones: Verificacion[] = [
     // Bloquean: sin esto la foto no sirve.
+    { clave: "tiquete", bloquea: true, ok: fraccionTexto(lum, w, h) >= u.textoMin, aviso: "Apunte la cámara a un tiquete: no se ve texto impreso" },
     { clave: "luz", bloquea: true, ok: brillo >= u.brilloMin && brillo <= u.brilloMax, aviso: brillo < u.brilloMin ? "Poca luz" : "Demasiada luz" },
     { clave: "quieto", bloquea: true, ok: movimiento <= u.movimientoMax, aviso: "Sostén el celular quieto" },
     { clave: "enfoque", bloquea: true, ok: nitidez >= u.nitidezMin, aviso: "Imagen borrosa: espera a que enfoque" },

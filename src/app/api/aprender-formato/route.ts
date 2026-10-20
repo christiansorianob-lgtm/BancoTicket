@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   if (subida.error) return NextResponse.json({ error: "No se pudo guardar la foto" }, { status: 500 });
 
   try {
-    const r = await aprenderDeFoto({ bytes, tipo: imagen.type as (typeof TIPOS)[number], ruta });
+    const r = await aprenderDeFoto({ bytes, tipo: imagen.type as (typeof TIPOS)[number], ruta }, perfil.id);
     if (!r.ok) await db.storage.from("tiquetes").remove([ruta]);
     revalidatePath("/admin/extractoras");
     return NextResponse.json(r);
