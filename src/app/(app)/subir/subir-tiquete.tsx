@@ -6,7 +6,7 @@ import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
-import { AvisoContacto } from "@/components/contacto";
+import { AvisoContacto, abrirWhatsApp } from "@/components/contacto";
 import { detalleTiquete } from "@/lib/mensajes";
 import { enviarARevision, enviarTiquete } from "./acciones";
 
@@ -22,7 +22,7 @@ type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined }
 );
 
-type Paso = "inicio" | "camara" | "leyendo" | "resultado" | "enviado" | "revision";
+type Paso = "inicio" | "camara" | "leyendo" | "resultado";
 
 // Luz, quietud y enfoque en verde durante 3 cuadros seguidos (~1 s): la foto se toma sola.
 const CUADROS_ESTABLES = 3;
@@ -37,7 +37,8 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
   const [foto, setFoto] = useState<string | null>(null);
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState<{ numero: string; extractora: string; detalle: string } | null>(null);
+  // Lo último que se envió: se muestra en la pantalla de subir, con el WhatsApp de respaldo.
+  const [listo, setListo] = useState<{ texto: string; mensaje: string } | null>(null);
   const [enviando, iniciar] = useTransition();
   const galeria = useRef<HTMLInputElement>(null);
   const camaraNativa = useRef<HTMLInputElement>(null);
@@ -46,8 +47,17 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
 
   function reiniciar() {
     if (foto) URL.revokeObjectURL(foto);
-    setFoto(null); setLectura(null); setError(null); setEnviado(null);
+    setFoto(null); setLectura(null); setError(null); setListo(null);
     setPaso("camara");
+  }
+
+  /** Tras enviar: abre la app de WhatsApp con el mensaje y vuelve a la pantalla de subir tiquete. */
+  function terminar(texto: string, mensaje: string) {
+    abrirWhatsApp({ celular: celularAdmin, mensaje });
+    if (foto) URL.revokeObjectURL(foto);
+    setFoto(null); setLectura(null); setError(null);
+    setListo({ texto, mensaje });
+    setPaso("inicio");
   }
 
   function repetirFoto() {
@@ -96,37 +106,6 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
       return;
     }
     await leer(await reducirImagen(img, 2000), desde);
-  }
-
-  if (paso === "enviado" && enviado) {
-    return (
-      <div className="tarjeta space-y-4 text-center">
-        <CheckCircle2 className="mx-auto size-14 text-ok" />
-        <div>
-          <p className="text-lg font-bold text-profundo">Tiquete recibido</p>
-          <p className="text-suave">N° {enviado.numero} de {enviado.extractora} quedó pendiente de aprobación. Le llegará un aviso cuando lo revisen.</p>
-        </div>
-        <AvisoContacto contacto={{
-          celular: celularAdmin,
-          mensaje: `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:\n\n${enviado.detalle}`,
-        }} />
-        <button className="boton-secundario w-full" onClick={reiniciar}>Subir otro tiquete</button>
-      </div>
-    );
-  }
-
-  if (paso === "revision") {
-    return (
-      <div className="tarjeta space-y-4 text-center">
-        <CheckCircle2 className="mx-auto size-14 text-alerta" />
-        <p className="text-suave">La foto pasó a revisión del administrador. Le avisaremos cuando la registre.</p>
-        <AvisoContacto contacto={{
-          celular: celularAdmin,
-          mensaje: `Hola, soy ${nombreComprador}. Envié a revisión un tiquete${nombreExtractora ? ` de ${nombreExtractora}` : ""} que la app no pudo leer.`,
-        }} />
-        <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
-      </div>
-    );
   }
 
   if (paso === "camara") {
@@ -198,7 +177,11 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
               <button className="boton-primario py-4" disabled={enviando}
                 onClick={() => iniciar(async () => {
                   const r = await enviarTiquete(lectura.token);
-                  if (r.ok) { setEnviado({ ...r, detalle: detalleTiquete({ ...lectura.datos, extractora: r.extractora }) }); setPaso("enviado"); } else setError(r.error);
+                  if (!r.ok) return setError(r.error);
+                  terminar(
+                    `Tiquete N° ${r.numero} de ${r.extractora} enviado. Queda pendiente de aprobación.`,
+                    `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:\n\n${detalleTiquete({ ...lectura.datos, extractora: r.extractora })}`,
+                  );
                 })}>
                 <CheckCircle2 className="size-5" /> {enviando ? "Enviando…" : "Coincide, enviar"}
               </button>
@@ -222,7 +205,11 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
               <button className="boton-secundario" disabled={enviando}
                 onClick={() => iniciar(async () => {
                   const r = await enviarARevision(lectura.tokenRevision);
-                  if (r.ok) setPaso("revision"); else setError(r.error ?? "Error");
+                  if (!r.ok) return setError(r.error ?? "Error");
+                  terminar(
+                    "La foto pasó a revisión del administrador. Le avisaremos cuando la registre.",
+                    `Hola, soy ${nombreComprador}. Envié a revisión un tiquete${nombreExtractora ? ` de ${nombreExtractora}` : ""} que la app no pudo leer.`,
+                  );
                 })}>
                 Enviar a revisión del administrador
               </button>
@@ -233,10 +220,17 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
     );
   }
 
-  // Inicio: solo si el comprador cerró la cámara, o si hubo un error.
+  // Inicio: después de enviar, si el comprador cerró la cámara o si hubo un error.
   return (
     <div className="space-y-4">
       {error && <Mensaje tono="error">{error}</Mensaje>}
+      {listo && (
+        <div className="tarjeta space-y-3">
+          <Mensaje tono="ok"><span className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-5 shrink-0" /> {listo.texto}</span></Mensaje>
+          <p className="text-xs text-suave">Si WhatsApp no se abrió, toque el botón:</p>
+          <AvisoContacto contacto={{ celular: celularAdmin, mensaje: listo.mensaje }} automatico={false} />
+        </div>
+      )}
       <div className="tarjeta space-y-4">
         <button className="boton-primario w-full py-4 text-lg" onClick={() => setPaso("camara")}>
           <Camera className="size-6" /> Tomar foto del tiquete
