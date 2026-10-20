@@ -36,7 +36,7 @@ export default async function InicioComprador() {
               <li key={a.id}>Anticipo de {formatoPesos(a.monto)} del {fecha(a.fecha)}</li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-suave">Ábralo desde el enlace que le llegó por WhatsApp o correo.</p>
+          <Link href="/anticipos" className="boton-primario mt-3 w-full">Revisar y confirmar</Link>
         </section>
       )}
 

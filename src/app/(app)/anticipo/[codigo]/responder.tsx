@@ -3,9 +3,12 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Mensaje } from "@/components/ui";
 import { AvisoContacto } from "@/components/contacto";
-import { responderAnticipo } from "./acciones";
+import { responderAnticipo, responderAnticipoPorId } from "./acciones";
 
-export function ResponderAnticipo({ codigo, tipo, monto, nombre, celularAdmin }: { codigo: string; tipo: string; monto: string; nombre: string; celularAdmin: string | null }) {
+/** Confirmar o disputar un anticipo: por el enlace (codigo) o desde la app del comprador (id). */
+export function ResponderAnticipo({ codigo, id, tipo, monto, nombre, celularAdmin }: {
+  codigo?: string; id?: string; tipo: string; monto: string; nombre: string; celularAdmin: string | null;
+}) {
   const [disputa, setDisputa] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [resultado, setResultado] = useState<"confirmado" | "en_disputa" | null>(null);
@@ -15,7 +18,7 @@ export function ResponderAnticipo({ codigo, tipo, monto, nombre, celularAdmin }:
   function responder(acepta: boolean) {
     setError(null);
     iniciar(async () => {
-      const r = await responderAnticipo(codigo, acepta, motivo);
+      const r = id ? await responderAnticipoPorId(id, acepta, motivo) : await responderAnticipo(codigo!, acepta, motivo);
       if (r.ok) setResultado(acepta ? "confirmado" : "en_disputa");
       else setError(r.error ?? "Error");
     });
@@ -49,8 +52,8 @@ export function ResponderAnticipo({ codigo, tipo, monto, nombre, celularAdmin }:
         </>
       ) : (
         <div className="tarjeta space-y-3">
-          <label className="etiqueta" htmlFor="motivo">¿Qué no coincide?</label>
-          <textarea id="motivo" className="campo min-h-24" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+          <label className="etiqueta" htmlFor={`motivo-${id ?? codigo}`}>¿Qué no coincide?</label>
+          <textarea id={`motivo-${id ?? codigo}`} className="campo min-h-24" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
           <div className="grid grid-cols-2 gap-2">
             <button className="boton-secundario" onClick={() => setDisputa(false)}>Atrás</button>
             <button className="boton-peligro" disabled={cargando || !motivo.trim()} onClick={() => responder(false)}>Enviar</button>
