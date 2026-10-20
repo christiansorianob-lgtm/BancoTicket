@@ -1,4 +1,5 @@
 "use server";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { exigirAdmin, correoInterno } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -8,6 +9,7 @@ import { interpretarFechaTiquete } from "@/lib/fechas";
 import { formatoPesos, kilosDesdeTexto, montoDesdeTexto } from "@/lib/numeros";
 import { normalizarPlaca } from "@/lib/lectura/controles";
 import { detalleTiquete } from "@/lib/mensajes";
+import { aprenderDeFoto } from "@/lib/lectura/aprender-guardar";
 
 /** whatsapp/correo/asunto: aviso que se abre listo en el dispositivo para enviarlo al comprador. */
 export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string; correo?: string; asunto?: string };
@@ -275,22 +277,59 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
 // ---------------------------------------------------------------------------
 // Extractoras y formatos
 // ---------------------------------------------------------------------------
+/** Las extractoras se crean al aprender un tiquete; aquí solo se cambia el nombre o se activa/desactiva. */
 export async function guardarExtractora(form: FormData): Promise<Resultado> {
   await exigirAdmin();
   const id = textoODefecto(form.get("id"));
   const nombre = textoODefecto(form.get("nombre"));
+  if (!id) return fallo("Extractora no encontrada");
   if (!nombre) return fallo("Escriba el nombre");
-  let plantilla: unknown = {};
-  const texto = String(form.get("plantilla") ?? "").trim();
-  if (texto) {
-    try { plantilla = JSON.parse(texto); } catch { return fallo("La plantilla debe ser JSON válido"); }
-  }
-  const fila = { nombre, activa: form.get("activa") !== "off", plantilla };
   const supabase = await supabaseServidor();
-  const { error } = id ? await supabase.from("extractoras").update(fila).eq("id", id) : await supabase.from("extractoras").insert(fila);
+  const { error } = await supabase.from("extractoras").update({ nombre, activa: form.get("activa") !== "off" }).eq("id", id);
   if (error) return fallo(error.message.includes("duplicate") ? "Ya existe una extractora con ese nombre" : error.message);
   revalidatePath("/admin/extractoras");
   return { ok: true, mensaje: "Extractora guardada" };
+}
+
+/** Olvida un formato aprendido (por ejemplo, si se aprendió de una foto equivocada). */
+export async function eliminarFormatoExtractora(formatoId: string): Promise<Resultado> {
+  await exigirAdmin();
+  const supabase = await supabaseServidor();
+  const { data } = await supabase.from("formatos_extractora").delete().eq("id", formatoId).select("imagen_ruta");
+  const ruta = data?.[0]?.imagen_ruta;
+  if (ruta) await supabaseAdmin().storage.from("tiquetes").remove([ruta]);
+  revalidatePath("/admin/extractoras");
+  return { ok: true, mensaje: "Formato eliminado" };
+}
+
+/** Desde «Formatos no reconocidos»: aprende la extractora y el formato con la misma foto. */
+export async function aprenderDesdeNoReconocido(formatoId: string): Promise<Resultado> {
+  await exigirAdmin();
+  const supabase = await supabaseServidor();
+  const { data: f } = await supabase.from("formatos_no_reconocidos").select("imagen_ruta").eq("id", formatoId).single();
+  if (!f?.imagen_ruta) return fallo("Esta revisión no tiene foto");
+  const db = supabaseAdmin();
+  const { data: archivo } = await db.storage.from("tiquetes").download(f.imagen_ruta);
+  if (!archivo) return fallo("No se encontró la foto");
+  const tipo = archivo.type === "image/webp" ? "image/webp" : "image/jpeg";
+  const bytes = Buffer.from(await archivo.arrayBuffer());
+  // Copia propia del ejemplo: la foto original sigue siendo el soporte del tiquete.
+  const ruta = `formatos/${randomUUID()}.${tipo === "image/webp" ? "webp" : "jpg"}`;
+  const subida = await db.storage.from("tiquetes").upload(ruta, bytes, { contentType: tipo });
+  if (subida.error) return fallo("No se pudo copiar la foto");
+  try {
+    const r = await aprenderDeFoto({ bytes, tipo, ruta });
+    if (!r.ok) {
+      await db.storage.from("tiquetes").remove([ruta]);
+      return fallo(r.motivo);
+    }
+    if (r.extractora.nueva) await supabase.from("formatos_no_reconocidos").update({ extractora_id: r.extractora.id }).eq("id", formatoId);
+    revalidatePath("/admin", "layout");
+    return { ok: true, mensaje: `Aprendido: ${r.extractora.nombre}${r.extractora.nueva ? " (extractora nueva)" : ""}, ${r.formato.nuevo ? "formato nuevo" : "formato que ya conocía"}. Ya puede registrar el tiquete.` };
+  } catch (e) {
+    await db.storage.from("tiquetes").remove([ruta]);
+    return fallo((e as Error).message);
+  }
 }
 
 /** Registra a mano un tiquete cuya lectura falló; queda pendiente para aprobar. */
@@ -316,15 +355,6 @@ export async function registrarDesdeFormato(formatoId: string, form: FormData): 
   });
   if (error) return fallo(error.message.replace(/^.*TIQUETE_DUPLICADO: /, "Ya existe: "));
   await supabase.from("formatos_no_reconocidos").update({ estado: "resuelto" }).eq("id", formatoId);
-
-  const plantilla = String(form.get("plantilla") ?? "").trim();
-  if (plantilla && f.extractora_id) {
-    try {
-      await supabase.from("extractoras").update({ plantilla: JSON.parse(plantilla) }).eq("id", f.extractora_id);
-    } catch {
-      return { ok: true, mensaje: "Tiquete registrado, pero la plantilla no es JSON válido y no se guardó" };
-    }
-  }
   revalidatePath("/admin", "layout");
   return { ok: true, mensaje: "Tiquete registrado como pendiente" };
 }

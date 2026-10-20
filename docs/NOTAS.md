@@ -2,6 +2,7 @@
 
 | Fecha | Qué se hizo |
 |---|---|
+| 2026-10-20 | **Decisión del usuario:** aprender extractoras y formatos solo con una foto (sin JSON); varios formatos por extractora; NIT como identificador (ej. «NodoLa4» imprime «Sociedad Agrovaspalma S.A.S.»). Migración 0003 aplicada. Base de datos vaciada (se conservaron los 3 usuarios). |
 | 2026-10-20 | **Decisión del usuario:** el comprador ya no elige la extractora; solo toma la foto (la cámara se abre al entrar). La IA detecta la extractora entre las registradas. Se retiró el aviso «no parece de la extractora elegida». |
 | 2026-10-20 | La IA identifica la extractora por logo y encabezado y la compara con la elegida (y con la lista de registradas). Si no coincide: aviso con «Leerlo como X», «Elegir otra extractora» (relee la misma foto) o «Continuar»; si continúa, el tiquete queda marcado «Verificar: extractora». Nombre confirmado de la extractora pendiente: Extractora Lukeoil SAS ZOMAC. Oleoflores: el número del tiquete es la guía de transporte; el código interno identifica al proveedor. Duplicados: se mantiene extractora + número. |
 | 2026-10-17 | **Decisión del usuario:** WhatsApp y correo se abren solos en el dispositivo con el mensaje listo (correo con `mailto:`), sin envío en segundo plano; se retiró Brevo. |

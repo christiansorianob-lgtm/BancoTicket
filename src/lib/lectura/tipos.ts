@@ -14,6 +14,7 @@ export const LecturaCruda = z.object({
   bascula: z.string().nullable(),
   observaciones: z.string().nullable().describe("Problemas de lectura: borroso, tapado por sello, girado, etc."),
   extractora_impresa: z.string().nullable().describe("Nombre de la extractora (empresa que pesa) según el logo o el encabezado del tiquete"),
+  nit_extractora: z.string().nullable().describe("NIT de la extractora tal como está impreso (no el del proveedor); null si no aparece"),
   extractora: z.string().nullable().describe("Nombre EXACTO, tal como aparece en la lista de extractoras registradas, de la extractora que emitió el tiquete; null si no es ninguna de la lista"),
   campos_dudosos: z
     .array(z.enum(["numero_tiquete", "fecha_entrada", "peso_bruto_kg", "tara_kg", "peso_neto_impreso_kg", "placa"]))
@@ -41,18 +42,11 @@ export type ResultadoLectura =
   | { ok: true; datos: DatosTiquete; controles: Control[]; cruda: LecturaCruda; dudosos: string[] }
   | { ok: false; motivo: string; controles: Control[]; cruda: LecturaCruda | null };
 
-export type PlantillaExtractora = {
-  rotulo_numero?: string;
-  sinonimos?: Record<string, string[]>;
-  formato_fecha?: string;
-  notas?: string;
-};
+/** Extractora con todo lo que se aprendió de ella, para que la IA la reconozca y la lea. */
+export type ExtractoraParaLeer = { nombre: string; nit: string | null; nombres_impresos: string[]; formatos: unknown[] };
 
 /** Proveedor de lectura intercambiable (IA por API u OCR gratuito). */
 export interface LectorTiquete {
-  /** La IA identifica la extractora entre las registradas y lee con la plantilla de esa extractora. */
-  leer(
-    imagen: { base64: string; tipo: "image/webp" | "image/jpeg" },
-    extractoras: { nombre: string; plantilla: PlantillaExtractora }[],
-  ): Promise<LecturaCruda>;
+  /** La IA identifica la extractora entre las registradas y lee con el formato que corresponda. */
+  leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: ExtractoraParaLeer[]): Promise<LecturaCruda>;
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { LecturaCruda, type LectorTiquete } from "./tipos";
+import { LecturaCruda, type ExtractoraParaLeer, type LectorTiquete } from "./tipos";
 
 const MODELO = "claude-haiku-5-5";
 
@@ -23,15 +23,13 @@ La foto puede venir girada, con firmas o sellos encima, reflejos u otros papeles
 Si un campo no se ve, devuélvelo como null. Si se ve pero algún carácter es dudoso (borroso, tapado, 6/8/9, 1/7, 0/8, 5/6), da tu mejor lectura y agrega ese campo a "campos_dudosos". "campos_dudosos" solo puede quedar vacío si estás 100 % seguro de cada carácter. Nunca inventes valores; explica los problemas en "observaciones".
 Si la imagen no es un tiquete de báscula, es_tiquete = false.
 
-Extractora: primero identifica por el logo y el encabezado qué empresa emitió el tiquete (la que pesa la fruta, no el proveedor). Elige de la lista de extractoras registradas la que corresponde y devuelve su nombre EXACTO en "extractora". Abreviaturas, tildes y sufijos cuentan como la misma (ej. "Babu" = "Babú Palm Oil Products S.A.S."; "Palnorte" = "Palmicultores del Norte S.A.S."). Luego lee los campos siguiendo la plantilla de ESA extractora. Si no es ninguna de la lista, "extractora" = null y lee los campos con las reglas generales.`;
+Extractora: primero identifica qué empresa emitió el tiquete (la que pesa la fruta, no el proveedor): copia su NIT en "nit_extractora" y su nombre en "extractora_impresa". Compáralos con las extractoras registradas (NIT, nombres impresos, logo) y devuelve en "extractora" el nombre EXACTO de la lista; el nombre de la lista puede ser distinto al impreso (ej. una extractora registrada como "NodoLa4" imprime "Sociedad Agrovaspalma S.A.S."). Luego lee los campos siguiendo el formato de esa extractora que más se parezca al tiquete (puede tener varios). Si no es ninguna de la lista, "extractora" = null y lee con las reglas generales.`;
 
 export class LectorIA implements LectorTiquete {
   private cliente = new Anthropic();
 
-  async leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: { nombre: string; plantilla: object }[]) {
-    const lista = extractoras
-      .map((e) => `- ${e.nombre}${Object.keys(e.plantilla ?? {}).length ? `\n  Plantilla: ${JSON.stringify(e.plantilla)}` : " (sin plantilla)"}`)
-      .join("\n");
+  async leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractoras: ExtractoraParaLeer[]) {
+    const lista = JSON.stringify(extractoras);
 
     const respuesta = await this.cliente.messages.parse({
       model: MODELO,

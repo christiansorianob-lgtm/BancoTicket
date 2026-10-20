@@ -8,6 +8,8 @@ import { lectorConfigurado } from "@/lib/lectura/lector-ia";
 import { aplicarControles } from "@/lib/lectura/controles";
 import { firmar } from "@/lib/lectura/firma";
 import type { LecturaCruda } from "@/lib/lectura/tipos";
+import { extractorasConocidas } from "@/lib/lectura/aprender-guardar";
+import { nitBase } from "@/lib/lectura/aprender";
 
 export const maxDuration = 60;
 
@@ -29,9 +31,12 @@ export async function POST(request: Request) {
   if (imagen.size > MAX_BYTES) return NextResponse.json({ error: "La foto es demasiado grande" }, { status: 400 });
 
   const db = supabaseAdmin();
-  const { data: activas } = await db.from("extractoras").select("id, nombre, plantilla").eq("activa", true).order("nombre");
-  const extractoras = activas ?? [];
-  if (extractoras.length === 0) return NextResponse.json({ error: "No hay extractoras registradas" }, { status: 400 });
+  const { data: activas } = await db.from("extractoras").select("id").eq("activa", true);
+  const ids = new Set((activas ?? []).map((e) => e.id));
+  const extractoras = (await extractorasConocidas()).filter((e) => ids.has(e.id));
+  if (extractoras.length === 0) {
+    return NextResponse.json({ error: "Todavía no hay extractoras registradas. Pida al administrador que suba un tiquete de ejemplo." }, { status: 400 });
+  }
 
   // La foto se guarda de una vez en la carpeta del comprador.
   const bytes = Buffer.from(await imagen.arrayBuffer());
@@ -49,16 +54,17 @@ export async function POST(request: Request) {
   } else try {
     cruda = await lectorConfigurado().leer(
       { base64: bytes.toString("base64"), tipo: imagen.type as (typeof TIPOS)[number] },
-      extractoras.map((e) => ({ nombre: e.nombre, plantilla: e.plantilla ?? {} })),
+      extractoras.map(({ nombre, nit, nombres_impresos, formatos }) => ({ nombre, nit, nombres_impresos, formatos: formatos.map((f) => f.plantilla) })),
     );
   } catch (e) {
     console.error("Fallo de lectura", e);
   }
 
-  // La extractora detectada debe ser una de las registradas.
-  const extractora = cruda?.extractora
-    ? extractoras.find((e) => e.nombre.trim().toLowerCase() === cruda!.extractora!.trim().toLowerCase())
-    : undefined;
+  // La extractora debe ser una de las registradas: primero por NIT impreso, luego por el nombre que devolvió la IA.
+  const nit = nitBase(cruda?.nit_extractora);
+  const extractora =
+    (nit ? extractoras.find((e) => nitBase(e.nit) === nit) : undefined) ??
+    (cruda?.extractora ? extractoras.find((e) => e.nombre.trim().toLowerCase() === cruda!.extractora!.trim().toLowerCase()) : undefined);
   if (cruda?.es_tiquete && !extractora) {
     const dice = cruda.extractora_impresa ? ` (el tiquete dice «${cruda.extractora_impresa}»)` : "";
     const motivo = `No se reconoció la extractora${dice}`;

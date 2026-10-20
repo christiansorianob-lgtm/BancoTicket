@@ -4,13 +4,16 @@ import { fechaHora } from "@/lib/fechas";
 import { Vacio } from "@/components/ui";
 import { FormAccion } from "@/components/form-accion";
 import { CamposTiquete } from "@/components/campos-tiquete";
-import { descartarFormato, registrarDesdeFormato } from "../acciones";
+import { aprenderDesdeNoReconocido, descartarFormato, registrarDesdeFormato } from "../acciones";
 
-/** Lecturas fallidas: el administrador ve la foto y lo leído, registra el tiquete a mano y puede guardar la plantilla. */
+/**
+ * Lecturas fallidas: el administrador puede enseñarle al sistema el formato con la misma
+ * foto (si es una extractora o un formato nuevo) y registrar el tiquete a mano.
+ */
 export default async function Formatos() {
   const supabase = await supabaseServidor();
   const [{ data }, { data: extractoras }] = await Promise.all([
-    supabase.from("formatos_no_reconocidos").select("*, extractoras(nombre, plantilla), perfiles(nombre)").eq("estado", "nuevo").order("creado_en"),
+    supabase.from("formatos_no_reconocidos").select("*, extractoras(nombre), perfiles(nombre)").eq("estado", "nuevo").order("creado_en"),
     supabase.from("extractoras").select("id, nombre").order("nombre"),
   ]);
   const filas = data ?? [];
@@ -20,8 +23,8 @@ export default async function Formatos() {
     <>
       <h1 className="titulo">Formatos no reconocidos ({filas.length})</h1>
       <p className="text-sm text-suave">
-        Tiquetes que la lectura automática no pudo leer. Regístrelos a mano y, si quiere, guarde una plantilla para que los siguientes de esa extractora se lean solos.
-        También puede copiar la foto y el texto leído a una conversación con Claude para que le devuelva la plantilla.
+        Tiquetes que la lectura automática no pudo leer. Si es una extractora nueva o un formato distinto, toque «Aprender este formato»:
+        los siguientes se leerán solos. Luego registre este tiquete a mano.
       </p>
       {filas.length === 0 && <Vacio>No hay formatos por revisar.</Vacio>}
       <ul className="space-y-4">
@@ -39,13 +42,12 @@ export default async function Formatos() {
               </details>
             </div>
             <div className="space-y-3">
-              <p className="font-bold text-profundo">{f.extractoras?.nombre} · {f.perfiles?.nombre} · {fechaHora(f.creado_en)}</p>
+              <p className="font-bold text-profundo">{f.extractoras?.nombre ?? "Extractora sin reconocer"} · {f.perfiles?.nombre} · {fechaHora(f.creado_en)}</p>
+              {f.imagen_ruta && (
+                <FormAccion accion={aprenderDesdeNoReconocido.bind(null, f.id)} boton="Aprender este formato" tonoBoton="secundario" />
+              )}
               <FormAccion accion={registrarDesdeFormato.bind(null, f.id)} boton="Registrar tiquete como pendiente">
-                <CamposTiquete t={{ extractora_id: f.extractora_id }} extractoras={extractoras ?? []} />
-                <label className="block"><span className="etiqueta">Plantilla de la extractora (JSON, opcional)</span>
-                  <textarea name="plantilla" className="campo min-h-24 font-mono text-xs"
-                    defaultValue={f.extractoras?.plantilla && Object.keys(f.extractoras.plantilla).length ? JSON.stringify(f.extractoras.plantilla, null, 2) : ""} />
-                </label>
+                <CamposTiquete t={{ extractora_id: f.extractora_id ?? undefined }} extractoras={extractoras ?? []} />
               </FormAccion>
               <FormAccion accion={descartarFormato.bind(null, f.id)} boton="Descartar" tonoBoton="secundario" confirmar="¿Descartar esta foto?" />
             </div>

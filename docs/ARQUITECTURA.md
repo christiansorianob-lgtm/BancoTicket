@@ -139,3 +139,6 @@ No hay correo automático (se retiró Brevo). Tras cada acción que avisa a otra
 
 ### Cambio (2026-10-20): el comprador no elige la extractora
 Al entrar a «Subir» se abre la cámara de una vez. La IA recibe la lista de extractoras activas con sus plantillas, identifica la extractora por logo y encabezado (`extractora`, nombre exacto de la lista) y lee con la plantilla de esa extractora. El comprador ve la extractora detectada al confirmar. Si no se reconoce, la foto puede ir a «Formatos no reconocidos» con `extractora_id` nulo y el administrador la elige al registrarla.
+
+### Cambio (2026-10-20): extractoras aprendidas desde una foto
+El administrador ya no escribe plantillas. En «Extractoras» sube la foto de un tiquete y la IA (Claude Opus 5.5, con respaldo de modelo) valida que sea un tiquete, identifica la extractora (NIT, razón social, nombres impresos) y aprende el formato. Una extractora puede tener varios formatos (`formatos_extractora`, migración 0003). La lectura del comprador reconoce la extractora primero por NIT (9 dígitos base) y luego por el nombre que devuelve la IA. Desde «Formatos no reconocidos» se puede aprender un formato con la misma foto.
