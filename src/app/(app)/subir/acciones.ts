@@ -17,6 +17,7 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
     return { ok: false, error: (e as Error).message };
   }
 
+  const aVerificar = [...l.dudosos, ...(l.extractora_impresa ? [`extractora (el tiquete dice ${l.extractora_impresa})`] : [])];
   const db = supabaseAdmin();
   const { error } = await db.rpc("registrar_pendiente", {
     p_usuario: perfil.id,
@@ -25,9 +26,10 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
       extractora_id: l.extractora_id,
       imagen_ruta: l.imagen_ruta,
       origen: l.origen,
-      // Solo va a revisión si la IA no está 100 % segura de algún dato (no por venir de la galería).
-      requiere_revision: l.dudosos.length > 0,
-      motivo_revision: l.dudosos.length > 0 ? `Verificar: ${l.dudosos.join(", ")}` : null,
+      // Va a revisión si la IA no está 100 % segura de algún dato o si el tiquete parece de otra extractora
+      // (no por venir de la galería).
+      requiere_revision: aVerificar.length > 0,
+      motivo_revision: aVerificar.length > 0 ? `Verificar: ${aVerificar.join(", ")}` : null,
       datos_leidos: l.datos,
     },
   });
@@ -39,7 +41,7 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
   const { data: ext } = await db.from("extractoras").select("nombre").eq("id", l.extractora_id).single();
   const extractora = ext?.nombre ?? "";
   await avisar(await administradores(), "Tiquete por aprobar",
-    `${perfil.nombre} subió el tiquete N° ${l.datos.numero} de ${extractora}${l.dudosos.length ? ` (verificar: ${l.dudosos.join(", ")})` : ""}.`,
+    `${perfil.nombre} subió el tiquete N° ${l.datos.numero} de ${extractora}${aVerificar.length ? ` (verificar: ${aVerificar.join(", ")})` : ""}.`,
     "/admin/pendientes");
   await avisar([{ id: perfil.id, correo: perfil.correo, nombre: perfil.nombre }], "Tiquete recibido",
     `Recibimos su tiquete N° ${l.datos.numero} de ${extractora}. Queda pendiente de aprobación.`, "/mis-tiquetes");

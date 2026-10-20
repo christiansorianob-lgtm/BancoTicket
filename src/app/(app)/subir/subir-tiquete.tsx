@@ -16,10 +16,13 @@ type Datos = {
   numero: string; fecha_entrada: string; peso_bruto_kg: number; tara_kg: number;
   neto_impreso_kg: number | null; placa: string | null; conductor: string | null; proveedor: string | null; bascula: string | null;
 };
-type Lectura =
+/** El tiquete parece de otra extractora: lo que dice el logo y, si está registrada, cuál es. */
+type OtraExtractora = { detectada: string | null; sugeridaId: string | null; sugeridaNombre: string | null };
+type Lectura = { otraExtractora?: OtraExtractora | null } & (
   | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
   | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[] }
-  | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined };
+  | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined }
+);
 
 type Paso = "elegir" | "camara" | "leyendo" | "resultado" | "enviado" | "revision";
 
@@ -34,6 +37,8 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState<{ numero: string; extractora: string; detalle: string } | null>(null);
   const [enviando, iniciar] = useTransition();
+  const [aceptoOtraExtractora, setAceptoOtraExtractora] = useState(false);
+  const [ultimaFoto, setUltimaFoto] = useState<{ blob: Blob; desde: "camara" | "galeria" } | null>(null);
   const galeria = useRef<HTMLInputElement>(null);
   const camaraNativa = useRef<HTMLInputElement>(null);
 
@@ -41,18 +46,21 @@ export function SubirTiquete({ extractoras, celularAdmin, correosAdmin, nombreCo
 
   function reiniciar() {
     if (foto) URL.revokeObjectURL(foto);
+    setUltimaFoto(null);
     setFoto(null); setLectura(null); setError(null); setEnviado(null);
     setPaso("elegir");
   }
 
-  async function leer(blob: Blob, desde: "camara" | "galeria") {
+  async function leer(blob: Blob, desde: "camara" | "galeria", conExtractora = extractoraId) {
+    setUltimaFoto({ blob, desde });
+    setAceptoOtraExtractora(false);
     setOrigen(desde);
     setFoto(URL.createObjectURL(blob));
     setPaso("leyendo");
     setError(null);
     const form = new FormData();
     form.set("imagen", new File([blob], blob.type === "image/webp" ? "tiquete.webp" : "tiquete.jpg", { type: blob.type }));
-    form.set("extractora_id", extractoraId);
+    form.set("extractora_id", conExtractora);
     form.set("origen", desde);
     try {
       const r = await fetch("/api/leer-tiquete", { method: "POST", body: form });
@@ -124,6 +132,42 @@ ${enviado.detalle}`,
       <div className="tarjeta space-y-3 text-center">
         {foto && <img src={foto} alt="Foto del tiquete" className="mx-auto max-h-72 rounded-xl" />}
         <p className="flex items-center justify-center gap-2 font-semibold text-primario"><Loader2 className="size-5 animate-spin" /> Leyendo el tiquete…</p>
+      </div>
+    );
+  }
+
+  if (paso === "resultado" && lectura?.otraExtractora && !aceptoOtraExtractora) {
+    const otra = lectura.otraExtractora;
+    return (
+      <div className="space-y-4">
+        <div className="tarjeta space-y-3">
+          {foto && <img src={foto} alt="Foto del tiquete" className="w-full rounded-xl border border-borde" />}
+          <Mensaje tono="alerta">
+            <span className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+              <span>
+                Este tiquete no parece ser de <b>{extractora?.nombre}</b>
+                {otra.detectada ? <>: el logo o encabezado dice <b>«{otra.detectada}»</b></> : ""}. ¿Qué desea hacer?
+              </span>
+            </span>
+          </Mensaje>
+        </div>
+        <div className="grid gap-2">
+          {otra.sugeridaId && (
+            <button className="boton-primario" onClick={() => {
+              setExtractoraId(otra.sugeridaId!);
+              if (ultimaFoto) leer(ultimaFoto.blob, ultimaFoto.desde, otra.sugeridaId!);
+            }}>
+              Leerlo como {otra.sugeridaNombre}
+            </button>
+          )}
+          <button className={otra.sugeridaId ? "boton-secundario" : "boton-primario"} onClick={() => setPaso("elegir")}>
+            Elegir otra extractora
+          </button>
+          <button className="boton-secundario" onClick={() => setAceptoOtraExtractora(true)}>
+            Continuar con {extractora?.nombre} (quedará para revisión)
+          </button>
+        </div>
       </div>
     );
   }
@@ -222,6 +266,11 @@ ${enviado.detalle}`,
           </select>
         </div>
         <div>
+          {ultimaFoto && extractoraId && (
+            <button className="boton-primario mb-3 w-full" onClick={() => leer(ultimaFoto!.blob, ultimaFoto!.desde)}>
+              Leer la misma foto con {extractora?.nombre}
+            </button>
+          )}
           <p className="etiqueta">2. Tome la foto del tiquete</p>
           <button className="boton-primario w-full py-4 text-lg" disabled={!extractoraId} onClick={() => setPaso("camara")}>
             <Camera className="size-6" /> Abrir cámara

@@ -13,6 +13,9 @@ export const LecturaCruda = z.object({
   proveedor: z.string().nullable().describe("Proveedor impreso (quien vende la fruta), tal como aparece"),
   bascula: z.string().nullable(),
   observaciones: z.string().nullable().describe("Problemas de lectura: borroso, tapado por sello, girado, etc."),
+  extractora_impresa: z.string().nullable().describe("Nombre de la extractora (empresa que pesa) según el logo o el encabezado del tiquete"),
+  coincide_extractora: z.boolean().describe("true si el tiquete es de la extractora elegida por el comprador (abreviaturas, tildes y sufijos S.A.S. cuentan como coincidencia)"),
+  extractora_sugerida: z.string().nullable().describe("Si no coincide: el nombre EXACTO, tal como aparece en la lista de extractoras registradas, de la que corresponde al tiquete; null si ninguna"),
   campos_dudosos: z
     .array(z.enum(["numero_tiquete", "fecha_entrada", "peso_bruto_kg", "tara_kg", "peso_neto_impreso_kg", "placa"]))
     .describe("Campos que no se leyeron con total certeza (cualquier carácter dudoso). Vacío solo si todo es 100 % seguro."),
@@ -48,5 +51,9 @@ export type PlantillaExtractora = {
 
 /** Proveedor de lectura intercambiable (IA por API u OCR gratuito). */
 export interface LectorTiquete {
-  leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractora: { nombre: string; plantilla: PlantillaExtractora }): Promise<LecturaCruda>;
+  leer(
+    imagen: { base64: string; tipo: "image/webp" | "image/jpeg" },
+    extractora: { nombre: string; plantilla: PlantillaExtractora },
+    registradas: string[],
+  ): Promise<LecturaCruda>;
 }

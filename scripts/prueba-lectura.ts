@@ -28,7 +28,7 @@ igual("Oleoflores", interpretarFechaTiquete("14-octubre-2026 08:34:30"), "2026-1
 igual("Lukeoil", interpretarFechaTiquete("08-09-2026 13:27:50"), "2026-09-08T13:27:50-05:00");
 igual("fecha inválida", interpretarFechaTiquete("31/02/2026"), null);
 
-const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, proveedor: "INVERSIONES AGROPALNORT S.A.S.", bascula: null, observaciones: null, campos_dudosos: [] as LecturaCruda["campos_dudosos"] };
+const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, proveedor: "INVERSIONES AGROPALNORT S.A.S.", bascula: null, observaciones: null, extractora_impresa: "Babú Palm", coincide_extractora: true, extractora_sugerida: null, campos_dudosos: [] as LecturaCruda["campos_dudosos"] };
 const r1 = aplicarControles({ ...base, peso_bruto_kg: "2,070", tara_kg: "680", peso_neto_impreso_kg: "1,390" }, { placaObligatoria: true });
 igual("Palnorte controles ok", r1.ok, true);
 igual("Palnorte neto", r1.ok && r1.datos.peso_bruto_kg - r1.datos.tara_kg, 1390);

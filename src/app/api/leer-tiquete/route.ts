@@ -29,8 +29,9 @@ export async function POST(request: Request) {
   if (imagen.size > MAX_BYTES) return NextResponse.json({ error: "La foto es demasiado grande" }, { status: 400 });
 
   const db = supabaseAdmin();
-  const { data: extractora } = await db.from("extractoras").select("id, nombre, plantilla, activa").eq("id", extractoraId).single();
-  if (!extractora?.activa) return NextResponse.json({ error: "Extractora no válida" }, { status: 400 });
+  const { data: activas } = await db.from("extractoras").select("id, nombre, plantilla").eq("activa", true);
+  const extractora = (activas ?? []).find((e) => e.id === extractoraId);
+  if (!extractora) return NextResponse.json({ error: "Extractora no válida" }, { status: 400 });
 
   // La foto se guarda de una vez en la carpeta del comprador.
   const bytes = Buffer.from(await imagen.arrayBuffer());
@@ -49,10 +50,19 @@ export async function POST(request: Request) {
     cruda = await lectorConfigurado().leer(
       { base64: bytes.toString("base64"), tipo: imagen.type as (typeof TIPOS)[number] },
       { nombre: extractora.nombre, plantilla: extractora.plantilla ?? {} },
+      (activas ?? []).map((e) => e.nombre),
     );
   } catch (e) {
     console.error("Fallo de lectura", e);
   }
+
+  // ¿El tiquete es de la extractora elegida? Si no, el comprador decide si sigue.
+  const sugerida = cruda?.extractora_sugerida
+    ? (activas ?? []).find((e) => e.nombre.toLowerCase() === cruda!.extractora_sugerida!.toLowerCase() && e.id !== extractora.id)
+    : undefined;
+  const otraExtractora = cruda && cruda.es_tiquete && !cruda.coincide_extractora
+    ? { detectada: cruda.extractora_impresa, sugeridaId: sugerida?.id ?? null, sugeridaNombre: sugerida?.nombre ?? null }
+    : null;
 
   const resultado = cruda
     ? aplicarControles(cruda, { placaObligatoria: config.placa_obligatoria })
@@ -63,6 +73,7 @@ export async function POST(request: Request) {
       ok: false,
       motivo: resultado.motivo,
       controles: resultado.controles,
+      otraExtractora,
       tokenRevision: firmar({ ...base, tipo: "revision", cruda: resultado.cruda, motivo: resultado.motivo }),
     });
   }
@@ -72,7 +83,7 @@ export async function POST(request: Request) {
   const { data: duplicado } = await supabase.rpc("buscar_duplicado", { p_extractora: extractora.id, p_numero: resultado.datos.numero });
   if (duplicado && duplicado.length > 0) {
     await db.storage.from("tiquetes").remove([ruta]);
-    return NextResponse.json({ ok: false, duplicado: duplicado[0], datos: resultado.datos, controles: resultado.controles });
+    return NextResponse.json({ ok: false, duplicado: duplicado[0], datos: resultado.datos, controles: resultado.controles, otraExtractora });
   }
 
   const { data: parecidos } = await supabase.rpc("posibles_duplicados", {
@@ -85,7 +96,11 @@ export async function POST(request: Request) {
     datos: resultado.datos,
     controles: resultado.controles,
     dudosos: resultado.dudosos,
+    otraExtractora,
     posiblesDuplicados: parecidos ?? [],
-    token: firmar({ ...base, tipo: "lectura", datos: resultado.datos, dudosos: resultado.dudosos }),
+    token: firmar({
+      ...base, tipo: "lectura", datos: resultado.datos, dudosos: resultado.dudosos,
+      extractora_impresa: otraExtractora ? (otraExtractora.detectada ?? "otra extractora") : null,
+    }),
   });
 }

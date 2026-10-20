@@ -21,12 +21,14 @@ Sinónimos de los campos:
 
 La foto puede venir girada, con firmas o sellos encima, reflejos u otros papeles debajo: lee solo el tiquete.
 Si un campo no se ve, devuélvelo como null. Si se ve pero algún carácter es dudoso (borroso, tapado, 6/8/9, 1/7, 0/8, 5/6), da tu mejor lectura y agrega ese campo a "campos_dudosos". "campos_dudosos" solo puede quedar vacío si estás 100 % seguro de cada carácter. Nunca inventes valores; explica los problemas en "observaciones".
-Si la imagen no es un tiquete de báscula, es_tiquete = false.`;
+Si la imagen no es un tiquete de báscula, es_tiquete = false.
+
+Extractora: identifica por el logo y el encabezado qué empresa emitió el tiquete (la que pesa la fruta, no el proveedor) y compárala con la que eligió el comprador. Abreviaturas, tildes y sufijos cuentan como la misma (ej. "Babu" = "Babú Palm Oil Products S.A.S."; "Palnorte" = "Palmicultores del Norte S.A.S."). Si no coincide, sugiere de la lista de extractoras registradas la que corresponda, con el nombre exacto de la lista.`;
 
 export class LectorIA implements LectorTiquete {
   private cliente = new Anthropic();
 
-  async leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractora: { nombre: string; plantilla: object }) {
+  async leer(imagen: { base64: string; tipo: "image/webp" | "image/jpeg" }, extractora: { nombre: string; plantilla: object }, registradas: string[]) {
     const pista = Object.keys(extractora.plantilla).length
       ? `Plantilla conocida de esta extractora: ${JSON.stringify(extractora.plantilla)}`
       : "No hay plantilla guardada para esta extractora.";
@@ -41,7 +43,10 @@ export class LectorIA implements LectorTiquete {
           role: "user",
           content: [
             { type: "image", source: { type: "base64", media_type: imagen.tipo, data: imagen.base64 } },
-            { type: "text", text: `Extractora elegida por el comprador: ${extractora.nombre}.\n${pista}\nExtrae los campos del tiquete.` },
+            {
+              type: "text",
+              text: `Extractora elegida por el comprador: ${extractora.nombre}.\nExtractoras registradas: ${registradas.join(" | ")}.\n${pista}\nExtrae los campos del tiquete.`,
+            },
           ],
         },
       ],

@@ -5,7 +5,8 @@ import type { DatosTiquete, LecturaCruda } from "./tipos";
 type Base = { comprador_id: string; extractora_id: string; imagen_ruta: string; origen: "camara" | "galeria"; emitida: number };
 
 /** Lectura que pasó los controles: el comprador solo puede confirmarla (no editarla). */
-export type LecturaFirmada = Base & { tipo: "lectura"; datos: DatosTiquete; dudosos: string[] };
+/** extractora_impresa: si no es null, el tiquete parece de otra extractora y el comprador decidió continuar. */
+export type LecturaFirmada = Base & { tipo: "lectura"; datos: DatosTiquete; dudosos: string[]; extractora_impresa: string | null };
 /** Lectura fallida que el comprador decide mandar a revisión del administrador. */
 export type RevisionFirmada = Base & { tipo: "revision"; cruda: LecturaCruda | null; motivo: string };
 
