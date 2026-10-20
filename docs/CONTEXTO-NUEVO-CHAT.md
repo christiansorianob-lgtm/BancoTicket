@@ -19,7 +19,8 @@ Especificación original: `docs/especificacion.pdf` (fuente de verdad del negoci
 
 ## 2. Personas y roles
 
-- **Administradores** (mismos permisos): Christian Soriano (usuario `christian`, celular 3182542939, christiansorianob@gmail.com) e Ingrid (usuario `ingrid`). Ven todo, aprueban/rechazan, fijan precios, registran anticipos, enseñan extractoras.
+- **Administrador** (uno solo): Ingrid (usuario `ingrid`). Ve todo, aprueba/rechaza, fija precios, registra anticipos, enseña extractoras. **Recibe todos los avisos y WhatsApp de los compradores.**
+- **Desarrollador** (uno solo): Christian Soriano (usuario `christian`, celular 3182542939, christiansorianob@gmail.com). Mismos permisos del administrador, pero no recibe avisos de compradores. Rol `desarrollador` (migraciones 0006–0007); no se asigna desde la app.
 - **Compradores** (intermediarios, sin límite): solo ven lo suyo. Usuario de prueba: `prueba`.
 - Ingreso con **usuario y contraseña**. Supabase Auth usa el correo interno `<usuario>@bancoticket.local`; el correo real va en `perfiles.correo`.
 
@@ -78,11 +79,11 @@ scripts/                             aplicar-sql, crear-admin, perfil-admin, pru
 docs/                                ARQUITECTURA.md (decisiones), NOTAS.md (bitácora), DESPLIEGUE.md, especificacion.pdf
 ```
 
-## 6. Base de datos (migraciones aplicadas: 0001 a 0005)
+## 6. Base de datos (migraciones aplicadas: 0001 a 0007)
 
-**Nunca editar una migración ya aplicada; crear la siguiente (`0006_...sql`) y aplicarla con:**
+**Nunca editar una migración ya aplicada; crear la siguiente (`0008_...sql`) y aplicarla con:**
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0006_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0008_nombre.sql
 ```
 (corre en una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`).
 
@@ -156,7 +157,6 @@ Local: `.env.local` (en .gitignore) tiene todo **menos `ANTHROPIC_API_KEY`**, as
 ## 12. Pendientes y cosas a vigilar
 
 - **Fase 2 (no iniciada)**: reportes y exportación a Excel/PDF de extractos y tiquetes.
-- **WhatsApp del comprador al admin** va al administrador más antiguo (Christian). Quedó sin responder si prefieren que el comprador elija entre los dos administradores.
 - **Lukeoil sin NIT**: enseñar otro tiquete donde se vea el NIT de la extractora.
 - **Renombrar Agrovaspalma → NodoLa4** si el usuario lo quiere (Extractoras → Editar).
 - **Umbrales de cámara** calibrados con pocas fotos; ajustar en `src/lib/camara/analisis.ts` (`UMBRALES`) si en la práctica cuesta tomar la foto.

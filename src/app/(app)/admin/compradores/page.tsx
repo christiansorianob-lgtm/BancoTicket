@@ -4,6 +4,7 @@ import { Chip, Vacio } from "@/components/ui";
 import { FormAccion } from "@/components/form-accion";
 import { guardarUsuario } from "../acciones";
 import { CamposUsuario } from "./campos-usuario";
+import { NOMBRE_ROL, type Rol } from "@/lib/sesion";
 
 export default async function Compradores() {
   const supabase = await supabaseServidor();
@@ -28,7 +29,7 @@ export default async function Compradores() {
                 <p className="text-sm text-suave">@{u.usuario} · {u.celular} · {u.correo}</p>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <Chip tono={u.rol === "admin" ? "primario" : "neutro"}>{u.rol === "admin" ? "Administrador" : "Comprador"}</Chip>
+                <Chip tono={u.rol === "comprador" ? "neutro" : "primario"}>{NOMBRE_ROL[u.rol as Rol]}</Chip>
                 {!u.activo && <Chip tono="error">Inactivo</Chip>}
               </div>
             </div>

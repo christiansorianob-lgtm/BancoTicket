@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { perfilActual } from "@/lib/sesion";
+import { esGestor, perfilActual } from "@/lib/sesion";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { aprenderDeFoto } from "@/lib/lectura/aprender-guardar";
 
@@ -12,7 +12,7 @@ const TIPOS = ["image/webp", "image/jpeg"] as const;
 /** El administrador sube la foto de un tiquete de ejemplo y el sistema aprende la extractora y su formato. */
 export async function POST(request: Request) {
   const perfil = await perfilActual();
-  if (!perfil || perfil.rol !== "admin") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!perfil || !esGestor(perfil.rol)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: "Falta la clave de Anthropic" }, { status: 503 });
 
   const imagen = (await request.formData()).get("imagen");

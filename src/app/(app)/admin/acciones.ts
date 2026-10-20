@@ -236,7 +236,7 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   const celular = String(form.get("celular") ?? "").replace(/\D/g, "");
   const correo = String(form.get("correo") ?? "").trim().toLowerCase();
   const clave = String(form.get("clave") ?? "");
-  const rol = form.get("rol") === "admin" ? "admin" : "comprador";
+  let rol = form.get("rol") === "admin" ? "admin" : "comprador";
   const activo = form.get("activo") !== "off";
 
   if (!nombre) return fallo("Escriba el nombre");
@@ -248,21 +248,29 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
 
   const auth = supabaseAdmin().auth.admin;
   const supabase = await supabaseServidor();
+  // El rol de desarrollador no se asigna ni se quita desde la app.
+  if (id) {
+    const { data: actual } = await supabase.from("perfiles").select("rol").eq("id", id).single();
+    if (actual?.rol === "desarrollador") rol = "desarrollador";
+  }
+  const rolUnico = (m: string) =>
+    m.includes("perfiles_un_rol_unico") ? "Ya hay un administrador activo: solo puede haber uno" : m.includes("duplicate") ? "Ese usuario ya existe" : m;
   if (!id) {
     const { data, error } = await auth.createUser({ email: correoInterno(usuario), password: clave, email_confirm: true });
     if (error) return fallo(error.message.includes("already") ? "Ese usuario ya existe" : error.message);
     const { error: e2 } = await supabase.from("perfiles").insert({ id: data.user.id, nombre, usuario, celular, correo, rol, activo });
     if (e2) {
       await auth.deleteUser(data.user.id);
-      return fallo(e2.message.includes("duplicate") ? "Ese usuario ya existe" : e2.message);
+      return fallo(rolUnico(e2.message));
     }
   } else {
     const cambiosAuth: { email?: string; password?: string; ban_duration?: string } = { email: correoInterno(usuario), ban_duration: activo ? "none" : "876000h" };
     if (clave) cambiosAuth.password = clave;
+    // Primero el perfil: si choca con la regla de un solo administrador, no se toca Auth.
+    const { error: e2 } = await supabase.from("perfiles").update({ nombre, usuario, celular, correo, rol, activo }).eq("id", id);
+    if (e2) return fallo(rolUnico(e2.message));
     const { error } = await auth.updateUserById(id, cambiosAuth);
     if (error) return fallo(error.message);
-    const { error: e2 } = await supabase.from("perfiles").update({ nombre, usuario, celular, correo, rol, activo }).eq("id", id);
-    if (e2) return fallo(e2.message);
   }
   revalidatePath("/admin/compradores");
   return { ok: true, mensaje: "Usuario guardado" };

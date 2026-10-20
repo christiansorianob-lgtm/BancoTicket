@@ -12,7 +12,11 @@ export function CamposUsuario({ u }: { u?: U }) {
         <input name="clave" type="password" className="campo" autoComplete="new-password" minLength={8} required={!u} />
       </label>
       <label><span className="etiqueta">Rol</span>
-        <select name="rol" className="campo" defaultValue={u?.rol ?? "comprador"}><option value="comprador">Comprador</option><option value="admin">Administrador</option></select>
+        {u?.rol === "desarrollador" ? (
+          <input className="campo" value="Desarrollador" disabled />
+        ) : (
+          <select name="rol" className="campo" defaultValue={u?.rol ?? "comprador"}><option value="comprador">Comprador</option><option value="admin">Administrador (solo uno)</option></select>
+        )}
       </label>
       {u && (
         <label><span className="etiqueta">Estado</span>

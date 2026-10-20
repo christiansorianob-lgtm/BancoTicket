@@ -15,6 +15,7 @@ export async function avisar(destinos: Destino[], titulo: string, cuerpo: string
   );
 }
 
+/** Solo el administrador (no el desarrollador) recibe los avisos de los compradores. */
 export async function administradores(): Promise<Destino[]> {
   const { data } = await supabaseAdmin().from("perfiles").select("id, correo, nombre").eq("rol", "admin").eq("activo", true);
   return data ?? [];
@@ -25,7 +26,7 @@ export async function perfilDestino(id: string): Promise<Destino | null> {
   return data;
 }
 
-/** A quién escribe un comprador por WhatsApp (abre un solo chat): el administrador más antiguo. */
+/** A quién escribe un comprador por WhatsApp: el administrador (hay uno solo activo). */
 export async function contactoAdministracion(): Promise<{ celular: string | null }> {
   const { data } = await supabaseAdmin().from("perfiles").select("celular").eq("rol", "admin").eq("activo", true).order("creado_en").limit(1);
   return { celular: data?.[0]?.celular ?? null };

@@ -9,9 +9,19 @@ export type Perfil = {
   usuario: string;
   celular: string;
   correo: string;
-  rol: "admin" | "comprador";
+  rol: Rol;
   activo: boolean;
 };
+
+/** Un administrador, un desarrollador (mismos permisos del admin) y varios compradores. */
+export type Rol = "admin" | "desarrollador" | "comprador";
+
+export const NOMBRE_ROL: Record<Rol, string> = { admin: "Administrador", desarrollador: "Desarrollador", comprador: "Comprador" };
+
+/** Administrador o desarrollador: ven y gestionan todo. */
+export function esGestor(rol: string) {
+  return rol === "admin" || rol === "desarrollador";
+}
 
 /** Perfil del usuario con sesión, o null. Se lee una vez por petición. */
 export const perfilActual = cache(async (): Promise<Perfil | null> => {
@@ -31,7 +41,7 @@ export async function exigirSesion(): Promise<Perfil> {
 
 export async function exigirAdmin(): Promise<Perfil> {
   const perfil = await exigirSesion();
-  if (perfil.rol !== "admin") redirect("/");
+  if (!esGestor(perfil.rol)) redirect("/");
   return perfil;
 }
 
