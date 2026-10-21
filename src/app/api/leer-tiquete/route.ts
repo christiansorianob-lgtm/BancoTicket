@@ -66,10 +66,11 @@ export async function POST(request: Request) {
     console.error("Fallo de lectura", e);
   }
 
-  // Para diagnosticar marcas de duda (se ve en los registros de Vercel). Sin conductor, proveedor ni cédulas.
+  // Para diagnosticar marcas de duda (se ve en los registros de Vercel). Sin conductor ni cédulas;
+  // el proveedor sí (es una empresa).
   if (cruda) {
     console.info("lectura", JSON.stringify({
-      extractora: cruda.extractora, numero: cruda.numero_tiquete, bruto: cruda.peso_bruto_kg, tara: cruda.tara_kg,
+      extractora: cruda.extractora, numero: cruda.numero_tiquete, proveedor: cruda.proveedor, bruto: cruda.peso_bruto_kg, tara: cruda.tara_kg,
       neto: cruda.peso_neto_impreso_kg, dudosos: cruda.campos_dudosos, observaciones: cruda.observaciones,
     }));
   }
