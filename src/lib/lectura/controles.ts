@@ -1,6 +1,9 @@
-import { interpretarFechaTiquete } from "@/lib/fechas";
+import { fechaHora, interpretarFechaTiquete } from "@/lib/fechas";
 import { kilosDesdeTexto } from "@/lib/numeros";
 import type { Control, LecturaCruda, ResultadoLectura } from "./tipos";
+
+/** Antigüedad máxima de un tiquete para poder subirlo. */
+export const MESES_MAXIMOS = 6;
 
 // Placa: 5 a 7 letras y números, con al menos una letra y un número (ej. "284DAF").
 const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
@@ -32,6 +35,14 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const fecha = interpretarFechaTiquete(cruda.fecha_entrada);
   const fechaOk = !!fecha && new Date(fecha).getTime() <= Date.now() + 36e5;
   add("Fecha", fechaOk, fechaOk ? "Fecha válida" : `Fecha no válida: "${cruda.fecha_entrada ?? ""}"`);
+
+  // Decisión del usuario: un tiquete de más de 6 meses es síntoma de fraude y no se puede subir.
+  const limite = new Date();
+  limite.setMonth(limite.getMonth() - MESES_MAXIMOS);
+  if (fechaOk && new Date(fecha!).getTime() < limite.getTime()) {
+    add("Periodo permitido", false, `El tiquete es de ${fechaHora(fecha)}: tiene más de ${MESES_MAXIMOS} meses`);
+    return { ok: false, motivo: `El tiquete tiene más de ${MESES_MAXIMOS} meses`, controles, cruda, fueraDePeriodo: true };
+  }
 
   const a = kilosDesdeTexto(cruda.peso_bruto_kg);
   const b = kilosDesdeTexto(cruda.tara_kg);

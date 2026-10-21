@@ -116,7 +116,8 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 **Administrador**
 - **Pendientes**: aprobar / rechazar con motivo / corregir datos. Abre WhatsApp al comprador con el detalle.
 - **Tiquetes y precios**: filtros por fechas (de entrada), extractora, comprador; precio en bloque o individual; editar cualquier dato con motivo; anular.
-- **Anticipos**: registrar → genera enlace → WhatsApp al comprador. El comprador confirma **por el enlace o desde su app** («Anticipos» / «Revisar y confirmar» en inicio).
+- **Anticipos**: registrar → aviso en la campana + WhatsApp **sin enlace** (decisión del usuario: no generar enlaces). El comprador confirma **desde su app** («Anticipos» / «Revisar y confirmar» en inicio).
+- **Proveedor** resaltado en el título de cada tiquete (es la empresa de la administración). Tiquetes de **más de 6 meses** no se pueden subir (síntoma de fraude).
 - **Extractoras**: «Enseñar un tiquete»: sube una foto → la IA (Opus) valida que sea tiquete, identifica la extractora (NIT, razón social), le pone nombre (editable), aprende el formato. Varios formatos por extractora. Se puede eliminar un formato.
 - **Formatos no reconocidos**: «Aprender este formato» con la misma foto + registrar el tiquete a mano.
 - **Panel**: saldos, indicadores y **«Consumo de IA este mes»**.

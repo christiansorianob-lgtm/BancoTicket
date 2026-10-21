@@ -8,7 +8,8 @@ import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
 import { AvisoContacto, abrirWhatsApp } from "@/components/contacto";
-import { detalleTiquete } from "@/lib/mensajes";import { enviarARevision, enviarTiquete } from "./acciones";
+import { detalleTiquete } from "@/lib/mensajes";
+import { MESES_MAXIMOS } from "@/lib/lectura/controles";import { enviarARevision, enviarTiquete } from "./acciones";
 
 type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 type Datos = {
@@ -20,7 +21,7 @@ type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
   | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[]; ilegible?: undefined }
   // Ilegible: no se puede enviar; el comprador debe conseguir una foto clara.
-  | { ok: false; ilegible: true; motivo: string; controles: Control[]; duplicado?: undefined; datos?: undefined }
+  | { ok: false; ilegible: true; fueraDePeriodo: boolean; motivo: string; controles: Control[]; duplicado?: undefined; datos?: undefined }
   // Tiquete legible de una extractora que no está registrada: va a revisión para aprenderla.
   | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined; ilegible?: undefined }
 );
@@ -199,6 +200,13 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
           <>
             <Mensaje tono="error">
               Este tiquete ya está registrado en {nombreExtractora}: lo registró {lectura.duplicado.quien} el {fechaHora(lectura.duplicado.cuando)} ({lectura.duplicado.estado}).
+            </Mensaje>
+            <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
+          </>
+        ) : lectura.ilegible && lectura.fueraDePeriodo ? (
+          <>
+            <Mensaje tono="error">
+              Este tiquete no está dentro del periodo permitido para subirlo: {lectura.motivo.toLowerCase()} desde su fecha de entrada. Solo se pueden subir tiquetes de los últimos {MESES_MAXIMOS} meses.
             </Mensaje>
             <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
           </>

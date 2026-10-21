@@ -1,6 +1,5 @@
 "use client";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { Copy } from "lucide-react";
 import type { Resultado } from "@/app/(app)/admin/acciones";
 import { Mensaje } from "@/components/ui";
 import { AvisoContacto } from "@/components/contacto";
@@ -49,14 +48,6 @@ export function ResultadoAccion({ resultado }: { resultado: Resultado | null }) 
   return (
     <div className="space-y-2">
       {resultado.mensaje && <Mensaje tono="ok">{resultado.mensaje}</Mensaje>}
-      {resultado.enlace && (
-        <div className="flex items-center gap-2 rounded-xl bg-white p-2 text-xs">
-          <span className="min-w-0 flex-1 truncate">{resultado.enlace}</span>
-          <button type="button" className="boton-secundario min-h-9 px-2 text-xs" onClick={() => navigator.clipboard.writeText(resultado.enlace!)}>
-            <Copy className="size-4" /> Copiar
-          </button>
-        </div>
-      )}
       {resultado.whatsapp && (
         <AvisoContacto contacto={{ celular: resultado.celular, mensaje: resultado.whatsapp }} />
       )}

@@ -94,6 +94,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: false,
       ilegible: true,
+      fueraDePeriodo: resultado.fueraDePeriodo ?? false,
       motivo: resultado.motivo,
       controles: resultado.controles,
       extractora: detectada,

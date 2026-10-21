@@ -14,7 +14,7 @@ import { detalleTiquete } from "@/lib/mensajes";
 import { aprenderDeFoto } from "@/lib/lectura/aprender-guardar";
 
 /** whatsapp: aviso que se abre listo en WhatsApp para enviarlo al comprador. */
-export type Resultado = { ok: boolean; error?: string; mensaje?: string; enlace?: string; celular?: string; whatsapp?: string };
+export type Resultado = { ok: boolean; error?: string; mensaje?: string; celular?: string; whatsapp?: string };
 
 const fallo = (error: string): Resultado => ({ ok: false, error });
 
@@ -183,24 +183,26 @@ async function celularDe(id: string | undefined) {
   return data?.celular;
 }
 
-async function enviarEnlace(anticipoId: string): Promise<Resultado> {
+/**
+ * Avisa al comprador (campana y WhatsApp) que tiene un anticipo por confirmar. Sin enlaces
+ * (decisión del usuario): el comprador lo confirma en «Anticipos» de su app.
+ */
+async function avisarAnticipo(anticipoId: string): Promise<Resultado> {
   const supabase = await supabaseServidor();
-  const { data: codigo, error } = await supabase.rpc("generar_enlace_anticipo", { p_id: anticipoId });
-  if (error) return fallo(error.message);
   const { data: a } = await supabase.from("anticipos").select("monto, fecha, comprador_id").eq("id", anticipoId).single();
-  const enlace = `${process.env.NEXT_PUBLIC_APP_URL}/anticipo/${codigo}`;
-  const comprador = a ? await perfilDestino(a.comprador_id) : null;
-  const negativo = Number(a?.monto) < 0;
+  if (!a) return fallo("Anticipo no encontrado");
+  const comprador = await perfilDestino(a.comprador_id);
+  const negativo = Number(a.monto) < 0;
   if (comprador) {
     await avisar([comprador], negativo ? "Confirme el saldo a su favor" : "Confirme el anticipo recibido",
-      `Se registró un ${describirAnticipo(a!.monto)} a su nombre. Ingrese y confirme si es correcto.`, `/anticipo/${codigo}`);
+      `Se registró un ${describirAnticipo(a.monto)} a su nombre. Confírmelo en «Anticipos».`, "/anticipos");
   }
   revalidatePath("/admin/anticipos");
   return {
     ok: true,
-    enlace,
-    celular: await celularDe(a?.comprador_id),
-    whatsapp: `Hola ${comprador?.nombre ?? ""}, le registré un ${describirAnticipo(a?.monto)}. Por favor confírmelo en BancoTicket: ${enlace}`,
+    mensaje: "Registrado. El comprador lo confirma en «Anticipos» de su app.",
+    celular: await celularDe(a.comprador_id),
+    whatsapp: `Hola ${comprador?.nombre ?? ""}, le registré un ${describirAnticipo(a.monto)}. Por favor confírmelo en BancoTicket, en «Anticipos».`,
   };
 }
 
@@ -220,12 +222,12 @@ export async function registrarAnticipo(form: FormData): Promise<Resultado> {
     nota: textoODefecto(form.get("nota")),
   }).select("id").single();
   if (error) return fallo(error.message);
-  return enviarEnlace(data.id);
+  return avisarAnticipo(data.id);
 }
 
-export async function reenviarEnlace(anticipoId: string): Promise<Resultado> {
+export async function recordarAnticipo(anticipoId: string): Promise<Resultado> {
   await exigirAdmin();
-  return enviarEnlace(anticipoId);
+  return avisarAnticipo(anticipoId);
 }
 
 // ---------------------------------------------------------------------------
@@ -269,7 +271,7 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
       ok: true,
       mensaje: `Usuario creado con la contraseña ${CLAVE_POR_DEFECTO}`,
       celular,
-      whatsapp: `Hola ${nombre}, ya tiene acceso a BancoTicket: ${process.env.NEXT_PUBLIC_APP_URL}\nUsuario: ${usuario}\nContraseña: ${CLAVE_POR_DEFECTO} (puede cambiarla con el ícono de llave 🔑)`,
+      whatsapp: `Hola ${nombre}, ya tiene acceso a BancoTicket.\nUsuario: ${usuario}\nContraseña: ${CLAVE_POR_DEFECTO} (puede cambiarla con el ícono de llave 🔑)`,
     };
   } else {
     // La contraseña no se cambia aquí: cada usuario cambia la suya o pide restablecerla.
@@ -309,7 +311,7 @@ export async function resolverSolicitudClave(id: string, aprobar: boolean): Prom
     ok: true,
     mensaje: `Contraseña restablecida a ${CLAVE_POR_DEFECTO}`,
     celular: usuario.data?.celular,
-    whatsapp: `Hola ${usuario.data?.nombre ?? ""}, restablecí su contraseña de BancoTicket. Ingrese con su usuario ${usuario.data?.usuario ?? ""} y la contraseña ${CLAVE_POR_DEFECTO}; puede cambiarla con el ícono de llave 🔑. ${process.env.NEXT_PUBLIC_APP_URL}`,
+    whatsapp: `Hola ${usuario.data?.nombre ?? ""}, restablecí su contraseña de BancoTicket. Ingrese con su usuario ${usuario.data?.usuario ?? ""} y la contraseña ${CLAVE_POR_DEFECTO}; puede cambiarla con el ícono de llave 🔑.`,
   };
 }
 

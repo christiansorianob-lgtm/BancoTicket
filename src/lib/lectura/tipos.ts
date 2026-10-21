@@ -40,7 +40,7 @@ export type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: b
 
 export type ResultadoLectura =
   | { ok: true; datos: DatosTiquete; controles: Control[]; cruda: LecturaCruda; dudosos: string[] }
-  | { ok: false; motivo: string; controles: Control[]; cruda: LecturaCruda | null };
+  | { ok: false; motivo: string; controles: Control[]; cruda: LecturaCruda | null; fueraDePeriodo?: boolean };
 
 /** Extractora con todo lo que se aprendió de ella, para que la IA la reconozca y la lea. */
 export type ExtractoraParaLeer = { nombre: string; nit: string | null; nombres_impresos: string[]; formatos: unknown[] };

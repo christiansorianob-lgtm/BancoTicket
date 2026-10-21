@@ -52,6 +52,12 @@ const r4 = aplicarControles({ ...base, placa: null, peso_bruto_kg: "11630", tara
 igual("placa no leída: pasa marcada", r4.ok && r4.dudosos, ["placa"]);
 const r9 = aplicarControles({ ...base, numero_tiquete: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("sin número: se rechaza", r9.ok, false);
+const viejo = new Date(); viejo.setMonth(viejo.getMonth() - 7);
+const r11 = aplicarControles({ ...base, fecha_entrada: `${viejo.getDate()}/${viejo.getMonth() + 1}/${viejo.getFullYear()}`, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
+igual("tiquete de hace 7 meses: fuera de periodo", !r11.ok && r11.fueraDePeriodo, true);
+const reciente = new Date(); reciente.setMonth(reciente.getMonth() - 5);
+const r12 = aplicarControles({ ...base, fecha_entrada: `${reciente.getDate()}/${reciente.getMonth() + 1}/${reciente.getFullYear()}`, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
+igual("tiquete de hace 5 meses: pasa", r12.ok, true);
 
 const r5 = aplicarControles({ ...base, placa: "284DAF", peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("placa 284DAF aceptada sin dudas", r5.ok && r5.dudosos, []);

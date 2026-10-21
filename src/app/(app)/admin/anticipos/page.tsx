@@ -3,7 +3,7 @@ import { fecha, fechaHora, hoyColombia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
 import { FormAccion } from "@/components/form-accion";
-import { registrarAnticipo, reenviarEnlace } from "../acciones";
+import { registrarAnticipo, recordarAnticipo } from "../acciones";
 import { BotonReenviar } from "./reenviar";
 
 export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin/anticipos">) {
@@ -26,7 +26,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
       <h1 className="titulo">Anticipos</h1>
       <section className="tarjeta">
         <h2 className="mb-3 font-bold text-profundo">Registrar</h2>
-        <FormAccion accion={registrarAnticipo} boton="Registrar y generar enlace" limpiar>
+        <FormAccion accion={registrarAnticipo} boton="Registrar y avisar" limpiar>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label><span className="etiqueta">Comprador</span>
               <select name="comprador" className="campo" required defaultValue="">
@@ -41,7 +41,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
           <p className="text-xs text-suave">
             <strong>Positivo</strong> (ej. 5.000.000): dinero que le entrego al comprador; queda a mi favor hasta que lo cubra con fruta.{" "}
             <strong>Negativo</strong> (ej. -2.000.000): dinero que yo le debo al comprador, por ejemplo el saldo con el que empezamos.{" "}
-            Queda pendiente hasta que el comprador lo confirme con su enlace (único, de un solo uso y con vencimiento).
+            Queda pendiente hasta que el comprador lo confirme en «Anticipos» de su app.
           </p>
         </FormAccion>
       </section>
@@ -67,10 +67,9 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
               <EstadoChip estado={a.estado} />
             </div>
             {a.nota && <p className="text-sm">{a.nota}</p>}
-            {a.estado === "pendiente" && <p className="text-xs text-suave">Enlace vence: {fechaHora(a.enlace_vence)}</p>}
             {a.respondido_en && <p className="text-xs text-suave">Respondido {fechaHora(a.respondido_en)} · {a.dispositivo}</p>}
             {a.motivo_disputa && <p className="rounded-lg bg-error-suave p-2 text-sm text-error">Motivo: {a.motivo_disputa}</p>}
-            {a.estado === "pendiente" && <BotonReenviar accion={reenviarEnlace.bind(null, a.id)} />}
+            {a.estado === "pendiente" && <BotonReenviar accion={recordarAnticipo.bind(null, a.id)} />}
           </li>
         ))}
       </ul>
