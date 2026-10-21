@@ -5,6 +5,7 @@ import { ZONA } from "@/lib/fechas";
 export type FilaInforme = {
   comprador: string;
   extractora: string;
+  proveedor: string | null;
   fecha_entrada: string; // ISO
   numero: string;
   peso_neto_t: number;
@@ -42,6 +43,7 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
   hoja.columns = [
     { key: "comprador", width: 28 },
     { key: "extractora", width: 20 },
+    { key: "proveedor", width: 30 },
     { key: "fecha", width: 18 },
     { key: "numero", width: 16 },
     { key: "neto", width: 16 },
@@ -50,7 +52,7 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
   ];
 
   // Encabezado del informe
-  hoja.mergeCells("A1:G1");
+  hoja.mergeCells("A1:H1");
   const titulo = hoja.getCell("A1");
   titulo.value = "BancoTicket · Informe de tiquetes";
   titulo.font = { name: "Calibri", size: 18, bold: true, color: { argb: "FFFFFFFF" } };
@@ -58,12 +60,12 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
   titulo.alignment = { vertical: "middle", indent: 1 };
   hoja.getRow(1).height = 34;
 
-  hoja.mergeCells("A2:G2");
+  hoja.mergeCells("A2:H2");
   hoja.getCell("A2").value = filtros;
   hoja.getCell("A2").font = { size: 11, color: { argb: GRIS } };
   hoja.getCell("A2").alignment = { indent: 1 };
 
-  hoja.mergeCells("A3:G3");
+  hoja.mergeCells("A3:H3");
   const generado = new Intl.DateTimeFormat("es-CO", { timeZone: ZONA, dateStyle: "long", timeStyle: "short" }).format(new Date());
   hoja.getCell("A3").value = `Generado el ${generado} por ${generadoPor}`;
   hoja.getCell("A3").font = { size: 10, italic: true, color: { argb: GRIS } };
@@ -71,7 +73,7 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
 
   // Tabla
   const encabezado = hoja.getRow(5);
-  encabezado.values = ["Comprador", "Extractora", "Fecha", "N° Tiquete", "Peso neto (t)", "Precio por tonelada", "Precio total"];
+  encabezado.values = ["Comprador", "Extractora", "Proveedor", "Fecha", "N° Tiquete", "Peso neto (t)", "Precio por tonelada", "Precio total"];
   encabezado.height = 24;
   encabezado.eachCell((c) => {
     c.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -83,16 +85,16 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
   const primera = 6;
   filas.forEach((f, i) => {
     const fila = hoja.getRow(primera + i);
-    fila.values = [f.comprador, f.extractora, fechaExcel(f.fecha_entrada), f.numero, Number(f.peso_neto_t),
+    fila.values = [f.comprador, f.extractora, f.proveedor ?? "—", fechaExcel(f.fecha_entrada), f.numero, Number(f.peso_neto_t),
       f.precio_tonelada == null ? "Sin precio" : Number(f.precio_tonelada), f.valor == null ? null : Number(f.valor)];
-    fila.getCell(3).numFmt = "dd/mm/yyyy hh:mm";
-    fila.getCell(4).alignment = { horizontal: "center" };
-    fila.getCell(5).numFmt = "#,##0.000";
-    fila.getCell(6).numFmt = '"$" #,##0';
+    fila.getCell(4).numFmt = "dd/mm/yyyy hh:mm";
+    fila.getCell(5).alignment = { horizontal: "center" };
+    fila.getCell(6).numFmt = "#,##0.000";
     fila.getCell(7).numFmt = '"$" #,##0';
+    fila.getCell(8).numFmt = '"$" #,##0';
     if (f.precio_tonelada == null) {
-      fila.getCell(6).font = { italic: true, color: { argb: "FFB45309" } };
-      fila.getCell(6).alignment = { horizontal: "right" };
+      fila.getCell(7).font = { italic: true, color: { argb: "FFB45309" } };
+      fila.getCell(7).alignment = { horizontal: "right" };
     }
     fila.eachCell({ includeEmpty: true }, (c) => {
       c.border = { bottom: BORDE, left: BORDE, right: BORDE };
@@ -105,15 +107,15 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
   const total = hoja.getRow(ultima + 1);
   const conFilas = filas.length > 0;
   total.values = [
-    `TOTAL (${filas.length} tiquete${filas.length === 1 ? "" : "s"})`, null, null, null,
-    conFilas ? { formula: `SUM(E${primera}:E${ultima})`, result: filas.reduce((s, f) => s + Number(f.peso_neto_t), 0) } : 0,
+    `TOTAL (${filas.length} tiquete${filas.length === 1 ? "" : "s"})`, null, null, null, null,
+    conFilas ? { formula: `SUM(F${primera}:F${ultima})`, result: filas.reduce((s, f) => s + Number(f.peso_neto_t), 0) } : 0,
     null,
-    conFilas ? { formula: `SUM(G${primera}:G${ultima})`, result: filas.reduce((s, f) => s + Number(f.valor ?? 0), 0) } : 0,
+    conFilas ? { formula: `SUM(H${primera}:H${ultima})`, result: filas.reduce((s, f) => s + Number(f.valor ?? 0), 0) } : 0,
   ];
-  hoja.mergeCells(`A${ultima + 1}:D${ultima + 1}`);
+  hoja.mergeCells(`A${ultima + 1}:E${ultima + 1}`);
   total.height = 22;
-  total.getCell(5).numFmt = "#,##0.000";
-  total.getCell(7).numFmt = '"$" #,##0';
+  total.getCell(6).numFmt = "#,##0.000";
+  total.getCell(8).numFmt = '"$" #,##0';
   total.eachCell({ includeEmpty: true }, (c) => {
     c.font = { bold: true, size: 12, color: { argb: AZUL } };
     c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBE4F7" } };
@@ -121,7 +123,7 @@ export async function informeTiquetesExcel(filas: FilaInforme[], filtros: string
     c.alignment = { vertical: "middle" };
   });
 
-  if (conFilas) hoja.autoFilter = { from: "A5", to: `G${ultima}` };
+  if (conFilas) hoja.autoFilter = { from: "A5", to: `H${ultima}` };
   if (filas.some((f) => f.precio_tonelada == null)) {
     const nota = hoja.getCell(`A${ultima + 3}`);
     nota.value = "Los tiquetes «Sin precio» no suman al precio total hasta que se les asigne precio.";

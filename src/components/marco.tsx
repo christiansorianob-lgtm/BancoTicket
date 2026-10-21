@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound } from "lucide-react";
+import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound, FileSpreadsheet } from "lucide-react";
+import { EnlaceMenu } from "@/components/enlace-menu";
 import { esGestor, type Perfil } from "@/lib/sesion";
 import { cerrarSesion } from "@/app/ingresar/acciones";
 
@@ -16,6 +17,7 @@ const ADMIN = [
   { href: "/admin", texto: "Saldos", icono: Home },
   { href: "/admin/pendientes", texto: "Pendientes", icono: ListChecks },
   { href: "/admin/tiquetes", texto: "Tiquetes y precios", icono: Tags },
+  { href: "/admin/reportes", texto: "Reportes", icono: FileSpreadsheet },
   { href: "/admin/anticipos", texto: "Anticipos", icono: Wallet },
   { href: "/admin/compradores", texto: "Compradores", icono: Users },
   { href: "/admin/extractoras", texto: "Extractoras", icono: Factory },
@@ -54,9 +56,9 @@ export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avi
         {gestor && (
           <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2 text-sm">
             {enlaces.map((e) => (
-              <Link key={e.href} href={e.href} className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-white/90 hover:bg-white/10">
+              <EnlaceMenu key={e.href} href={e.href} variante="superior">
                 <e.icono className="size-4" aria-hidden /> {e.texto}
-              </Link>
+              </EnlaceMenu>
             ))}
           </nav>
         )}
@@ -68,9 +70,9 @@ export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avi
         <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-borde bg-white/95 backdrop-blur" aria-label="Menú">
           <div className="mx-auto grid max-w-lg grid-cols-5">
             {enlaces.map((e) => (
-              <Link key={e.href} href={e.href} className="flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium text-suave hover:text-primario">
+              <EnlaceMenu key={e.href} href={e.href} variante="inferior">
                 <e.icono className="size-6" aria-hidden /> {e.texto}
-              </Link>
+              </EnlaceMenu>
             ))}
           </div>
         </nav>

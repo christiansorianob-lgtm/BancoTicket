@@ -160,7 +160,7 @@ Local: `.env.local` (en .gitignore) tiene todo **menos `ANTHROPIC_API_KEY`**, as
 
 ## 12. Pendientes y cosas a vigilar
 
-- **Fase 2 (iniciada)**: ya existe «Exportar a Excel» de tiquetes en «Tiquetes y precios» (`/api/exportar/tiquetes`). Faltan extractos y PDF si se piden.
+- **Fase 2 (iniciada)**: sección **«Reportes»** (`/admin/reportes`) con filtros (fechas, comprador, extractora, proveedor, N° tiquete), tabla y «Exportar a Excel» (`/api/exportar/tiquetes`, mismos filtros). Faltan extractos y PDF si se piden.
 - **Lukeoil sin NIT**: enseñar otro tiquete donde se vea el NIT de la extractora.
 - **Renombrar Agrovaspalma → NodoLa4** si el usuario lo quiere (Extractoras → Editar).
 - **Umbrales de cámara** calibrados con pocas fotos; ajustar en `src/lib/camara/analisis.ts` (`UMBRALES`) si en la práctica cuesta tomar la foto.
