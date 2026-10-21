@@ -1,3 +1,5 @@
+import { grisDesdeRGBA, prepararTiquete } from "@/lib/imagen/escaner";
+
 /**
  * Reduce la foto en el navegador: hasta `ladoLargo` px por el lado largo, WebP (o JPEG
  * si el navegador no codifica WebP, como Safari) con calidad media. Los tiquetes van
@@ -23,6 +25,33 @@ export async function reducirImagen(fuente: CanvasImageSource & { width: number;
     }
   }
   throw new Error("No se pudo reducir la foto");
+}
+
+/**
+ * Recorta el tiquete y le da efecto escaneo (fondo blanco, tinta oscura) en el celular, sin IA
+ * (ver src/lib/imagen/escaner.ts). Devuelve la foto lista para mostrar y leer, reducida a 2000 px.
+ */
+export async function escanearTiquete(fuente: CanvasImageSource & { width: number; height: number }): Promise<Blob> {
+  // Se procesa a 2400 px como máximo: suficiente para los dígitos y rápido en el celular.
+  const escala = Math.min(1, 2400 / Math.max(fuente.width, fuente.height));
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.round(fuente.width * escala);
+  lienzo.height = Math.round(fuente.height * escala);
+  const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(fuente, 0, 0, lienzo.width, lienzo.height);
+  const { imagen } = prepararTiquete(grisDesdeRGBA(ctx.getImageData(0, 0, lienzo.width, lienzo.height).data, lienzo.width, lienzo.height));
+
+  const salida = document.createElement("canvas");
+  salida.width = imagen.w;
+  salida.height = imagen.h;
+  const sctx = salida.getContext("2d")!;
+  const px = sctx.createImageData(imagen.w, imagen.h);
+  for (let i = 0, p = 0; i < imagen.d.length; i++, p += 4) {
+    const v = imagen.d[i];
+    px.data[p] = v; px.data[p + 1] = v; px.data[p + 2] = v; px.data[p + 3] = 255;
+  }
+  sctx.putImageData(px, 0, 0);
+  return reducirImagen(salida, 2000);
 }
 
 /** Carga un archivo de la galería o de la cámara del celular como imagen (respeta la orientación EXIF). */
