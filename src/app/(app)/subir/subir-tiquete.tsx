@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, ScanText, XCircle, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
 import { analizarCuadro, nitidezDeFoto, pareceDocumento, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
 import { MENSAJE_BORROSA } from "@/lib/camara/nitidez";
 import { escanearTiquete, imagenDesdeArchivo } from "@/lib/imagen";
@@ -26,8 +26,8 @@ type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined; ilegible?: undefined }
 );
 
-// revisar: el comprador ve la foto ya recortada y con efecto escaneo antes de que la IA la lea.
-type Paso = "inicio" | "camara" | "preparando" | "revisar" | "leyendo" | "resultado";
+// preparando: recorte y efecto escaneo por código; luego se lee de inmediato (decisión del usuario).
+type Paso = "inicio" | "camara" | "preparando" | "leyendo" | "resultado";
 
 // Luz, quietud y enfoque en verde durante 3 cuadros seguidos (~1 s): la foto se toma sola.
 const CUADROS_ESTABLES = 3;
@@ -40,8 +40,6 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
   const [paso, setPaso] = useState<Paso>("inicio");
   const [origen, setOrigen] = useState<"camara" | "galeria">("camara");
   const [foto, setFoto] = useState<string | null>(null);
-  // La foto procesada que se va a leer cuando el comprador toque «Leer tiquete».
-  const [porLeer, setPorLeer] = useState<Blob | null>(null);
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Lo último que se envió: se muestra en la pantalla de subir, con el WhatsApp de respaldo.
@@ -71,7 +69,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
     setPaso(origen === "camara" ? "camara" : "inicio");
   }
 
-  /** Recorta y aplica el efecto escaneo (por código, sin IA) y muestra la foto antes de leer. */
+  /** Recorta y aplica el efecto escaneo (por código, sin IA) y lee de inmediato la foto resultante. */
   async function preparar(fuente: CanvasImageSource & { width: number; height: number }, desde: "camara" | "galeria") {
     setOrigen(desde);
     setError(null);
@@ -80,8 +78,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
       const blob = await escanearTiquete(fuente);
       if (foto) URL.revokeObjectURL(foto);
       setFoto(URL.createObjectURL(blob));
-      setPorLeer(blob);
-      setPaso("revisar");
+      await leer(blob, desde);
     } catch {
       setError("No se pudo preparar la foto. Intente de nuevo.");
       setPaso("inicio");
@@ -147,21 +144,6 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
     return (
       <div className="tarjeta text-center">
         <p className="flex items-center justify-center gap-2 font-semibold text-primario"><Loader2 className="size-5 animate-spin" /> Preparando la foto…</p>
-      </div>
-    );
-  }
-
-  if (paso === "revisar" && foto && porLeer) {
-    return (
-      <div className="space-y-4">
-        <div className="tarjeta space-y-3">
-          <img src={foto} alt="Foto del tiquete lista para leer" className="w-full rounded-xl border border-borde" />
-          <p className="text-sm text-suave">Así se va a leer el tiquete: recortado y con efecto escaneo. Si se ve bien, toque «Leer tiquete».</p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <button className="boton-primario py-4" onClick={() => leer(porLeer, origen)}><ScanText className="size-5" /> Leer tiquete</button>
-          <button className="boton-secundario py-4" onClick={repetirFoto}><RotateCcw className="size-5" /> Tomar otra foto</button>
-        </div>
       </div>
     );
   }

@@ -6,7 +6,9 @@ import { grisDesdeRGBA, prepararTiquete } from "@/lib/imagen/escaner";
  * recortados a 2000 px para que se lean bien los números; si pesa más de 500 KB se
  * baja la calidad y luego el tamaño.
  */
-export async function reducirImagen(fuente: CanvasImageSource & { width: number; height: number }, ladoLargo = 1280): Promise<Blob> {
+export async function reducirImagen(
+  fuente: CanvasImageSource & { width: number; height: number }, ladoLargo = 1280, calidades = [0.8, 0.7, 0.6, 0.5],
+): Promise<Blob> {
   // No se reduce más de 0,85: por debajo la foto pierde la resolución que exige el servidor.
   for (const factor of [1, 0.85]) {
     const escala = Math.min(1, (ladoLargo * factor) / Math.max(fuente.width, fuente.height));
@@ -18,7 +20,7 @@ export async function reducirImagen(fuente: CanvasImageSource & { width: number;
     const aBlob = (tipo: string, calidad: number) =>
       new Promise<Blob | null>((ok) => canvas.toBlob(ok, tipo, calidad));
 
-    for (const calidad of [0.8, 0.7, 0.6, 0.5]) {
+    for (const calidad of calidades) {
       let blob = await aBlob("image/webp", calidad);
       if (!blob || blob.type !== "image/webp") blob = await aBlob("image/jpeg", calidad);
       if (blob && blob.size <= 500_000) return blob;
@@ -51,7 +53,8 @@ export async function escanearTiquete(fuente: CanvasImageSource & { width: numbe
     px.data[p] = v; px.data[p + 1] = v; px.data[p + 2] = v; px.data[p + 3] = 255;
   }
   sctx.putImageData(px, 0, 0);
-  return reducirImagen(salida, 2000);
+  // Calidad alta: en blanco y negro pesa poco, y una compresión fuerte desgasta el borde de las letras.
+  return reducirImagen(salida, 2000, [0.92, 0.85, 0.8, 0.7]);
 }
 
 /** Carga un archivo de la galería o de la cámara del celular como imagen (respeta la orientación EXIF). */

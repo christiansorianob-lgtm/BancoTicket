@@ -88,7 +88,7 @@ export function zonaDeTexto(g: Gris): { x0: number; y0: number; x1: number; y1: 
  * queda blanco parejo y la tinta oscura; luego estira el contraste. Conserva los grises del
  * borde de cada letra (pasar a solo 2 colores puede borrar dígitos tenues del papel térmico).
  */
-export function efectoEscaneo(g: Gris): Gris {
+export function efectoEscaneo(g: Gris, { negro = 0.3, blanco = 0.95, curva = 1.15 } = {}): Gris {
   // Fondo: versión pequeña, «máximo» local (borra la tinta) y suavizado; luego se amplía.
   const lado = 64;
   const p = reducir(g, lado);
@@ -116,10 +116,12 @@ export function efectoEscaneo(g: Gris): Gris {
       d[y * g.w + x] = Math.min(1, g.d[y * g.w + x] / Math.max(40, f));
     }
   }
-  // Contraste: el papel (≥ 0,9 del fondo) a blanco; la tinta se oscurece con una curva.
+  // Contraste suave (calibrado con tiquetes reales, 2026-10-21): el papel (≥ 0,95 del fondo) a
+  // blanco y la tinta oscura con una curva leve. Una curva fuerte (0,35–0,9 y 1,6) adelgazaba y
+  // cortaba las letras, y la IA dejaba de leer el neto con certeza.
   for (let i = 0; i < d.length; i++) {
-    const v = Math.min(1, Math.max(0, (d[i] - 0.35) / (0.9 - 0.35)));
-    d[i] = 255 * Math.pow(v, 1.6);
+    const v = Math.min(1, Math.max(0, (d[i] - negro) / (blanco - negro)));
+    d[i] = 255 * Math.pow(v, curva);
   }
   return { w: g.w, h: g.h, d };
 }
