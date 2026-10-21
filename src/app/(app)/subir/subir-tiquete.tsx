@@ -9,6 +9,7 @@ import { formatoToneladas } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
 import { AvisoContacto, abrirWhatsApp } from "@/components/contacto";
 import { detalleTiquete } from "@/lib/mensajes";
+import { MAX_CAMPOS_REVISION } from "@/lib/lectura/tipos";
 import { enviarARevision, enviarTiquete } from "./acciones";
 
 type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
@@ -171,7 +172,11 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
         {lectura.ok ? (
           <>
             <Mensaje tono="alerta">Compare estos datos, incluida la extractora, con el tiquete que tiene en la mano. No se pueden editar: si algo no coincide, tome otra foto.</Mensaje>
-            {lectura.dudosos.length > 0 && (
+            {lectura.dudosos.length > MAX_CAMPOS_REVISION ? (
+              <Mensaje tono="error">
+                Hay {lectura.dudosos.length} campos que no son 100 % legibles ({lectura.dudosos.join(", ")}). Con tantos campos dudosos no se puede enviar: tome otra foto más nítida, de frente, con buena luz y el tiquete completo.
+              </Mensaje>
+            ) : lectura.dudosos.length > 0 && (
               <Mensaje tono="alerta">Estos campos no son 100 % legibles: {lectura.dudosos.join(", ")} (resaltados arriba). Puede enviarlo así y la administradora los revisará con la foto; o tome otra foto más nítida.</Mensaje>
             )}
             {lectura.posiblesDuplicados.length > 0 && (
@@ -180,7 +185,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
               </Mensaje>
             )}
             <div className="grid gap-2 sm:grid-cols-2">
-              <button className="boton-primario py-4" disabled={enviando}
+              {lectura.dudosos.length <= MAX_CAMPOS_REVISION && <button className="boton-primario py-4" disabled={enviando}
                 onClick={() => iniciar(async () => {
                   const r = await enviarTiquete(lectura.token);
                   if (!r.ok) return setError(r.error);
@@ -190,7 +195,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
                   );
                 })}>
                 <CheckCircle2 className="size-5" /> {enviando ? "Enviando…" : "Coincide, enviar"}
-              </button>
+              </button>}
               <button className="boton-secundario py-4" disabled={enviando} onClick={repetirFoto}>
                 <RotateCcw className="size-5" /> No coincide, tomar otra foto
               </button>

@@ -109,7 +109,7 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 3. Revisión final en el celular: la foto (del sensor, recortada al marco) debe parecer documento y tener nitidez ≥ 200 a 1000 px; si no, reintenta sola. La galería pasa por las mismas revisiones. **No se gira la foto** (la regla automática fallaba).
 4. El servidor repite la revisión de nitidez con `sharp` (`src/lib/camara/revisar-foto.ts`) antes de la IA.
    Servidor: la IA (Haiku) recibe la foto + todas las extractoras activas (NIT, nombres impresos, plantillas). Detecta la extractora (**primero por NIT**, luego por nombre) y lee los campos. Controles + duplicados. Si la IA duda de algún carácter → se puede enviar pero queda **«Verificar: …»** para el admin.
-5. El comprador ve los datos solo lectura → «Coincide, enviar» → se abre WhatsApp al admin con el detalle y la pantalla **vuelve a «Subir tiquete»**.
+5. Campos no 100 % legibles salen resaltados («Revisar»). **Con más de 3 no se puede enviar** (solo «tomar otra foto»; el servidor también lo impide). El comprador ve los datos solo lectura → «Coincide, enviar» → se abre WhatsApp al admin con el detalle y la pantalla **vuelve a «Subir tiquete»**.
 6. Solo se rechaza si no es tiquete o falta lo indispensable (número, fecha válida, pesos); placa no leída o neto que no cuadra pasan marcados. Si se rechaza → **no se puede enviar**, se muestra el motivo concreto: «El tiquete está ilegible», solo «Tomar la foto con la cámara» o «Elegir otra foto»; la foto se borra. Solo un tiquete legible de una **extractora no registrada** se puede «Enviar a revisión» (va a «Formatos no reconocidos»).
 
 **Administrador**
