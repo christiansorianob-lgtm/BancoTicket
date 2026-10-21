@@ -9,6 +9,9 @@ export type FiltrosInforme = {
 export type FilaReporte = {
   id: string; comprador: string; extractora: string; proveedor: string | null; fecha_entrada: string;
   numero: string; peso_neto_t: number; precio_tonelada: number | null; valor: number | null; imagen_ruta: string | null;
+  // Para editar el registro desde Reportes.
+  extractora_id: string; comprador_id: string; peso_bruto_kg: number; tara_kg: number; neto_impreso_kg: number | null;
+  placa: string | null; conductor: string | null; bascula: string | null; estado: string;
 };
 
 export function filtrosDesde(leer: (clave: string) => string | null | undefined): FiltrosInforme {
@@ -27,7 +30,7 @@ export async function consultarInforme(
   for (let desde = 0; desde < maximo; desde += 1000) {
     let q = supabase
       .from("tiquetes")
-      .select("id, numero, proveedor, imagen_ruta, fecha_entrada, peso_neto_t, precio_tonelada, valor, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre)")
+      .select("id, numero, proveedor, imagen_ruta, fecha_entrada, peso_neto_t, precio_tonelada, valor, extractora_id, comprador_id, peso_bruto_kg, tara_kg, neto_impreso_kg, placa, conductor, bascula, estado, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre)")
       .eq("estado", "vigente")
       .order("fecha_entrada", { ascending: true })
       .range(desde, Math.min(desde + 999, maximo - 1));
@@ -45,7 +48,9 @@ export async function consultarInforme(
         id: r.id, comprador: r.perfiles?.nombre ?? "", extractora: r.extractoras?.nombre ?? "", proveedor: r.proveedor,
         fecha_entrada: r.fecha_entrada, numero: r.numero, peso_neto_t: Number(r.peso_neto_t),
         precio_tonelada: r.precio_tonelada == null ? null : Number(r.precio_tonelada), valor: r.valor == null ? null : Number(r.valor),
-        imagen_ruta: r.imagen_ruta,
+        imagen_ruta: r.imagen_ruta, extractora_id: r.extractora_id, comprador_id: r.comprador_id,
+        peso_bruto_kg: r.peso_bruto_kg, tara_kg: r.tara_kg, neto_impreso_kg: r.neto_impreso_kg,
+        placa: r.placa, conductor: r.conductor, bascula: r.bascula, estado: r.estado,
       });
     }
     if (!data || data.length < 1000) break;
