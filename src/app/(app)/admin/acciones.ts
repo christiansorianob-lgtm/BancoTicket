@@ -10,11 +10,12 @@ import { avisar, perfilDestino } from "@/lib/avisos";
 import { interpretarFechaTiquete } from "@/lib/fechas";
 import { formatoPesos, kilosDesdeTexto, montoDesdeTexto } from "@/lib/numeros";
 import { normalizarPlaca } from "@/lib/lectura/controles";
-import { detalleTiquete } from "@/lib/mensajes";
+import { detalleTiquete, textoAvisoResta } from "@/lib/mensajes";
 import { aprenderDeFoto } from "@/lib/lectura/aprender-guardar";
 
 /** whatsapp: aviso que se abre listo en WhatsApp para enviarlo al comprador. */
-export type Resultado = { ok: boolean; error?: string; mensaje?: string; celular?: string; whatsapp?: string };
+/** aviso: advertencia que no impide la acción (ej. bruto − tara no da el neto impreso). */
+export type Resultado = { ok: boolean; error?: string; mensaje?: string; aviso?: string; celular?: string; whatsapp?: string };
 
 const fallo = (error: string): Resultado => ({ ok: false, error });
 
@@ -116,7 +117,14 @@ export async function editarPendiente(id: string, form: FormData): Promise<Resul
   if (error) return fallo(error.message.replace(/^.*TIQUETE_DUPLICADO: /, "Ya existe: "));
   await supabase.from("tiquetes_pendientes").update({ requiere_revision: false }).eq("id", id);
   revalidatePath("/admin/pendientes");
-  return { ok: true, mensaje: "Datos corregidos" };
+  return { ok: true, mensaje: "Datos corregidos", aviso: await avisoResta(supabase, "tiquetes_pendientes", id) };
+}
+
+/** Tras corregir: si bruto − tara no da el neto impreso, el aviso (no impide guardar). */
+async function avisoResta(supabase: Awaited<ReturnType<typeof supabaseServidor>>, tabla: "tiquetes" | "tiquetes_pendientes", id: string) {
+  const { data: t } = await supabase.from(tabla).select("peso_bruto_kg, tara_kg, neto_impreso_kg").eq("id", id).single();
+  if (!t || t.neto_impreso_kg == null || t.peso_bruto_kg - t.tara_kg === t.neto_impreso_kg) return undefined;
+  return textoAvisoResta(t.peso_bruto_kg, t.tara_kg, t.neto_impreso_kg);
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +145,7 @@ export async function editarTiquete(id: string, form: FormData): Promise<Resulta
       `El tiquete N° ${antes.numero} quedó con precio de ${formatoPesos(cambios.precio_tonelada as number)} por tonelada.`, "/extracto");
   }
   revalidatePath("/admin", "layout");
-  return { ok: true, mensaje: "Tiquete actualizado" };
+  return { ok: true, mensaje: "Tiquete actualizado", aviso: await avisoResta(supabase, "tiquetes", id) };
 }
 
 export async function asignarPrecioBloque(form: FormData): Promise<Resultado> {

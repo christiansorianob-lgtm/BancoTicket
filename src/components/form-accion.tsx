@@ -48,6 +48,7 @@ export function ResultadoAccion({ resultado }: { resultado: Resultado | null }) 
   return (
     <div className="space-y-2">
       {resultado.mensaje && <Mensaje tono="ok">{resultado.mensaje}</Mensaje>}
+      {resultado.aviso && <Mensaje tono="alerta">{resultado.aviso}</Mensaje>}
       {resultado.whatsapp && (
         <AvisoContacto contacto={{ celular: resultado.celular, mensaje: resultado.whatsapp }} />
       )}

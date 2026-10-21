@@ -1,3 +1,5 @@
+import { AvisoResta } from "@/components/aviso-resta";
+
 /** Campos editables de un tiquete (el administrador puede cambiar cualquier dato). */
 type Tiquete = {
   extractora_id?: string; numero?: string; fecha_entrada?: string; peso_bruto_kg?: number; tara_kg?: number;
@@ -24,11 +26,12 @@ export function CamposTiquete({ t = {}, extractoras }: { t?: Tiquete; extractora
       <label><span className="etiqueta">Placa</span><input name="placa" className="campo uppercase" defaultValue={t.placa ?? ""} /></label>
       <label><span className="etiqueta">Peso bruto (kg)</span><input name="peso_bruto_kg" inputMode="numeric" className="campo" defaultValue={t.peso_bruto_kg} required /></label>
       <label><span className="etiqueta">Tara (kg)</span><input name="tara_kg" inputMode="numeric" className="campo" defaultValue={t.tara_kg} required /></label>
-      <label><span className="etiqueta">Neto impreso (kg, opcional)</span><input name="neto_impreso_kg" inputMode="numeric" className="campo" defaultValue={t.neto_impreso_kg ?? ""} /></label>
+      <label><span className="etiqueta">Neto impreso (kg, el que se cobra)</span><input name="neto_impreso_kg" inputMode="numeric" className="campo" defaultValue={t.neto_impreso_kg ?? ""} /></label>
       <label><span className="etiqueta">Proveedor</span><input name="proveedor" className="campo" defaultValue={t.proveedor ?? ""} /></label>
       <label><span className="etiqueta">Conductor</span><input name="conductor" className="campo" defaultValue={t.conductor ?? ""} /></label>
       <label><span className="etiqueta">Báscula</span><input name="bascula" className="campo" defaultValue={t.bascula ?? ""} /></label>
       <label><span className="etiqueta">Motivo del cambio</span><input name="motivo" className="campo" placeholder="Ej.: corrección de lectura" /></label>
+      <AvisoResta />
     </div>
   );
 }
