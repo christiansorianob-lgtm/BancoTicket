@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileSpreadsheet } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
@@ -42,7 +43,16 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
 
   return (
     <>
-      <h1 className="titulo">Tiquetes aprobados y precios</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="titulo">Tiquetes aprobados y precios</h1>
+        {/* Exporta con los mismos filtros de esta pantalla. */}
+        <a href={`/api/exportar/tiquetes?${new URLSearchParams({
+          desde: f.desde, hasta: f.hasta, extractora: f.extractora, comprador: f.comprador,
+          estado: f.estado, ...(f.sinPrecio ? { sin_precio: "1" } : {}),
+        })}`} className="boton-primario" download>
+          <FileSpreadsheet className="size-5" aria-hidden /> Exportar a Excel
+        </a>
+      </div>
 
       <form className="tarjeta grid gap-3 sm:grid-cols-2 lg:grid-cols-6" method="get">
         <label><span className="etiqueta">Desde (fecha de entrada)</span><input type="date" name="desde" defaultValue={f.desde} className="campo" /></label>
