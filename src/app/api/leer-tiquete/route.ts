@@ -48,9 +48,10 @@ export async function POST(request: Request) {
   const base = { comprador_id: perfil.id, imagen_ruta: ruta, origen, emitida: Date.now() } as const;
 
   let cruda: LecturaCruda | null = null;
-  let motivoFallo = "No se pudo leer la foto";
+  const motivoFallo = "No se pudo leer la foto";
   if (!process.env.ANTHROPIC_API_KEY) {
-    motivoFallo = "La lectura automática todavía no está configurada (falta la clave de Anthropic). Envíelo a revisión del administrador";
+    await db.storage.from("tiquetes").remove([ruta]);
+    return NextResponse.json({ error: "La lectura automática no está disponible en este momento. Intente más tarde." }, { status: 503 });
   } else try {
     cruda = await lectorConfigurado().leer(
       { base64: bytes.toString("base64"), tipo: imagen.type as (typeof TIPOS)[number] },
@@ -82,13 +83,16 @@ export async function POST(request: Request) {
     : { ok: false as const, motivo: motivoFallo, controles: [], cruda: null };
   const detectada = extractora ? { id: extractora.id, nombre: extractora.nombre } : null;
 
+  // Ilegible (o no es un tiquete, o los datos no cuadran): no va a revisión del administrador.
+  // El comprador debe conseguir una foto clara; la foto no se guarda.
   if (!resultado.ok) {
+    await db.storage.from("tiquetes").remove([ruta]);
     return NextResponse.json({
       ok: false,
+      ilegible: true,
       motivo: resultado.motivo,
       controles: resultado.controles,
       extractora: detectada,
-      tokenRevision: firmar({ ...base, tipo: "revision", extractora_id: detectada?.id ?? null, cruda: resultado.cruda, motivo: resultado.motivo }),
     });
   }
   // Aquí la extractora siempre se detectó (si no, se devolvió arriba).

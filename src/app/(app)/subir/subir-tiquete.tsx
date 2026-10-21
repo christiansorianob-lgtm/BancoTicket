@@ -18,8 +18,11 @@ type Datos = {
 /** extractora: la que detectó la IA entre las registradas (null si no la reconoció). */
 type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
-  | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[] }
-  | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined }
+  | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[]; ilegible?: undefined }
+  // Ilegible: no se puede enviar; el comprador debe conseguir una foto clara.
+  | { ok: false; ilegible: true; motivo: string; controles: Control[]; duplicado?: undefined; datos?: undefined }
+  // Tiquete legible de una extractora que no está registrada: va a revisión para aprenderla.
+  | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined; ilegible?: undefined }
 );
 
 type Paso = "inicio" | "camara" | "leyendo" | "resultado";
@@ -197,9 +200,20 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
             </Mensaje>
             <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
           </>
+        ) : lectura.ilegible ? (
+          <>
+            <Mensaje tono="error">
+              El tiquete está ilegible y no se puede registrar. Busque una foto más clara o, mejor, tome la foto al tiquete en físico con la cámara de la app: de frente, con buena luz, completo y sin arrugas.
+            </Mensaje>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button className="boton-primario py-4" onClick={() => setPaso("camara")}><Camera className="size-5" /> Tomar la foto con la cámara</button>
+              <button className="boton-secundario py-4" onClick={() => galeria.current?.click()}><ImageUp className="size-5" /> Elegir otra foto</button>
+            </div>
+            <input ref={galeria} type="file" accept="image/*" className="hidden" onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />
+          </>
         ) : (
           <>
-            <Mensaje tono="error">No se pudo leer bien el tiquete: {lectura.motivo}. Repita la foto de frente, con buena luz y el tiquete completo.</Mensaje>
+            <Mensaje tono="error">{lectura.motivo}. Si es de una extractora nueva, envíelo a revisión para que el administrador la registre.</Mensaje>
             <div className="grid gap-2 sm:grid-cols-2">
               <button className="boton-primario" onClick={repetirFoto}><RotateCcw className="size-5" /> Tomar otra foto</button>
               <button className="boton-secundario" disabled={enviando}
