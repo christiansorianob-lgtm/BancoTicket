@@ -21,7 +21,8 @@ export function EditarFila({ t, foto, extractoras, compradores }: {
         className="inline-flex size-9 items-center justify-center rounded-lg text-primario hover:bg-primario-suave">
         <Pencil className="size-5" aria-label={`Editar el tiquete ${t.numero}`} />
       </button>
-      <dialog ref={ventana} className="m-auto w-[min(56rem,calc(100vw-2rem))] rounded-2xl bg-white p-0 text-left text-texto shadow-2xl backdrop:bg-profundo/50">
+      {/* whitespace-normal: la ventana vive dentro de una celda «nowrap» de la tabla. */}
+      <dialog ref={ventana} className="m-auto w-[min(56rem,calc(100vw-2rem))] whitespace-normal break-words rounded-2xl bg-white p-0 text-left text-texto shadow-2xl backdrop:bg-profundo/50">
         <div className="flex items-center justify-between gap-2 border-b border-borde p-4">
           <h2 className="font-bold text-profundo">Editar {t.extractora} · N° {t.numero}</h2>
           <button type="button" onClick={() => ventana.current?.close()} className="rounded-lg p-2 hover:bg-primario-suave" aria-label="Cerrar">
