@@ -83,11 +83,11 @@ scripts/                             aplicar-sql, crear-admin, perfil-admin, pru
 docs/                                ARQUITECTURA.md (decisiones), NOTAS.md (bitácora), DESPLIEGUE.md, especificacion.pdf
 ```
 
-## 6. Base de datos (migraciones aplicadas: 0001 a 0013)
+## 6. Base de datos (migraciones aplicadas: 0001 a 0014)
 
-**Nunca editar una migración ya aplicada; crear la siguiente (`0014_...sql`) y aplicarla con:**
+**Nunca editar una migración ya aplicada; crear la siguiente (`0015_...sql`) y aplicarla con:**
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0014_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0015_nombre.sql
 ```
 (corre en una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`).
 
