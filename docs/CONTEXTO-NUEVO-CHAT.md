@@ -25,7 +25,7 @@ Especificación original: `docs/especificacion.pdf` (fuente de verdad del negoci
 - **Desarrollador** (uno solo): Christian Soriano (usuario `christian`, celular 3182542939, christiansorianob@gmail.com). Mismos permisos del administrador, pero no recibe avisos de compradores. Rol `desarrollador` (migraciones 0006–0007); no se asigna desde la app.
 - **Compradores** (intermediarios, sin límite): solo ven lo suyo. Usuario de prueba: `prueba`.
 - **Contraseñas:** usuarios nuevos y restablecidos quedan con **12345678** y pueden seguir trabajando con ella (no se obliga a cambiarla). Cada uno la cambia en la llave del encabezado (`/clave`). «Olvidé mi contraseña» → solicitud → el desarrollador aprueba en «Contraseñas» (`/admin/claves`).
-- Ingreso con **usuario y contraseña**. Supabase Auth usa el correo interno `<usuario>@bancoticket.local`; el correo real va en `perfiles.correo`.
+- Ingreso con **usuario y contraseña**. Supabase Auth usa el correo interno `<usuario>@bancoticket.local`; el correo real (opcional) va en `perfiles.correo`.
 
 ## 3. Dónde está todo
 

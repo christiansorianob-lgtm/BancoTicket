@@ -1,6 +1,6 @@
 import { CLAVE_POR_DEFECTO } from "@/lib/claves";
 
-type U = { id: string; nombre: string; usuario: string; celular: string; correo: string; rol: string; activo: boolean };
+type U = { id: string; nombre: string; usuario: string; celular: string; correo: string | null; rol: string; activo: boolean };
 
 export function CamposUsuario({ u }: { u?: U }) {
   return (
@@ -9,7 +9,7 @@ export function CamposUsuario({ u }: { u?: U }) {
       <label><span className="etiqueta">Nombre</span><input name="nombre" className="campo" defaultValue={u?.nombre} required /></label>
       <label><span className="etiqueta">Usuario (para ingresar)</span><input name="usuario" className="campo lowercase" defaultValue={u?.usuario} required autoCapitalize="none" /></label>
       <label><span className="etiqueta">Celular WhatsApp</span><input name="celular" inputMode="tel" className="campo" defaultValue={u?.celular} required placeholder="3001234567" /></label>
-      <label><span className="etiqueta">Correo</span><input name="correo" type="email" className="campo" defaultValue={u?.correo} required /></label>
+      <label><span className="etiqueta">Correo (opcional)</span><input name="correo" type="email" className="campo" defaultValue={u?.correo ?? ""} /></label>
       {!u && (
         <label><span className="etiqueta">Contraseña (por defecto; la cambiará al ingresar)</span>
           <input className="campo" value={CLAVE_POR_DEFECTO} disabled readOnly />

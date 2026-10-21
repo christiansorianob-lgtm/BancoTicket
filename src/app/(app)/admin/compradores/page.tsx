@@ -26,7 +26,7 @@ export default async function Compradores() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-bold text-profundo">{u.nombre}</p>
-                <p className="text-sm text-suave">@{u.usuario} · {u.celular} · {u.correo}</p>
+                <p className="text-sm text-suave">@{u.usuario} · {u.celular}{u.correo ? ` · ${u.correo}` : ""}</p>
               </div>
               <div className="flex flex-col items-end gap-1">
                 <Chip tono={u.rol === "comprador" ? "neutro" : "primario"}>{NOMBRE_ROL[u.rol as Rol]}</Chip>

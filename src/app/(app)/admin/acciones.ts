@@ -238,14 +238,15 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   const nombre = textoODefecto(form.get("nombre"));
   const usuario = String(form.get("usuario") ?? "").trim().toLowerCase();
   const celular = String(form.get("celular") ?? "").replace(/\D/g, "");
-  const correo = String(form.get("correo") ?? "").trim().toLowerCase();
+  // Opcional (decisión del usuario): vacío se guarda como null.
+  const correo = String(form.get("correo") ?? "").trim().toLowerCase() || null;
   let rol = form.get("rol") === "admin" ? "admin" : "comprador";
   const activo = form.get("activo") !== "off";
 
   if (!nombre) return fallo("Escriba el nombre");
   if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return fallo("Usuario: 3 a 30 letras minúsculas, números, punto o guion");
   if (celular.length < 10) return fallo("El celular (WhatsApp) es obligatorio");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return fallo("El correo es obligatorio");
+  if (correo && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return fallo("El correo no es válido (o déjelo vacío)");
 
   const auth = supabaseAdmin().auth.admin;
   const supabase = await supabaseServidor();

@@ -1,7 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-type Destino = { id: string; correo: string; nombre: string };
+type Destino = { id: string; correo: string | null; nombre: string };
 
 /**
  * Aviso dentro de la app (campana). WhatsApp no se envía desde el servidor: se abre en el

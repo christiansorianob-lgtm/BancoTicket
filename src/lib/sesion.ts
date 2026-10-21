@@ -8,7 +8,7 @@ export type Perfil = {
   nombre: string;
   usuario: string;
   celular: string;
-  correo: string;
+  correo: string | null;
   rol: Rol;
   activo: boolean;
   /** Tiene la contraseña por defecto (usuario nuevo o restablecido). Solo se usa para recomendarle cambiarla. */
