@@ -41,9 +41,15 @@ export default async function Pendientes() {
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-lg font-bold text-profundo">{t.extractoras?.nombre} · N° {t.numero}</p>
                 {/* El proveedor es la empresa de la administración a la que se le entregó la fruta. */}
-                <span className="rounded-lg bg-profundo px-2.5 py-1 text-sm font-bold uppercase tracking-wide text-white">
-                  Proveedor: {t.proveedor ?? "no leído"}
-                </span>
+                {camposARevisar(t.requiere_revision ? t.motivo_revision : null).has("proveedor") ? (
+                  <span className="rounded-lg border-2 border-alerta bg-alerta-suave px-2.5 py-1 text-sm font-bold uppercase tracking-wide text-alerta">
+                    Proveedor: {t.proveedor ?? "no leído"} · Revisar
+                  </span>
+                ) : (
+                  <span className="rounded-lg bg-profundo px-2.5 py-1 text-sm font-bold uppercase tracking-wide text-white">
+                    Proveedor: {t.proveedor ?? "no leído"}
+                  </span>
+                )}
                 {t.requiere_revision && <Chip tono="alerta">{t.motivo_revision ?? "Revisar"}</Chip>}
                 <Chip tono={t.origen === "camara" ? "primario" : "alerta"}>{t.origen === "camara" ? "Cámara" : "Galería"}</Chip>
               </div>

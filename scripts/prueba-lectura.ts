@@ -54,6 +54,18 @@ const r4 = aplicarControles({ ...base, placa: null, peso_bruto_kg: "11630", tara
 igual("placa no leída: pasa marcada", r4.ok && r4.dudosos, ["placa"]);
 const r9 = aplicarControles({ ...base, numero_tiquete: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("sin número: se rechaza", r9.ok, false);
+const conocidos = { placaObligatoria: true, proveedoresConocidos: ["OLEUM FOODS S.A.S.", "INVERSIONES AGROPALNORT S.A.S."] };
+const pesos = { peso_bruto_kg: "16,280", tara_kg: "8,290", peso_neto_impreso_kg: "7,990" };
+const p1 = aplicarControles({ ...base, ...pesos, proveedor: "OLEUN FOODS S.A.S." }, conocidos);
+igual("proveedor mal leído (OLEUN): marcado", p1.ok && p1.dudosos, ["proveedor"]);
+igual("sugiere el parecido", p1.controles.find((c) => c.nombre === "Proveedor")?.mensaje.includes("OLEUM FOODS"), true);
+const p2 = aplicarControles({ ...base, ...pesos, proveedor: "GLEIM RODOS S.A.S." }, conocidos);
+igual("proveedor mal leído (GLEIM RODOS): marcado", p2.ok && p2.dudosos, ["proveedor"]);
+const p3 = aplicarControles({ ...base, ...pesos, proveedor: "Oleum Foods SAS", campos_dudosos: ["proveedor"] }, conocidos);
+igual("proveedor conocido (mayúsculas y puntos distintos): confirmado", p3.ok && p3.dudosos, []);
+const p4 = aplicarControles({ ...base, ...pesos, proveedor: null }, conocidos);
+igual("proveedor no leído: marcado", p4.ok && p4.dudosos, ["proveedor"]);
+
 const viejo = new Date(); viejo.setMonth(viejo.getMonth() - 7);
 const r11 = aplicarControles({ ...base, fecha_entrada: `${viejo.getDate()}/${viejo.getMonth() + 1}/${viejo.getFullYear()}`, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("tiquete de hace 7 meses: fuera de periodo", !r11.ok && r11.fueraDePeriodo, true);

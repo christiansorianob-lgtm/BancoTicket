@@ -151,7 +151,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
                 <Dato etiqueta="Peso bruto" revisar={dudoso("peso bruto")}>{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
                 <Dato etiqueta="Tara" revisar={dudoso("tara")}>{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
                 <Dato etiqueta="Peso neto">{formatoToneladas(netoKg(lectura.datos) / 1000)}</Dato>
-                {lectura.datos.proveedor && <Dato etiqueta="Proveedor">{lectura.datos.proveedor}</Dato>}
+                <Dato etiqueta="Proveedor" revisar={dudoso("proveedor")}>{lectura.datos.proveedor ?? "—"}</Dato>
                 {lectura.datos.conductor && <Dato etiqueta="Conductor">{lectura.datos.conductor}</Dato>}
                 {lectura.datos.bascula && <Dato etiqueta="Báscula">{lectura.datos.bascula}</Dato>}
               </dl>

@@ -8,7 +8,7 @@ export type FiltrosInforme = {
 
 export type FilaReporte = {
   id: string; comprador: string; extractora: string; proveedor: string | null; fecha_entrada: string;
-  numero: string; peso_neto_t: number; precio_tonelada: number | null; valor: number | null;
+  numero: string; peso_neto_t: number; precio_tonelada: number | null; valor: number | null; imagen_ruta: string | null;
 };
 
 export function filtrosDesde(leer: (clave: string) => string | null | undefined): FiltrosInforme {
@@ -27,7 +27,7 @@ export async function consultarInforme(
   for (let desde = 0; desde < maximo; desde += 1000) {
     let q = supabase
       .from("tiquetes")
-      .select("id, numero, proveedor, fecha_entrada, peso_neto_t, precio_tonelada, valor, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre)")
+      .select("id, numero, proveedor, imagen_ruta, fecha_entrada, peso_neto_t, precio_tonelada, valor, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre)")
       .eq("estado", "vigente")
       .order("fecha_entrada", { ascending: true })
       .range(desde, Math.min(desde + 999, maximo - 1));
@@ -45,6 +45,7 @@ export async function consultarInforme(
         id: r.id, comprador: r.perfiles?.nombre ?? "", extractora: r.extractoras?.nombre ?? "", proveedor: r.proveedor,
         fecha_entrada: r.fecha_entrada, numero: r.numero, peso_neto_t: Number(r.peso_neto_t),
         precio_tonelada: r.precio_tonelada == null ? null : Number(r.precio_tonelada), valor: r.valor == null ? null : Number(r.valor),
+        imagen_ruta: r.imagen_ruta,
       });
     }
     if (!data || data.length < 1000) break;

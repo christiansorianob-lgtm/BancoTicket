@@ -90,8 +90,11 @@ export async function POST(request: Request) {
     });
   }
 
+  // Proveedores de tiquetes ya aprobados (empresas de la administración) para confirmar el leído.
+  const { data: aprobados } = await db.from("tiquetes").select("proveedor").eq("estado", "vigente").not("proveedor", "is", null).limit(5000);
+  const proveedoresConocidos = [...new Set((aprobados ?? []).map((t) => t.proveedor as string))];
   const resultado = cruda
-    ? aplicarControles(cruda, { placaObligatoria: config.placa_obligatoria })
+    ? aplicarControles(cruda, { placaObligatoria: config.placa_obligatoria, proveedoresConocidos })
     : { ok: false as const, motivo: motivoFallo, controles: [], cruda: null };
   const detectada = extractora ? { id: extractora.id, nombre: extractora.nombre } : null;
 

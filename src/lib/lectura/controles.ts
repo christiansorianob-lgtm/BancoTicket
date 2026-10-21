@@ -9,7 +9,33 @@ export const MESES_MAXIMOS = 6;
 const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
 
 /** Campos del filtro 2: si la IA duda, pasan marcados. */
-const OTROS: Record<string, string> = { fecha_entrada: "fecha", placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara" };
+const OTROS: Record<string, string> = { fecha_entrada: "fecha", placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara", proveedor: "proveedor" };
+
+/** Para comparar proveedores sin importar mayúsculas, puntos ni espacios: «Oleum Foods S.A.S» = «OLEUM FOODS SAS». */
+export function claveProveedor(p: string) {
+  return p.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** Distancia de edición entre dos textos (cuántas letras cambian). */
+function distancia(a: string, b: string) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+
+/** El proveedor conocido más parecido, si se parece lo suficiente (hasta ~40 % de letras distintas). */
+function masParecido(leido: string, conocidos: string[]) {
+  const k = claveProveedor(leido);
+  let mejor: { p: string; d: number } | null = null;
+  for (const p of conocidos) {
+    const d = distancia(k, claveProveedor(p));
+    if (!mejor || d < mejor.d) mejor = { p, d };
+  }
+  return mejor && mejor.d <= Math.max(2, Math.round(k.length * 0.4)) ? mejor.p : null;
+}
 
 export function normalizarPlaca(p: string | null | undefined) {
   const t = (p ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -20,7 +46,9 @@ export function normalizarPlaca(p: string | null | undefined) {
  * Valida y normaliza la lectura. Bruto = mayor de los dos pesos y tara = menor,
  * así no importa cómo los rotule cada extractora.
  */
-export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligatoria: boolean }): ResultadoLectura {
+export function aplicarControles(
+  cruda: LecturaCruda, opciones: { placaObligatoria: boolean; proveedoresConocidos?: string[] },
+): ResultadoLectura {
   const controles: Control[] = [];
   const add = (nombre: string, ok: boolean, mensaje: string) => controles.push({ nombre, ok, mensaje });
 
@@ -93,6 +121,25 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
     controles.push({ nombre: "Placa", ok: true, dudoso: true, mensaje: "No se leyó la placa" });
   }
 
+  // Proveedor: son las empresas de la administración, así que se repiten. Si no coincide con uno
+  // ya aprobado, se marca (con el más parecido como sugerencia); si coincide, queda confirmado.
+  const proveedor = cruda.proveedor?.trim().replace(/\s+/g, " ") || null;
+  const conocidos = opciones.proveedoresConocidos ?? [];
+  if (!proveedor) {
+    dudosos.add(OTROS.proveedor);
+    controles.push({ nombre: "Proveedor", ok: true, dudoso: true, mensaje: "No se leyó el proveedor" });
+  } else if (conocidos.length > 0) {
+    const igual = conocidos.find((p) => claveProveedor(p) === claveProveedor(proveedor));
+    if (igual) {
+      dudosos.delete(OTROS.proveedor);
+    } else {
+      dudosos.add(OTROS.proveedor);
+      const parecido = masParecido(proveedor, conocidos);
+      controles.push({ nombre: "Proveedor", ok: true, dudoso: true,
+        mensaje: `El proveedor «${proveedor}» no coincide con ninguno registrado${parecido ? ` (¿${parecido}?)` : ""}` });
+    }
+  }
+
   if (dudosos.size > 0) {
     controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `Otros datos no 100 % seguros: ${[...dudosos].join(", ")}. La administradora los revisará con la foto.` });
   }
@@ -114,7 +161,7 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
       neto_impreso_kg: netoImpreso,
       placa,
       conductor: cruda.conductor?.trim() || null,
-      proveedor: cruda.proveedor?.trim().replace(/\s+/g, " ") || null,
+      proveedor,
       bascula: cruda.bascula?.trim() || null,
     },
   };

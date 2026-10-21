@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Image as ImageIcon } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
+import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
 import { formatoPesos, formatoToneladas } from "@/lib/numeros";
 import { Vacio } from "@/components/ui";
@@ -21,6 +22,8 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
     supabase.from("extractoras").select("id, nombre").order("nombre"),
     supabase.from("tiquetes").select("proveedor").eq("estado", "vigente").not("proveedor", "is", null).limit(10000),
   ]);
+  // Enlaces firmados (30 min) a las fotos de las filas que se ven en pantalla.
+  const fotos = await urlsFotos(filas.slice(0, MAX_PANTALLA).map((t) => t.imagen_ruta));
   const proveedores = [...new Set((conProveedor ?? []).map((p) => p.proveedor as string))].sort((a, b) => a.localeCompare(b, "es"));
 
   const toneladas = filas.reduce((s, t) => s + t.peso_neto_t, 0);
@@ -75,7 +78,7 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
             <thead className="bg-profundo text-left text-white">
               <tr>
                 <th className="p-3">Comprador</th><th className="p-3">Extractora</th><th className="p-3">Proveedor</th><th className="p-3">Fecha</th>
-                <th className="p-3">N° Tiquete</th><th className="p-3 text-right">Peso neto</th><th className="p-3 text-right">Precio / t</th><th className="p-3 text-right">Precio total</th>
+                <th className="p-3">N° Tiquete</th><th className="p-3 text-right">Peso neto</th><th className="p-3 text-right">Precio / t</th><th className="p-3 text-right">Precio total</th><th className="p-3 text-center">Foto</th>
               </tr>
             </thead>
             <tbody>
@@ -89,6 +92,14 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
                   <td className="p-3 text-right whitespace-nowrap">{formatoToneladas(t.peso_neto_t)}</td>
                   <td className="p-3 text-right whitespace-nowrap">{t.precio_tonelada == null ? <span className="font-semibold text-alerta">Sin precio</span> : formatoPesos(t.precio_tonelada)}</td>
                   <td className="p-3 text-right whitespace-nowrap font-semibold">{t.valor == null ? "—" : formatoPesos(t.valor)}</td>
+                  <td className="p-3 text-center">
+                    {t.imagen_ruta && fotos[t.imagen_ruta] ? (
+                      <a href={fotos[t.imagen_ruta]} target="_blank" rel="noopener noreferrer" title={`Ver foto del tiquete ${t.numero}`}
+                        className="inline-flex size-9 items-center justify-center rounded-lg text-primario hover:bg-primario-suave">
+                        <ImageIcon className="size-5" aria-label={`Ver foto del tiquete ${t.numero}`} />
+                      </a>
+                    ) : <span className="text-xs text-suave">—</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -98,6 +109,7 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
                 <td className="p-3 text-right whitespace-nowrap">{formatoToneladas(toneladas)}</td>
                 <td className="p-3" />
                 <td className="p-3 text-right whitespace-nowrap">{formatoPesos(total)}</td>
+                <td className="p-3" />
               </tr>
             </tfoot>
           </table>
