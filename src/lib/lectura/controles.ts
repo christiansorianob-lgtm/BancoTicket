@@ -2,14 +2,7 @@ import { interpretarFechaTiquete } from "@/lib/fechas";
 import { kilosDesdeTexto } from "@/lib/numeros";
 import type { Control, LecturaCruda, ResultadoLectura } from "./tipos";
 
-// Placa: 5 a 7 letras y números, con al menos una letra y un número. Las impresas
-// en los tiquetes no siempre siguen el formato ABC123 (ej. "284DAF").
-const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
-
-const NOMBRES: Record<string, string> = {
-  numero_tiquete: "número", fecha_entrada: "fecha", peso_bruto_kg: "peso bruto", tara_kg: "tara",
-  peso_neto_impreso_kg: "peso neto impreso", placa: "placa",
-};
+const NOMBRES = { numero_tiquete: "número", peso_neto_impreso_kg: "peso neto" };
 
 export function normalizarPlaca(p: string | null | undefined) {
   const t = (p ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -46,42 +39,32 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const neto = bruto - tara;
   add("Peso neto", pesosOk && neto > 0, neto > 0 ? `Neto ${neto.toLocaleString("es-CO")} kg` : "El peso neto debe ser mayor que cero");
 
-  // Lo que se lee con certeza se acepta; cada campo que la IA no lee 100 % seguro pasa marcado
-  // para que el administrador lo compare con la foto antes de aprobar.
-  const dudosos = new Set((cruda.campos_dudosos ?? []).map((c) => NOMBRES[c] ?? c));
+  // Decisión del usuario: solo el número y el peso neto (el neto × precio es lo que vale el
+  // tiquete) exigen legibilidad 100 %; si no la tienen, pasan marcados para la administradora.
+  // Los demás campos son informativos: se toleran y no se marcan.
+  const dudosos = new Set<string>();
+  if (cruda.campos_dudosos?.includes("numero_tiquete")) dudosos.add(NOMBRES.numero_tiquete);
 
-  // Solo bloquea lo indispensable para registrar el tiquete (número, fecha y pesos, arriba).
-  // Todo lo demás que no cuadre o no se lea pasa marcado para que la administradora lo revise.
-  const marcar = (nombre: string, mensaje: string, ...campos: string[]) => {
-    campos.forEach((c) => dudosos.add(c));
-    controles.push({ nombre, ok: true, dudoso: true, mensaje });
-  };
-
-  // El neto impreso es la prueba cruzada de los pesos: si no cuadra, algún peso puede estar mal leído.
+  // El neto se confirma solo con la prueba objetiva: bruto − tara debe dar exacto el neto impreso
+  // (un dígito mal leído descuadraría la resta). Sin neto impreso o si no cuadra, se marca.
   const netoImpreso = kilosDesdeTexto(cruda.peso_neto_impreso_kg);
   if (netoImpreso === null) {
     dudosos.add(NOMBRES.peso_neto_impreso_kg);
+    controles.push({ nombre: "Peso neto", ok: true, dudoso: true, mensaje: "No se leyó el peso neto impreso para comprobar la resta" });
   } else if (netoImpreso === neto) {
-    // Prueba objetiva: si bruto − tara da exacto el neto impreso, los tres pesos se confirman
-    // entre sí (un dígito mal leído descuadraría la resta), así que no hace falta revisarlos.
-    [NOMBRES.peso_bruto_kg, NOMBRES.tara_kg, NOMBRES.peso_neto_impreso_kg].forEach((c) => dudosos.delete(c));
-    add("Bruto − tara = neto impreso", true, "Coincide con el neto impreso: pesos confirmados");
+    add("Bruto − tara = neto impreso", true, "Coincide con el neto impreso: peso neto confirmado");
   } else if (pesosOk) {
-    marcar("Bruto − tara = neto impreso", `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`,
-      NOMBRES.peso_bruto_kg, NOMBRES.tara_kg, NOMBRES.peso_neto_impreso_kg);
+    dudosos.add(NOMBRES.peso_neto_impreso_kg);
+    controles.push({ nombre: "Bruto − tara = neto impreso", ok: true, dudoso: true,
+      mensaje: `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})` });
   }
 
   const placa = normalizarPlaca(cruda.placa);
-  if (!placa) {
-    if (opciones.placaObligatoria) marcar("Placa", "No se leyó la placa", NOMBRES.placa);
-  } else {
-    // Un formato raro no bloquea: se envía y el administrador lo verifica.
-    if (!PLACA.test(placa)) dudosos.add("placa");
-    controles.push({ nombre: "Placa", ok: true, mensaje: `Placa ${placa}`, dudoso: dudosos.has("placa") });
-  }
+  if (placa) controles.push({ nombre: "Placa", ok: true, mensaje: `Placa ${placa}` });
+  else if (opciones.placaObligatoria) controles.push({ nombre: "Placa", ok: true, mensaje: "No se leyó la placa (informativo)" });
 
   if (dudosos.size > 0) {
-    controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `La lectura no es 100 % segura en: ${[...dudosos].join(", ")}. El administrador revisará esos campos.` });
+    controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `No es 100 % seguro: ${[...dudosos].join(", ")}. La administradora lo revisará con la foto.` });
   }
 
   const fallos = controles.filter((c) => !c.ok);

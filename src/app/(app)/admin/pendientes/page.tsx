@@ -45,6 +45,8 @@ export default async function Pendientes() {
               </div>
               {(() => {
                 const r = camposARevisar(t.requiere_revision ? t.motivo_revision : null);
+                // «peso neto impreso» es el nombre que usaban los tiquetes marcados antes del 2026-10-21.
+                const netoRevisar = r.has("peso neto") || r.has("peso neto impreso");
                 return (
                   <>
                     {r.size > 0 && (
@@ -60,9 +62,9 @@ export default async function Pendientes() {
                       <Dato etiqueta="Proveedor" revisar={r.has("proveedor")}>{t.proveedor ?? "—"}</Dato>
                       <Dato etiqueta="Bruto" revisar={r.has("peso bruto")}>{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>
                       <Dato etiqueta="Tara" revisar={r.has("tara")}>{formatoToneladas(t.tara_kg / 1000)}</Dato>
-                      <Dato etiqueta="Neto">{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
-                      {(t.neto_impreso_kg != null || r.has("peso neto impreso")) && (
-                        <Dato etiqueta="Neto impreso" revisar={r.has("peso neto impreso")}>
+                      <Dato etiqueta="Neto (bruto − tara)" revisar={netoRevisar}>{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
+                      {(t.neto_impreso_kg != null || netoRevisar) && (
+                        <Dato etiqueta="Neto impreso" revisar={netoRevisar}>
                           {t.neto_impreso_kg != null ? formatoToneladas(t.neto_impreso_kg / 1000) : "No se leyó"}
                         </Dato>
                       )}

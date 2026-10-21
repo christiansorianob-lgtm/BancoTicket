@@ -147,11 +147,11 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
               <dl className="grid grid-cols-2 gap-3">
                 <Dato etiqueta="Extractora">{nombreExtractora || "—"}</Dato>
                 <Dato etiqueta="N° tiquete" revisar={dudoso("número")}>{lectura.datos.numero}</Dato>
-                <Dato etiqueta="Fecha" revisar={dudoso("fecha")}>{fechaHora(lectura.datos.fecha_entrada)}</Dato>
-                <Dato etiqueta="Placa" revisar={dudoso("placa")}>{lectura.datos.placa ?? "—"}</Dato>
-                <Dato etiqueta="Peso bruto" revisar={dudoso("peso bruto")}>{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
-                <Dato etiqueta="Tara" revisar={dudoso("tara")}>{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
-                <Dato etiqueta="Peso neto" revisar={dudoso("peso neto impreso")}>{formatoToneladas((lectura.datos.peso_bruto_kg - lectura.datos.tara_kg) / 1000)}</Dato>
+                <Dato etiqueta="Fecha">{fechaHora(lectura.datos.fecha_entrada)}</Dato>
+                <Dato etiqueta="Placa">{lectura.datos.placa ?? "—"}</Dato>
+                <Dato etiqueta="Peso bruto">{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
+                <Dato etiqueta="Tara">{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
+                <Dato etiqueta="Peso neto" revisar={dudoso("peso neto")}>{formatoToneladas((lectura.datos.peso_bruto_kg - lectura.datos.tara_kg) / 1000)}</Dato>
                 {lectura.datos.proveedor && <Dato etiqueta="Proveedor">{lectura.datos.proveedor}</Dato>}
                 {lectura.datos.conductor && <Dato etiqueta="Conductor">{lectura.datos.conductor}</Dato>}
                 {lectura.datos.bascula && <Dato etiqueta="Báscula">{lectura.datos.bascula}</Dato>}

@@ -35,9 +35,9 @@ igual("Palnorte neto", r1.ok && r1.datos.peso_bruto_kg - r1.datos.tara_kg, 1390)
 const r2 = aplicarControles({ ...base, peso_bruto_kg: "9.000", tara_kg: "26.500", peso_neto_impreso_kg: "17.500" }, { placaObligatoria: true });
 igual("bruto/tara invertidos se ordenan", r2.ok && [r2.datos.peso_bruto_kg, r2.datos.tara_kg], [26500, 9000]);
 const r3 = aplicarControles({ ...base, peso_bruto_kg: "6,320", tara_kg: "3,130", peso_neto_impreso_kg: "3,100" }, { placaObligatoria: true });
-igual("neto impreso no cuadra: pasa con pesos marcados", r3.ok && r3.dudosos, ["peso bruto", "tara", "peso neto impreso"]);
+igual("neto impreso no cuadra: pasa con el neto marcado", r3.ok && r3.dudosos, ["peso neto"]);
 const r4 = aplicarControles({ ...base, placa: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
-igual("placa no leída: pasa marcada", r4.ok && r4.dudosos, ["placa"]);
+igual("placa no leída: informativa, sin marcar", r4.ok && r4.dudosos, []);
 const r9 = aplicarControles({ ...base, numero_tiquete: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("sin número: se rechaza", r9.ok, false);
 
@@ -46,11 +46,11 @@ igual("placa 284DAF aceptada sin dudas", r5.ok && r5.dudosos, []);
 const r6 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["numero_tiquete", "tara_kg"] }, { placaObligatoria: true });
 igual("duda en tara confirmada por el neto: solo queda el número", r6.ok && r6.dudosos, ["número"]);
 const r6b = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["placa"] }, { placaObligatoria: true });
-igual("IA con duda solo en placa: pasa marcada", r6b.ok && r6b.dudosos, ["placa"]);
+igual("duda solo en placa: tolerada", r6b.ok && r6b.dudosos, []);
 const r8 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: null }, { placaObligatoria: true });
-igual("sin neto impreso: pasa marcado", r8.ok && r8.dudosos, ["peso neto impreso"]);
+igual("sin neto impreso: neto marcado", r8.ok && r8.dudosos, ["peso neto"]);
 const r7 = aplicarControles({ ...base, placa: "X1", peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
-igual("placa rara: pasa pero marcada", r7.ok && r7.dudosos, ["placa"]);
+igual("placa rara: tolerada", r7.ok && r7.dudosos, []);
 
 console.log(fallos ? `\n${fallos} prueba(s) fallaron` : "\nTodas las pruebas pasaron");
 process.exit(fallos ? 1 : 0);
