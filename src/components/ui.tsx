@@ -39,10 +39,13 @@ export function Vacio({ children }: { children: ReactNode }) {
   return <p className="rounded-xl border border-dashed border-borde bg-white/50 p-6 text-center text-suave">{children}</p>;
 }
 
-export function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
+/** revisar: la lectura no fue 100 % segura en este campo; se resalta para compararlo con la foto. */
+export function Dato({ etiqueta, children, revisar = false }: { etiqueta: string; children: ReactNode; revisar?: boolean }) {
   return (
-    <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-suave">{etiqueta}</dt>
+    <div className={revisar ? "-m-1.5 rounded-lg border-2 border-alerta bg-alerta-suave p-1.5" : ""}>
+      <dt className={`text-xs font-medium uppercase tracking-wide ${revisar ? "text-alerta" : "text-suave"}`}>
+        {etiqueta}{revisar && " · Revisar"}
+      </dt>
       <dd className="text-base font-semibold text-texto">{children}</dd>
     </div>
   );

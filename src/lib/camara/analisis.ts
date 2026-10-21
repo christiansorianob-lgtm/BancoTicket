@@ -27,11 +27,6 @@ export const UMBRALES = {
 
 const luminancia = (img: ImageData) => luminanciaRGBA(img.data);
 
-/** ¿La foto original tiene resolución suficiente para leer cada carácter con certeza? */
-export function resolucionSuficiente(fuente: { width: number; height: number }) {
-  return (fuente.width * fuente.height) / 1e6 >= FOTO.megapixelesMin;
-}
-
 /**
  * ¿Hay un documento impreso? Divide la imagen en bloques de 32 px y cuenta los que tienen
  * fondo claro (con cualquier tinte), trazos oscuros y bordes nítidos: letras sobre papel.

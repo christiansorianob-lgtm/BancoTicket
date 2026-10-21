@@ -11,9 +11,6 @@ const NOMBRES: Record<string, string> = {
   peso_neto_impreso_kg: "peso neto impreso", placa: "placa",
 };
 
-/** Campos que definen el valor del tiquete: no admiten ninguna duda de lectura. */
-const CRITICOS = new Set(["numero_tiquete", "fecha_entrada", "peso_bruto_kg", "tara_kg", "peso_neto_impreso_kg"]);
-
 export function normalizarPlaca(p: string | null | undefined) {
   const t = (p ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   return t || null;
@@ -49,21 +46,20 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const neto = bruto - tara;
   add("Peso neto", pesosOk && neto > 0, neto > 0 ? `Neto ${neto.toLocaleString("es-CO")} kg` : "El peso neto debe ser mayor que cero");
 
-  // El neto impreso es la prueba cruzada de los pesos: es obligatorio y debe cuadrar exacto.
-  // Todas las extractoras registradas lo imprimen.
+  // Lo que se lee con certeza se acepta; cada campo que la IA no lee 100 % seguro pasa marcado
+  // para que el administrador lo compare con la foto antes de aprobar.
+  const dudosos = new Set((cruda.campos_dudosos ?? []).map((c) => NOMBRES[c] ?? c));
+
+  // El neto impreso es la prueba cruzada de los pesos. Si se leyó y no cuadra, hay un peso mal
+  // leído y se pide otra foto; si no se leyó, pasa marcado.
   const netoImpreso = kilosDesdeTexto(cruda.peso_neto_impreso_kg);
-  const cuadra = netoImpreso !== null && netoImpreso === neto;
-  add("Bruto − tara = neto impreso", cuadra,
-    cuadra ? "Coincide con el neto impreso"
-      : netoImpreso === null ? "No se leyó el peso neto impreso"
-      : `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`);
-
-  // Un tiquete es como un cheque al portador: si la IA duda de un carácter del número, la fecha
-  // o los pesos, no se acepta. Solo la placa dudosa pasa marcada para que el administrador la verifique.
-  const criticos = [...new Set((cruda.campos_dudosos ?? []).filter((c) => CRITICOS.has(c)).map((c) => NOMBRES[c] ?? c))];
-  if (criticos.length > 0) add("Certeza", false, `La lectura no es 100 % segura en: ${criticos.join(", ")}`);
-
-  const dudosos = new Set((cruda.campos_dudosos ?? []).filter((c) => !CRITICOS.has(c)).map((c) => NOMBRES[c] ?? c));
+  if (netoImpreso === null) {
+    dudosos.add(NOMBRES.peso_neto_impreso_kg);
+  } else {
+    const cuadra = netoImpreso === neto;
+    add("Bruto − tara = neto impreso", cuadra,
+      cuadra ? "Coincide con el neto impreso" : `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`);
+  }
 
   const placa = normalizarPlaca(cruda.placa);
   if (!placa && opciones.placaObligatoria) {
@@ -75,7 +71,7 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   }
 
   if (dudosos.size > 0) {
-    controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `La lectura no es 100 % segura en: ${[...dudosos].join(", ")}. El administrador lo verificará.` });
+    controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `La lectura no es 100 % segura en: ${[...dudosos].join(", ")}. El administrador revisará esos campos.` });
   }
 
   const fallos = controles.filter((c) => !c.ok);

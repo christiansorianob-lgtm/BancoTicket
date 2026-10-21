@@ -2,8 +2,14 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
-import { Chip, Dato, Vacio } from "@/components/ui";
+import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
+
+/** Campos que la lectura no leyó 100 % segura, guardados como «Verificar: número, tara». */
+function camposARevisar(motivo: string | null): Set<string> {
+  if (!motivo?.startsWith("Verificar:")) return new Set();
+  return new Set(motivo.slice("Verificar:".length).split(",").map((c) => c.trim()).filter(Boolean));
+}
 
 export default async function Pendientes() {
   const supabase = await supabaseServidor();
@@ -37,19 +43,36 @@ export default async function Pendientes() {
                 {t.requiere_revision && <Chip tono="alerta">{t.motivo_revision ?? "Revisar"}</Chip>}
                 <Chip tono={t.origen === "camara" ? "primario" : "alerta"}>{t.origen === "camara" ? "Cámara" : "Galería"}</Chip>
               </div>
-              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Dato etiqueta="Comprador">{t.perfiles?.nombre}</Dato>
-                <Dato etiqueta="Fecha de entrada">{fechaHora(t.fecha_entrada)}</Dato>
-                <Dato etiqueta="Placa">{t.placa ?? "—"}</Dato>
-                <Dato etiqueta="Proveedor">{t.proveedor ?? "—"}</Dato>
-                <Dato etiqueta="Bruto">{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>
-                <Dato etiqueta="Tara">{formatoToneladas(t.tara_kg / 1000)}</Dato>
-                <Dato etiqueta="Neto">{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
-                {t.neto_impreso_kg != null && <Dato etiqueta="Neto impreso">{formatoToneladas(t.neto_impreso_kg / 1000)}</Dato>}
-                {t.conductor && <Dato etiqueta="Conductor">{t.conductor}</Dato>}
-                {t.bascula && <Dato etiqueta="Báscula">{t.bascula}</Dato>}
-                <Dato etiqueta="Subido">{fechaHora(t.cargado_en)}</Dato>
-              </dl>
+              {(() => {
+                const r = camposARevisar(t.requiere_revision ? t.motivo_revision : null);
+                return (
+                  <>
+                    {r.size > 0 && (
+                      <Mensaje tono="alerta">
+                        Compare con la foto antes de aprobar: la lectura no fue 100 % segura en {[...r].join(", ")}. Si algo no coincide, use «Corregir datos».
+                      </Mensaje>
+                    )}
+                    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <Dato etiqueta="N° tiquete" revisar={r.has("número")}>{t.numero}</Dato>
+                      <Dato etiqueta="Comprador">{t.perfiles?.nombre}</Dato>
+                      <Dato etiqueta="Fecha de entrada" revisar={r.has("fecha")}>{fechaHora(t.fecha_entrada)}</Dato>
+                      <Dato etiqueta="Placa" revisar={r.has("placa")}>{t.placa ?? "—"}</Dato>
+                      <Dato etiqueta="Proveedor" revisar={r.has("proveedor")}>{t.proveedor ?? "—"}</Dato>
+                      <Dato etiqueta="Bruto" revisar={r.has("peso bruto")}>{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>
+                      <Dato etiqueta="Tara" revisar={r.has("tara")}>{formatoToneladas(t.tara_kg / 1000)}</Dato>
+                      <Dato etiqueta="Neto">{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
+                      {(t.neto_impreso_kg != null || r.has("peso neto impreso")) && (
+                        <Dato etiqueta="Neto impreso" revisar={r.has("peso neto impreso")}>
+                          {t.neto_impreso_kg != null ? formatoToneladas(t.neto_impreso_kg / 1000) : "No se leyó"}
+                        </Dato>
+                      )}
+                      {(t.conductor || r.has("conductor")) && <Dato etiqueta="Conductor" revisar={r.has("conductor")}>{t.conductor ?? "—"}</Dato>}
+                      {t.bascula && <Dato etiqueta="Báscula" revisar={r.has("bascula")}>{t.bascula}</Dato>}
+                      <Dato etiqueta="Subido">{fechaHora(t.cargado_en)}</Dato>
+                    </dl>
+                  </>
+                );
+              })()}
               <AccionesPendiente tiquete={t} extractoras={extractoras ?? []} />
             </div>
           </li>
