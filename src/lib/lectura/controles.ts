@@ -62,7 +62,10 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   if (netoImpreso === null) {
     dudosos.add(NOMBRES.peso_neto_impreso_kg);
   } else if (netoImpreso === neto) {
-    add("Bruto − tara = neto impreso", true, "Coincide con el neto impreso");
+    // Prueba objetiva: si bruto − tara da exacto el neto impreso, los tres pesos se confirman
+    // entre sí (un dígito mal leído descuadraría la resta), así que no hace falta revisarlos.
+    [NOMBRES.peso_bruto_kg, NOMBRES.tara_kg, NOMBRES.peso_neto_impreso_kg].forEach((c) => dudosos.delete(c));
+    add("Bruto − tara = neto impreso", true, "Coincide con el neto impreso: pesos confirmados");
   } else if (pesosOk) {
     marcar("Bruto − tara = neto impreso", `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`,
       NOMBRES.peso_bruto_kg, NOMBRES.tara_kg, NOMBRES.peso_neto_impreso_kg);
