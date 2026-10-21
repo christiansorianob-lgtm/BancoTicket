@@ -4,8 +4,6 @@ import { exigirComprador } from "@/lib/sesion";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verificar, type LecturaFirmada, type RevisionFirmada } from "@/lib/lectura/firma";
 import { administradores, avisar } from "@/lib/avisos";
-import { MAX_CAMPOS_REVISION } from "@/lib/lectura/tipos";
-
 export type ResultadoEnvio = { ok: true; numero: string; extractora: string } | { ok: false; error: string };
 
 /** El comprador confirmó «Coincide, enviar»: entra a la tabla provisional como pendiente. */
@@ -19,9 +17,6 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
   }
 
   const aVerificar = l.dudosos;
-  if (aVerificar.length > MAX_CAMPOS_REVISION) {
-    return { ok: false, error: `Hay ${aVerificar.length} campos que no se leyeron con certeza. Tome otra foto más nítida.` };
-  }
   const db = supabaseAdmin();
   const { error } = await db.rpc("registrar_pendiente", {
     p_usuario: perfil.id,

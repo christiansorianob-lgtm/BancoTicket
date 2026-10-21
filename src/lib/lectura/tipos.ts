@@ -35,9 +35,6 @@ export type DatosTiquete = {
   bascula: string | null;
 };
 
-/** Con más campos que esto por revisar, la foto no sirve: el comprador debe tomar otra. */
-export const MAX_CAMPOS_REVISION = 3;
-
 /** dudoso: el dato pasó pero el administrador debe verificarlo. */
 export type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 
