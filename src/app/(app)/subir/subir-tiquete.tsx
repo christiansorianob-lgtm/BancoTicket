@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
 import { analizarCuadro, nitidezDeFoto, pareceDocumento, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
 import { MENSAJE_BORROSA } from "@/lib/camara/nitidez";
-import { escanearTiquete, imagenDesdeArchivo } from "@/lib/imagen";
+import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
@@ -26,8 +26,7 @@ type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: false; motivo: string; controles: Control[]; tokenRevision: string; duplicado?: undefined; datos?: undefined; ilegible?: undefined }
 );
 
-// preparando: recorte y efecto escaneo por código; luego se lee de inmediato (decisión del usuario).
-type Paso = "inicio" | "camara" | "preparando" | "leyendo" | "resultado";
+type Paso = "inicio" | "camara" | "leyendo" | "resultado";
 
 // Luz, quietud y enfoque en verde durante 3 cuadros seguidos (~1 s): la foto se toma sola.
 const CUADROS_ESTABLES = 3;
@@ -69,23 +68,9 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
     setPaso(origen === "camara" ? "camara" : "inicio");
   }
 
-  /** Recorta y aplica el efecto escaneo (por código, sin IA) y lee de inmediato la foto resultante. */
-  async function preparar(fuente: CanvasImageSource & { width: number; height: number }, desde: "camara" | "galeria") {
-    setOrigen(desde);
-    setError(null);
-    setPaso("preparando");
-    try {
-      const blob = await escanearTiquete(fuente);
-      if (foto) URL.revokeObjectURL(foto);
-      setFoto(URL.createObjectURL(blob));
-      await leer(blob, desde);
-    } catch {
-      setError("No se pudo preparar la foto. Intente de nuevo.");
-      setPaso("inicio");
-    }
-  }
-
   async function leer(blob: Blob, desde: "camara" | "galeria") {
+    setOrigen(desde);
+    setFoto(URL.createObjectURL(blob));
     setPaso("leyendo");
     setError(null);
     const form = new FormData();
@@ -124,27 +109,19 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
       setPaso("inicio");
       return;
     }
-    await preparar(img, desde);
+    await leer(await reducirImagen(img, 2000), desde);
   }
 
   if (paso === "camara") {
     return (
       <>
-        <CamaraGuiada onCaptura={(c) => preparar(c, "camara")} onCancelar={() => setPaso("inicio")}
+        <CamaraGuiada onCaptura={(b) => leer(b, "camara")} onCancelar={() => setPaso("inicio")}
           onCamaraNativa={() => camaraNativa.current?.click()} onGaleria={() => galeria.current?.click()} />
         <input ref={camaraNativa} type="file" accept="image/*" capture="environment" className="hidden"
           onChange={(e) => { desdeArchivo(e.target.files?.[0], "camara"); e.target.value = ""; }} />
         <input ref={galeria} type="file" accept="image/*" className="hidden"
           onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />
       </>
-    );
-  }
-
-  if (paso === "preparando") {
-    return (
-      <div className="tarjeta text-center">
-        <p className="flex items-center justify-center gap-2 font-semibold text-primario"><Loader2 className="size-5 animate-spin" /> Preparando la foto…</p>
-      </div>
     );
   }
 
@@ -351,7 +328,7 @@ async function fotoDelSensor(flujo: MediaStream, v: HTMLVideoElement, m: Marco):
 }
 
 function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
-  onCaptura: (c: HTMLCanvasElement) => void; onCancelar: () => void; onCamaraNativa: () => void; onGaleria: () => void;
+  onCaptura: (b: Blob) => void; onCancelar: () => void; onCamaraNativa: () => void; onGaleria: () => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const contenedor = useRef<HTMLDivElement>(null);
@@ -440,7 +417,7 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
       setCapturando(false);
       return;
     }
-    onCaptura(c);
+    onCaptura(await reducirImagen(c, 2000));
   }
 
   // Foto automática: apenas se cumplen los mínimos (luz, quieto y enfocado), se toma sola.
