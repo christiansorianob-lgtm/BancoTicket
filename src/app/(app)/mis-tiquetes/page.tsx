@@ -4,7 +4,7 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { leerConfiguracion } from "@/lib/config";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
-import { formatoPesos, formatoToneladas } from "@/lib/numeros";
+import { formatoPesos, formatoToneladas, netoKg } from "@/lib/numeros";
 import { Dato, EstadoChip, Vacio } from "@/components/ui";
 import { BotonEliminarRechazado } from "./eliminar";
 
@@ -43,7 +43,7 @@ export default async function MisTiquetes({ searchParams }: PageProps<"/mis-tiqu
 
       <ul className="space-y-3">
         {filas.map((t) => {
-          const netoKg = t.peso_bruto_kg - t.tara_kg;
+          const neto = netoKg(t);
           const conPrecio = t.precio_tonelada != null;
           return (
             <li key={t.id} className="tarjeta">
@@ -56,7 +56,7 @@ export default async function MisTiquetes({ searchParams }: PageProps<"/mis-tiqu
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {(estado !== "vigente" || conPrecio || config.comprador_ve_toneladas_sin_precio) && (
-                  <Dato etiqueta="Peso neto">{formatoToneladas(netoKg / 1000)}</Dato>
+                  <Dato etiqueta="Peso neto">{formatoToneladas(neto / 1000)}</Dato>
                 )}
                 <Dato etiqueta="Placa">{t.placa ?? "—"}</Dato>
                 {t.proveedor && <Dato etiqueta="Proveedor">{t.proveedor}</Dato>}

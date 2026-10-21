@@ -1,7 +1,7 @@
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
-import { formatoToneladas } from "@/lib/numeros";
+import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
 
@@ -62,11 +62,9 @@ export default async function Pendientes() {
                       <Dato etiqueta="Proveedor" revisar={r.has("proveedor")}>{t.proveedor ?? "—"}</Dato>
                       <Dato etiqueta="Bruto" revisar={r.has("peso bruto")}>{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>
                       <Dato etiqueta="Tara" revisar={r.has("tara")}>{formatoToneladas(t.tara_kg / 1000)}</Dato>
-                      <Dato etiqueta="Neto (bruto − tara)" revisar={netoRevisar}>{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
-                      {(t.neto_impreso_kg != null || netoRevisar) && (
-                        <Dato etiqueta="Neto impreso" revisar={netoRevisar}>
-                          {t.neto_impreso_kg != null ? formatoToneladas(t.neto_impreso_kg / 1000) : "No se leyó"}
-                        </Dato>
+                      <Dato etiqueta="Peso neto (impreso, se cobra)" revisar={netoRevisar}>{formatoToneladas(netoKg(t) / 1000)}</Dato>
+                      {t.neto_impreso_kg != null && t.neto_impreso_kg !== t.peso_bruto_kg - t.tara_kg && (
+                        <Dato etiqueta="Bruto − tara (no cuadra)" revisar>{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
                       )}
                       {(t.conductor || r.has("conductor")) && <Dato etiqueta="Conductor" revisar={r.has("conductor")}>{t.conductor ?? "—"}</Dato>}
                       {t.bascula && <Dato etiqueta="Báscula" revisar={r.has("bascula")}>{t.bascula}</Dato>}

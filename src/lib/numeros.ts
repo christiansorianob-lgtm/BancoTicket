@@ -13,6 +13,14 @@ export function kilosDesdeTexto(texto: string | number | null | undefined): numb
   return Number.isSafeInteger(n) ? n : null;
 }
 
+/**
+ * Peso neto que vale (con él se cobra): el IMPRESO en el tiquete. Solo si no lo tiene
+ * (registro manual antiguo) se usa bruto − tara. Igual que la columna calculada en la base.
+ */
+export function netoKg(t: { peso_bruto_kg: number; tara_kg: number; neto_impreso_kg?: number | null }): number {
+  return t.neto_impreso_kg ?? t.peso_bruto_kg - t.tara_kg;
+}
+
 /** Toneladas exactas a partir de kilos enteros (sin redondear). */
 export function toneladas(kilos: number): number {
   return kilos / 1000;

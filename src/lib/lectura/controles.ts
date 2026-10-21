@@ -5,8 +5,8 @@ import type { Control, LecturaCruda, ResultadoLectura } from "./tipos";
 // Placa: 5 a 7 letras y números, con al menos una letra y un número (ej. "284DAF").
 const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
 
-/** Campos del filtro 2: si la IA duda, pasan marcados. Bruto y tara los confirma el neto (filtro 1). */
-const OTROS: Record<string, string> = { fecha_entrada: "fecha", placa: "placa" };
+/** Campos del filtro 2: si la IA duda, pasan marcados. */
+const OTROS: Record<string, string> = { fecha_entrada: "fecha", placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara" };
 
 export function normalizarPlaca(p: string | null | undefined) {
   const t = (p ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -41,25 +41,38 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const bruto = pesosOk ? Math.max(a!, b!) : 0;
   const tara = pesosOk ? Math.min(a!, b!) : 0;
   const neto = bruto - tara;
-  add("Peso neto", pesosOk && neto > 0, neto > 0 ? `Neto ${neto.toLocaleString("es-CO")} kg` : "El peso neto debe ser mayor que cero");
+  if (pesosOk && neto <= 0) add("Bruto y tara", false, "El peso bruto debe ser mayor que la tara");
 
   // Filtro 1 (decisión del usuario): el número y el peso neto (neto × precio = valor del tiquete)
   // deben ser 100 % legibles; si no, el tiquete no pasa y se pide una foto más legible.
   if (numero && cruda.campos_dudosos?.includes("numero_tiquete")) {
     add("Número 100 % legible", false, `El número del tiquete (${numero}) no es 100 % legible`);
   }
-  // El neto se confirma con la prueba objetiva: bruto − tara debe dar exacto el neto impreso
-  // (un dígito mal leído descuadraría la resta).
+  // El peso neto que vale es el IMPRESO (con él se cobra), no la resta: debe leerse 100 % seguro.
   const netoImpreso = kilosDesdeTexto(cruda.peso_neto_impreso_kg);
-  if (pesosOk) {
-    if (netoImpreso === null) add("Peso neto 100 % legible", false, "No se pudo leer el peso neto impreso para confirmar el peso");
-    else if (netoImpreso === neto) add("Bruto − tara = neto impreso", true, "Coincide con el neto impreso: peso neto confirmado");
-    else add("Peso neto 100 % legible", false, `El peso neto no se pudo confirmar: la resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`);
+  if (netoImpreso === null || netoImpreso <= 0) {
+    add("Peso neto 100 % legible", false, "No se pudo leer el peso neto impreso");
+  } else if (cruda.campos_dudosos?.includes("peso_neto_impreso_kg")) {
+    add("Peso neto 100 % legible", false, `El peso neto impreso (${cruda.peso_neto_impreso_kg}) no es 100 % legible`);
+  } else {
+    add("Peso neto", true, `Peso neto ${netoImpreso.toLocaleString("es-CO")} kg`);
   }
 
   // Filtro 2: los demás campos dudosos no detienen el tiquete; pasan marcados e informados para
-  // que la administradora decida. Si el neto se confirmó, bruto y tara quedan confirmados también.
+  // que la administradora decida.
   const dudosos = new Set((cruda.campos_dudosos ?? []).filter((c) => OTROS[c]).map((c) => OTROS[c]));
+  // La resta bruto − tara solo comprueba: si da exacto el neto impreso, bruto y tara quedan
+  // confirmados; si no, se marcan (lo que vale es el neto impreso).
+  if (pesosOk && netoImpreso !== null && netoImpreso > 0) {
+    if (netoImpreso === neto) {
+      dudosos.delete(OTROS.peso_bruto_kg); dudosos.delete(OTROS.tara_kg);
+      add("Bruto − tara = neto impreso", true, "Bruto y tara coinciden con el neto impreso");
+    } else {
+      dudosos.add(OTROS.peso_bruto_kg); dudosos.add(OTROS.tara_kg);
+      controles.push({ nombre: "Bruto − tara = neto impreso", ok: true, dudoso: true,
+        mensaje: `La resta bruto − tara (${neto}) no da el neto impreso (${netoImpreso}): revisar bruto y tara` });
+    }
+  }
   const placa = normalizarPlaca(cruda.placa);
   if (placa) {
     if (!PLACA.test(placa)) dudosos.add("placa");

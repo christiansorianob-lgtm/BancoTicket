@@ -35,7 +35,10 @@ igual("Palnorte neto", r1.ok && r1.datos.peso_bruto_kg - r1.datos.tara_kg, 1390)
 const r2 = aplicarControles({ ...base, peso_bruto_kg: "9.000", tara_kg: "26.500", peso_neto_impreso_kg: "17.500" }, { placaObligatoria: true });
 igual("bruto/tara invertidos se ordenan", r2.ok && [r2.datos.peso_bruto_kg, r2.datos.tara_kg], [26500, 9000]);
 const r3 = aplicarControles({ ...base, peso_bruto_kg: "6,320", tara_kg: "3,130", peso_neto_impreso_kg: "3,100" }, { placaObligatoria: true });
-igual("neto impreso no cuadra: no pasa", r3.ok, false);
+igual("resta no da el neto impreso: pasa con bruto y tara marcados", r3.ok && r3.dudosos, ["peso bruto", "tara"]);
+igual("se cobra el neto impreso, no la resta", r3.ok && r3.datos.neto_impreso_kg, 3100);
+const r10 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["peso_neto_impreso_kg"] }, { placaObligatoria: true });
+igual("neto impreso dudoso: no pasa", r10.ok, false);
 const r4 = aplicarControles({ ...base, placa: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("placa no leída: pasa marcada", r4.ok && r4.dudosos, ["placa"]);
 const r9 = aplicarControles({ ...base, numero_tiquete: null, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });

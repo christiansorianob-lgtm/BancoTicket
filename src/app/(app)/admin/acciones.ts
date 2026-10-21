@@ -58,11 +58,11 @@ function cambiosTiquete(form: FormData): Record<string, unknown> | string {
 // ---------------------------------------------------------------------------
 // Tiquetes pendientes
 // ---------------------------------------------------------------------------
-const CAMPOS_DETALLE = "numero, comprador_id, fecha_entrada, proveedor, peso_bruto_kg, tara_kg, placa, conductor, extractoras(nombre)";
+const CAMPOS_DETALLE = "numero, comprador_id, fecha_entrada, proveedor, peso_bruto_kg, tara_kg, neto_impreso_kg, placa, conductor, extractoras(nombre)";
 
 type FilaDetalle = {
   numero: string; comprador_id: string; fecha_entrada: string; proveedor: string | null;
-  peso_bruto_kg: number; tara_kg: number; placa: string | null; conductor: string | null; extractoras: { nombre?: string } | null;
+  peso_bruto_kg: number; tara_kg: number; neto_impreso_kg: number | null; placa: string | null; conductor: string | null; extractoras: { nombre?: string } | null;
 };
 
 function detalleDe(tp: FilaDetalle) {

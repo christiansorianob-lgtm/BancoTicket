@@ -80,11 +80,11 @@ scripts/                             aplicar-sql, crear-admin, perfil-admin, pru
 docs/                                ARQUITECTURA.md (decisiones), NOTAS.md (bitácora), DESPLIEGUE.md, especificacion.pdf
 ```
 
-## 6. Base de datos (migraciones aplicadas: 0001 a 0008)
+## 6. Base de datos (migraciones aplicadas: 0001 a 0009)
 
-**Nunca editar una migración ya aplicada; crear la siguiente (`0009_...sql`) y aplicarla con:**
+**Nunca editar una migración ya aplicada; crear la siguiente (`0010_...sql`) y aplicarla con:**
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0009_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0010_nombre.sql
 ```
 (corre en una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`).
 
@@ -93,7 +93,7 @@ Tablas:
 - `extractoras`: nombre (interno, editable), activa, `nit`, `nombres_impresos text[]` (índice único por 9 dígitos del NIT).
 - `formatos_extractora`: varios por extractora; `plantilla jsonb` aprendida por la IA, descripcion, imagen_ruta (ejemplo en `formatos/`).
 - `anticipos`: comprador, monto, fecha, nota, estado `pendiente|confirmado|en_disputa`, enlace (hash, vence 48 h, un uso). Columna `tipo` existe pero ya no se usa (siempre `anticipo`).
-- `tiquetes_pendientes` (provisional) y `tiquetes` (aprobados): extractora, numero, comprador, fecha_entrada, peso_bruto_kg, tara_kg (enteros), neto_impreso_kg, placa, conductor, **proveedor**, bascula, imagen_ruta, origen `camara|galeria`. Pendientes: requiere_revision, motivo_revision, estado `pendiente|rechazado`, motivo_rechazo. Aprobados: `peso_neto_t` y `valor` **calculados**, precio_tonelada, estado `vigente|anulado`.
+- `tiquetes_pendientes` (provisional) y `tiquetes` (aprobados): extractora, numero, comprador, fecha_entrada, peso_bruto_kg, tara_kg (enteros), neto_impreso_kg, placa, conductor, **proveedor**, bascula, imagen_ruta, origen `camara|galeria`. Pendientes: requiere_revision, motivo_revision, estado `pendiente|rechazado`, motivo_rechazo. Aprobados: `peso_neto_t` y `valor` **calculados con el neto impreso** (o bruto − tara si no hay), precio_tonelada, estado `vigente|anulado`.
 - `historial` (disparadores en todas las tablas de negocio; motivo con `fijar_contexto(accion, motivo)`).
 - `formatos_no_reconocidos`: lecturas fallidas enviadas a revisión (extractora puede ser null).
 - `notificaciones` (campana), `configuracion` (valores pendientes de decisión), `consumo_ia` (tokens y costo por llamada).
@@ -109,7 +109,7 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 3. Revisión final en el celular: la foto (del sensor, recortada al marco) debe parecer documento y tener nitidez ≥ 200 a 1000 px; si no, reintenta sola. La galería pasa por las mismas revisiones. **No se gira la foto** (la regla automática fallaba).
 4. El servidor repite la revisión de nitidez con `sharp` (`src/lib/camara/revisar-foto.ts`) antes de la IA.
    Servidor: la IA (Haiku) recibe la foto + todas las extractoras activas (NIT, nombres impresos, plantillas). Detecta la extractora (**primero por NIT**, luego por nombre) y lee los campos. Controles + duplicados. Si la IA duda de algún carácter → se puede enviar pero queda **«Verificar: …»** para el admin.
-5. **Dos filtros (decisión del usuario).** Filtro 1: número de tiquete y peso neto 100 % legibles (neto confirmado si bruto − tara = neto impreso) o **no pasa** y se pide un tiquete más legible. Filtro 2: fecha y placa dudosas pasan marcadas («Revisar») para la administradora. Sin límite de cantidad de campos marcados. El comprador ve los datos solo lectura → «Coincide, enviar» → se abre WhatsApp al admin con el detalle y la pantalla **vuelve a «Subir tiquete»**.
+5. **Dos filtros (decisión del usuario).** Filtro 1: número de tiquete y **peso neto IMPRESO** 100 % legibles o **no pasa** y se pide un tiquete más legible. Filtro 2: fecha, placa, bruto o tara dudosos (o bruto − tara que no da el neto impreso) pasan marcados («Revisar») para la administradora. Sin límite de cantidad de campos marcados. El comprador ve los datos solo lectura → «Coincide, enviar» → se abre WhatsApp al admin con el detalle y la pantalla **vuelve a «Subir tiquete»**.
 6. Solo se rechaza si no es tiquete o falta lo indispensable (número, fecha válida, pesos); placa no leída o neto que no cuadra pasan marcados. Si se rechaza → **no se puede enviar**, se muestra el motivo concreto: «El tiquete está ilegible», solo «Tomar la foto con la cámara» o «Elegir otra foto»; la foto se borra. Solo un tiquete legible de una **extractora no registrada** se puede «Enviar a revisión» (va a «Formatos no reconocidos»).
 
 **Administrador**

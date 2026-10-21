@@ -5,7 +5,7 @@ import { analizarCuadro, nitidezDeFoto, pareceDocumento, UMBRALES, type Verifica
 import { MENSAJE_BORROSA } from "@/lib/camara/nitidez";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
-import { formatoToneladas } from "@/lib/numeros";
+import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
 import { AvisoContacto, abrirWhatsApp } from "@/components/contacto";
 import { detalleTiquete } from "@/lib/mensajes";import { enviarARevision, enviarTiquete } from "./acciones";
@@ -147,9 +147,9 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
                 <Dato etiqueta="N° tiquete" revisar={dudoso("número")}>{lectura.datos.numero}</Dato>
                 <Dato etiqueta="Fecha" revisar={dudoso("fecha")}>{fechaHora(lectura.datos.fecha_entrada)}</Dato>
                 <Dato etiqueta="Placa" revisar={dudoso("placa")}>{lectura.datos.placa ?? "—"}</Dato>
-                <Dato etiqueta="Peso bruto">{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
-                <Dato etiqueta="Tara">{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
-                <Dato etiqueta="Peso neto" revisar={dudoso("peso neto")}>{formatoToneladas((lectura.datos.peso_bruto_kg - lectura.datos.tara_kg) / 1000)}</Dato>
+                <Dato etiqueta="Peso bruto" revisar={dudoso("peso bruto")}>{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
+                <Dato etiqueta="Tara" revisar={dudoso("tara")}>{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
+                <Dato etiqueta="Peso neto">{formatoToneladas(netoKg(lectura.datos) / 1000)}</Dato>
                 {lectura.datos.proveedor && <Dato etiqueta="Proveedor">{lectura.datos.proveedor}</Dato>}
                 {lectura.datos.conductor && <Dato etiqueta="Conductor">{lectura.datos.conductor}</Dato>}
                 {lectura.datos.bascula && <Dato etiqueta="Báscula">{lectura.datos.bascula}</Dato>}
