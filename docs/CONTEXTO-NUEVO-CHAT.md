@@ -21,6 +21,7 @@ Especificación original: `docs/especificacion.pdf` (fuente de verdad del negoci
 ## 2. Personas y roles
 
 - **Administrador** (uno solo): Ingrid (usuario `ingrid`). Ve todo, aprueba/rechaza, fija precios, registra anticipos, enseña extractoras. **Recibe todos los avisos de los compradores (campana).**
+- **Todos los perfiles** tienen un botón ↻ para refrescar la página en el encabezado.
 - **Desarrollador** (uno solo): Christian Soriano (usuario `christian`, celular 3182542939, christiansorianob@gmail.com). Mismos permisos del administrador, pero no recibe avisos de compradores. Rol `desarrollador` (migraciones 0006–0007); no se asigna desde la app.
 - **Compradores** (intermediarios, sin límite): solo ven lo suyo. Usuario de prueba: `prueba`.
 - **Contraseñas:** usuarios nuevos y restablecidos quedan con **12345678** y pueden seguir trabajando con ella (no se obliga a cambiarla). Cada uno la cambia en la llave del encabezado (`/clave`). «Olvidé mi contraseña» → solicitud → el desarrollador aprueba en «Contraseñas» (`/admin/claves`).
@@ -56,7 +57,8 @@ src/lib/sesion.ts                    perfilActual, exigirAdmin, exigirComprador,
 src/lib/fechas.ts                    America/Bogota, es-CO, interpretarFechaTiquete (formatos reales)
 src/lib/numeros.ts                   kilosDesdeTexto ("2,070"/"26.500"/"10680"), formatoPesos/Toneladas
 src/lib/mensajes.ts                  textoAvisoResta() (aviso bruto − tara ≠ neto al corregir)
-src/lib/whatsapp.ts / components/contacto.tsx   enlaces wa.me y whatsapp://, AvisoContacto (abre WhatsApp solo)
+src/lib/whatsapp.ts / components/contacto.tsx   enlaces wa.me y whatsapp://, AvisoContacto (botón; WhatsApp ya no se abre solo)
+src/lib/informes/backup-excel.ts     backup manual en Excel (una hoja por tabla); /admin/backups y /api/backup, solo desarrollador
 src/lib/avisos.ts                    avisar() = notificación en la campana; contactoAdministracion() = celular del admin más antiguo
 src/lib/camara/analisis.ts           análisis en vivo (luz, quieto, enfoque, texto impreso) y revisión de la foto final
 src/lib/imagen.ts                    reducir foto (2000 px, WebP/JPEG ≤ 500 KB)

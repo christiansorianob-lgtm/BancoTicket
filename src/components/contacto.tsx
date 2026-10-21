@@ -1,5 +1,4 @@
 "use client";
-import { useEffect, useRef } from "react";
 import { MessageCircle } from "lucide-react";
 import { enlaceWhatsApp, enlaceWhatsAppApp } from "@/lib/whatsapp";
 
@@ -23,15 +22,11 @@ export function abrirWhatsApp(c: Contacto) {
   if (!window.open(url, "_blank", "noopener")) window.location.href = url;
 }
 
-/** Abre WhatsApp automáticamente una sola vez (si se pide) y deja el botón de respaldo. */
-export function AvisoContacto({ contacto, automatico = true }: { contacto: Contacto; automatico?: boolean }) {
-  const abierto = useRef(false);
-  useEffect(() => {
-    if (!automatico || abierto.current) return;
-    abierto.current = true;
-    abrirWhatsApp(contacto);
-  }, [automatico, contacto]);
-
+/**
+ * Botón para enviar el aviso por WhatsApp. No se abre solo (decisión del usuario): WhatsApp se
+ * abre únicamente cuando la persona toca el botón.
+ */
+export function AvisoContacto({ contacto }: { contacto: Contacto }) {
   return (
     <a
       className="boton-whatsapp w-full"

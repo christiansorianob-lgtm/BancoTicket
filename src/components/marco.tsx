@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound, FileSpreadsheet } from "lucide-react";
+import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound, FileSpreadsheet, DatabaseBackup } from "lucide-react";
 import { EnlaceMenu } from "@/components/enlace-menu";
+import { BotonRefrescar } from "@/components/boton-refrescar";
 import { esGestor, type Perfil } from "@/lib/sesion";
 import { cerrarSesion } from "@/app/ingresar/acciones";
 
@@ -27,10 +28,11 @@ const ADMIN = [
 
 /** Solo para el desarrollador. */
 const CLAVES = { href: "/admin/claves", texto: "Contraseñas", icono: KeyRound };
+const BACKUPS = { href: "/admin/backups", texto: "Backups", icono: DatabaseBackup };
 
 export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avisosSinLeer: number; children: ReactNode }) {
   const gestor = esGestor(perfil.rol);
-  const enlaces = gestor ? (perfil.rol === "desarrollador" ? [...ADMIN, CLAVES] : ADMIN) : COMPRADOR;
+  const enlaces = gestor ? (perfil.rol === "desarrollador" ? [...ADMIN, CLAVES, BACKUPS] : ADMIN) : COMPRADOR;
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-white/40 bg-gradient-to-r from-profundo to-primario text-white shadow">
@@ -40,6 +42,7 @@ export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avi
             <span className="hidden sm:inline">BancoTicket</span>
           </Link>
           <span className="min-w-0 flex-1 truncate text-sm text-white/80">{perfil.nombre}</span>
+          <BotonRefrescar />
           <Link href="/avisos" className="relative rounded-lg p-2 hover:bg-white/10" aria-label="Avisos">
             <Bell className="size-5" />
             {avisosSinLeer > 0 && (
