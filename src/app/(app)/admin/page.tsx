@@ -66,7 +66,8 @@ export default async function PanelAdmin() {
         </div>
         <p className="text-sm text-suave">
           {lecturasMes} lectura{lecturasMes === 1 ? "" : "s"} de tiquetes · {aprendizajesMes} formato{aprendizajesMes === 1 ? "" : "s"} aprendido{aprendizajesMes === 1 ? "" : "s"}
-          {lecturasMes > 0 && ` · US$ ${(usos.filter((u) => u.tipo === "lectura").reduce((s, u) => s + Number(u.costo_usd), 0) / lecturasMes).toLocaleString("es-CO", { maximumFractionDigits: 4 })} por lectura`}
+          {/* Con el gasto total (incluye el ajuste a la consola de Anthropic), no solo el estimado por tokens. */}
+          {lecturasMes > 0 && ` · US$ ${(costoMes / lecturasMes).toLocaleString("es-CO", { maximumFractionDigits: 4 })} por lectura`}
         </p>
       </section>
 

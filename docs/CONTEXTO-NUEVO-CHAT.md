@@ -142,7 +142,7 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 - La **galería no fuerza revisión** (misma revisión de nitidez que la cámara). Lo que la IA lee 100 % seguro se acepta; **cada campo dudoso pasa marcado** y se resalta en «Pendientes» («Revisar») para que la administradora lo compare con la foto. No exigir más que eso (el usuario lo pidió tras probar una versión demasiado estricta).
 - **Solo WhatsApp** (se quitaron Brevo y el correo `mailto:`). En celular abre la app de WhatsApp, no WhatsApp Web.
 - Tras enviar un tiquete, **volver a «Subir tiquete»**.
-- **Consumo de IA crítico**: cualquier cambio que agregue llamadas o tokens de IA **se consulta antes**. Cada llamada se registra en `consumo_ia`. Costo estimado: lectura ≈ US$0,001; aprender un formato ≈ US$0,05–0,10.
+- **Consumo de IA crítico**: cualquier cambio que agregue llamadas o tokens de IA **se consulta antes**. Cada llamada se registra en `consumo_ia`. Costo real según la consola de Anthropic: lectura ≈ US$0,008 (el estimado por tokens da ~0,0018; la consola cobra más); aprender un formato ≈ US$0,05–0,10. El panel se igualó a la consola con una fila `consumo_ia` tipo `ajuste`.
 - Campo **proveedor** obligatorio en el sistema (opcional en el papel).
 
 ## 10. Variables de entorno
