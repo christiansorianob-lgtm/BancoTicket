@@ -1,7 +1,8 @@
 "use server";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { exigirAdmin, correoInterno } from "@/lib/sesion";
+import { exigirAdmin, exigirDesarrollador, correoInterno } from "@/lib/sesion";
+import { CLAVE_POR_DEFECTO } from "@/lib/claves";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { avisar, perfilDestino } from "@/lib/avisos";
@@ -235,7 +236,6 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   const usuario = String(form.get("usuario") ?? "").trim().toLowerCase();
   const celular = String(form.get("celular") ?? "").replace(/\D/g, "");
   const correo = String(form.get("correo") ?? "").trim().toLowerCase();
-  const clave = String(form.get("clave") ?? "");
   let rol = form.get("rol") === "admin" ? "admin" : "comprador";
   const activo = form.get("activo") !== "off";
 
@@ -243,8 +243,6 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return fallo("Usuario: 3 a 30 letras minúsculas, números, punto o guion");
   if (celular.length < 10) return fallo("El celular (WhatsApp) es obligatorio");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return fallo("El correo es obligatorio");
-  if (!id && clave.length < 8) return fallo("La contraseña debe tener al menos 8 caracteres");
-  if (clave && clave.length < 8) return fallo("La contraseña debe tener al menos 8 caracteres");
 
   const auth = supabaseAdmin().auth.admin;
   const supabase = await supabaseServidor();
@@ -256,16 +254,24 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   const rolUnico = (m: string) =>
     m.includes("perfiles_un_rol_unico") ? "Ya hay un administrador activo: solo puede haber uno" : m.includes("duplicate") ? "Ese usuario ya existe" : m;
   if (!id) {
-    const { data, error } = await auth.createUser({ email: correoInterno(usuario), password: clave, email_confirm: true });
+    // Todo usuario nuevo empieza con la contraseña por defecto y debe cambiarla al ingresar.
+    const { data, error } = await auth.createUser({ email: correoInterno(usuario), password: CLAVE_POR_DEFECTO, email_confirm: true });
     if (error) return fallo(error.message.includes("already") ? "Ese usuario ya existe" : error.message);
-    const { error: e2 } = await supabase.from("perfiles").insert({ id: data.user.id, nombre, usuario, celular, correo, rol, activo });
+    const { error: e2 } = await supabase.from("perfiles").insert({ id: data.user.id, nombre, usuario, celular, correo, rol, activo, cambiar_clave: true });
     if (e2) {
       await auth.deleteUser(data.user.id);
       return fallo(rolUnico(e2.message));
     }
+    revalidatePath("/admin/compradores");
+    return {
+      ok: true,
+      mensaje: `Usuario creado con la contraseña ${CLAVE_POR_DEFECTO}`,
+      celular,
+      whatsapp: `Hola ${nombre}, ya tiene acceso a BancoTicket: ${process.env.NEXT_PUBLIC_APP_URL}\nUsuario: ${usuario}\nContraseña: ${CLAVE_POR_DEFECTO} (la app le pedirá cambiarla al ingresar)`,
+    };
   } else {
-    const cambiosAuth: { email?: string; password?: string; ban_duration?: string } = { email: correoInterno(usuario), ban_duration: activo ? "none" : "876000h" };
-    if (clave) cambiosAuth.password = clave;
+    // La contraseña no se cambia aquí: cada usuario cambia la suya o pide restablecerla.
+    const cambiosAuth = { email: correoInterno(usuario), ban_duration: activo ? "none" : "876000h" };
     // Primero el perfil: si choca con la regla de un solo administrador, no se toca Auth.
     const { error: e2 } = await supabase.from("perfiles").update({ nombre, usuario, celular, correo, rol, activo }).eq("id", id);
     if (e2) return fallo(rolUnico(e2.message));
@@ -274,6 +280,35 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   }
   revalidatePath("/admin/compradores");
   return { ok: true, mensaje: "Usuario guardado" };
+}
+
+// ---------------------------------------------------------------------------
+// Solicitudes de restablecer contraseña (solo el desarrollador)
+// ---------------------------------------------------------------------------
+export async function resolverSolicitudClave(id: string, aprobar: boolean): Promise<Resultado> {
+  const dev = await exigirDesarrollador();
+  const supabase = await supabaseServidor();
+  const { data: s } = await supabase.from("solicitudes_clave").select("usuario_id, estado").eq("id", id).single();
+  if (!s || s.estado !== "pendiente") return fallo("La solicitud ya fue resuelta");
+  const usuario = await supabase.from("perfiles").select("nombre, usuario, celular").eq("id", s.usuario_id).single();
+
+  if (aprobar) {
+    const { error } = await supabaseAdmin().auth.admin.updateUserById(s.usuario_id, { password: CLAVE_POR_DEFECTO });
+    if (error) return fallo(error.message);
+    const { error: e2 } = await supabase.from("perfiles").update({ cambiar_clave: true }).eq("id", s.usuario_id);
+    if (e2) return fallo(e2.message);
+  }
+  const { error: e3 } = await supabase.from("solicitudes_clave")
+    .update({ estado: aprobar ? "aprobada" : "rechazada", resuelta_por: dev.id, resuelta_en: new Date().toISOString() }).eq("id", id);
+  if (e3) return fallo(e3.message);
+  revalidatePath("/admin/claves");
+  if (!aprobar) return { ok: true, mensaje: "Solicitud rechazada" };
+  return {
+    ok: true,
+    mensaje: `Contraseña restablecida a ${CLAVE_POR_DEFECTO}`,
+    celular: usuario.data?.celular,
+    whatsapp: `Hola ${usuario.data?.nombre ?? ""}, restablecí su contraseña de BancoTicket. Ingrese con su usuario ${usuario.data?.usuario ?? ""} y la contraseña ${CLAVE_POR_DEFECTO}; la app le pedirá escoger una nueva. ${process.env.NEXT_PUBLIC_APP_URL}`,
+  };
 }
 
 // ---------------------------------------------------------------------------

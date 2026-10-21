@@ -21,6 +21,12 @@ export async function administradores(): Promise<Destino[]> {
   return data ?? [];
 }
 
+/** El desarrollador recibe las solicitudes de restablecer contraseña. */
+export async function desarrolladores(): Promise<Destino[]> {
+  const { data } = await supabaseAdmin().from("perfiles").select("id, correo, nombre").eq("rol", "desarrollador").eq("activo", true);
+  return data ?? [];
+}
+
 export async function perfilDestino(id: string): Promise<Destino | null> {
   const { data } = await supabaseAdmin().from("perfiles").select("id, correo, nombre").eq("id", id).single();
   return data;

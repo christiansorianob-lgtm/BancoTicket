@@ -11,6 +11,8 @@ export type Perfil = {
   correo: string;
   rol: Rol;
   activo: boolean;
+  /** Tiene la contraseña por defecto (usuario nuevo o restablecido): debe cambiarla. */
+  cambiar_clave: boolean;
 };
 
 /** Un administrador, un desarrollador (mismos permisos del admin) y varios compradores. */
@@ -42,6 +44,12 @@ export async function exigirSesion(): Promise<Perfil> {
 export async function exigirAdmin(): Promise<Perfil> {
   const perfil = await exigirSesion();
   if (!esGestor(perfil.rol)) redirect("/");
+  return perfil;
+}
+
+export async function exigirDesarrollador(): Promise<Perfil> {
+  const perfil = await exigirSesion();
+  if (perfil.rol !== "desarrollador") redirect("/");
   return perfil;
 }
 

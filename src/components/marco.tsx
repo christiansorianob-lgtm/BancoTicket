@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt } from "lucide-react";
+import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound } from "lucide-react";
 import { esGestor, type Perfil } from "@/lib/sesion";
 import { cerrarSesion } from "@/app/ingresar/acciones";
 
@@ -23,9 +23,12 @@ const ADMIN = [
   { href: "/admin/historial", texto: "Historial", icono: History },
 ];
 
+/** Solo para el desarrollador. */
+const CLAVES = { href: "/admin/claves", texto: "Contraseñas", icono: KeyRound };
+
 export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avisosSinLeer: number; children: ReactNode }) {
   const gestor = esGestor(perfil.rol);
-  const enlaces = gestor ? ADMIN : COMPRADOR;
+  const enlaces = gestor ? (perfil.rol === "desarrollador" ? [...ADMIN, CLAVES] : ADMIN) : COMPRADOR;
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-white/40 bg-gradient-to-r from-profundo to-primario text-white shadow">
@@ -40,6 +43,9 @@ export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avi
             {avisosSinLeer > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex min-w-5 items-center justify-center rounded-full bg-amber-400 px-1 text-xs font-bold text-profundo">{avisosSinLeer}</span>
             )}
+          </Link>
+          <Link href="/clave" className="rounded-lg p-2 hover:bg-white/10" aria-label="Cambiar contraseña" title="Cambiar contraseña">
+            <KeyRound className="size-5" />
           </Link>
           <form action={cerrarSesion}>
             <button className="rounded-lg p-2 hover:bg-white/10" aria-label="Salir" title="Salir"><LogOut className="size-5" /></button>

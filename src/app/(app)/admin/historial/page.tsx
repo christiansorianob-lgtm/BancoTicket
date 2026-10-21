@@ -3,7 +3,7 @@ import { fechaHora } from "@/lib/fechas";
 import { Chip, Vacio } from "@/components/ui";
 
 const TABLAS: Record<string, string> = {
-  tiquetes: "Tiquetes", tiquetes_pendientes: "Pendientes", anticipos: "Anticipos", perfiles: "Usuarios", extractoras: "Extractoras",
+  tiquetes: "Tiquetes", tiquetes_pendientes: "Pendientes", anticipos: "Anticipos", perfiles: "Usuarios", extractoras: "Extractoras", solicitudes_clave: "Contraseñas",
 };
 const OCULTOS = new Set(["enlace_hash", "datos_leidos", "valor", "peso_neto_t"]);
 

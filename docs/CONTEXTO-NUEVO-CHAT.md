@@ -22,6 +22,7 @@ Especificación original: `docs/especificacion.pdf` (fuente de verdad del negoci
 - **Administrador** (uno solo): Ingrid (usuario `ingrid`). Ve todo, aprueba/rechaza, fija precios, registra anticipos, enseña extractoras. **Recibe todos los avisos y WhatsApp de los compradores.**
 - **Desarrollador** (uno solo): Christian Soriano (usuario `christian`, celular 3182542939, christiansorianob@gmail.com). Mismos permisos del administrador, pero no recibe avisos de compradores. Rol `desarrollador` (migraciones 0006–0007); no se asigna desde la app.
 - **Compradores** (intermediarios, sin límite): solo ven lo suyo. Usuario de prueba: `prueba`.
+- **Contraseñas:** usuarios nuevos y restablecidos quedan con **12345678** y la app obliga a cambiarla. Cada uno la cambia en la llave del encabezado (`/clave`). «Olvidé mi contraseña» → solicitud → el desarrollador aprueba en «Contraseñas» (`/admin/claves`).
 - Ingreso con **usuario y contraseña**. Supabase Auth usa el correo interno `<usuario>@bancoticket.local`; el correo real va en `perfiles.correo`.
 
 ## 3. Dónde está todo
@@ -79,11 +80,11 @@ scripts/                             aplicar-sql, crear-admin, perfil-admin, pru
 docs/                                ARQUITECTURA.md (decisiones), NOTAS.md (bitácora), DESPLIEGUE.md, especificacion.pdf
 ```
 
-## 6. Base de datos (migraciones aplicadas: 0001 a 0007)
+## 6. Base de datos (migraciones aplicadas: 0001 a 0008)
 
-**Nunca editar una migración ya aplicada; crear la siguiente (`0008_...sql`) y aplicarla con:**
+**Nunca editar una migración ya aplicada; crear la siguiente (`0009_...sql`) y aplicarla con:**
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0008_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0009_nombre.sql
 ```
 (corre en una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`).
 
