@@ -50,21 +50,28 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   // para que el administrador lo compare con la foto antes de aprobar.
   const dudosos = new Set((cruda.campos_dudosos ?? []).map((c) => NOMBRES[c] ?? c));
 
-  // El neto impreso es la prueba cruzada de los pesos. Si se leyó y no cuadra, hay un peso mal
-  // leído y se pide otra foto; si no se leyó, pasa marcado.
+  // Solo bloquea lo indispensable para registrar el tiquete (número, fecha y pesos, arriba).
+  // Todo lo demás que no cuadre o no se lea pasa marcado para que la administradora lo revise.
+  const marcar = (nombre: string, mensaje: string, ...campos: string[]) => {
+    campos.forEach((c) => dudosos.add(c));
+    controles.push({ nombre, ok: true, dudoso: true, mensaje });
+  };
+
+  // El neto impreso es la prueba cruzada de los pesos: si no cuadra, algún peso puede estar mal leído.
   const netoImpreso = kilosDesdeTexto(cruda.peso_neto_impreso_kg);
   if (netoImpreso === null) {
     dudosos.add(NOMBRES.peso_neto_impreso_kg);
-  } else {
-    const cuadra = netoImpreso === neto;
-    add("Bruto − tara = neto impreso", cuadra,
-      cuadra ? "Coincide con el neto impreso" : `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`);
+  } else if (netoImpreso === neto) {
+    add("Bruto − tara = neto impreso", true, "Coincide con el neto impreso");
+  } else if (pesosOk) {
+    marcar("Bruto − tara = neto impreso", `La resta (${neto}) no coincide con el neto impreso (${cruda.peso_neto_impreso_kg})`,
+      NOMBRES.peso_bruto_kg, NOMBRES.tara_kg, NOMBRES.peso_neto_impreso_kg);
   }
 
   const placa = normalizarPlaca(cruda.placa);
-  if (!placa && opciones.placaObligatoria) {
-    add("Placa", false, "No se leyó la placa");
-  } else if (placa) {
+  if (!placa) {
+    if (opciones.placaObligatoria) marcar("Placa", "No se leyó la placa", NOMBRES.placa);
+  } else {
     // Un formato raro no bloquea: se envía y el administrador lo verifica.
     if (!PLACA.test(placa)) dudosos.add("placa");
     controles.push({ nombre: "Placa", ok: true, mensaje: `Placa ${placa}`, dudoso: dudosos.has("placa") });

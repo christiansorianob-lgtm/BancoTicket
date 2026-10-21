@@ -206,7 +206,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
         ) : lectura.ilegible ? (
           <>
             <Mensaje tono="error">
-              El tiquete está ilegible y no se puede registrar. Busque una foto más clara o, mejor, tome la foto al tiquete en físico con la cámara de la app: de frente, con buena luz, completo y sin arrugas.
+              No se puede registrar: {lectura.motivo}. Sin ese dato el tiquete no se puede guardar. Busque una foto más clara o, mejor, tome la foto al tiquete en físico con la cámara de la app: de frente, con buena luz, completo y sin arrugas.
             </Mensaje>
             <div className="grid gap-2 sm:grid-cols-2">
               <button className="boton-primario py-4" onClick={() => setPaso("camara")}><Camera className="size-5" /> Tomar la foto con la cámara</button>
