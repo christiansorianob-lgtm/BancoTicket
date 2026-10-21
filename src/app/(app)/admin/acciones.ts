@@ -121,6 +121,28 @@ async function avisoResta(supabase: Awaited<ReturnType<typeof supabaseServidor>>
 // ---------------------------------------------------------------------------
 // Tiquetes aprobados y precios
 // ---------------------------------------------------------------------------
+/**
+ * Elimina un tiquete aprobado (con o sin precio). El saldo del comprador se ajusta solo; el
+ * registro queda en el historial con el motivo. Se borra su foto y se avisa al comprador.
+ */
+export async function eliminarTiquete(id: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const motivo = textoODefecto(form.get("motivo"));
+  if (!motivo) return fallo("Escriba el motivo de la eliminación");
+  const supabase = await supabaseServidor();
+  const { data: t } = await supabase.from("tiquetes").select("numero, comprador_id, extractoras(nombre)").eq("id", id).single();
+  const { data: ruta, error } = await supabase.rpc("eliminar_tiquete", { p_id: id, p_motivo: motivo });
+  if (error) return fallo(error.message);
+  if (ruta) await supabaseAdmin().storage.from("tiquetes").remove([ruta as string]);
+  if (t) {
+    const comprador = await perfilDestino(t.comprador_id);
+    const extractora = (t.extractoras as { nombre?: string } | null)?.nombre ?? "";
+    if (comprador) await avisar([comprador], "Tiquete eliminado", `Su tiquete N° ${t.numero} de ${extractora} fue eliminado. Motivo: ${motivo}`, "/extracto");
+  }
+  revalidatePath("/admin", "layout");
+  return { ok: true, mensaje: "Tiquete eliminado. El saldo del comprador ya se ajustó." };
+}
+
 export async function editarTiquete(id: string, form: FormData): Promise<Resultado> {
   await exigirAdmin();
   const cambios = cambiosTiquete(form);

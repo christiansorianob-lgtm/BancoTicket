@@ -7,6 +7,7 @@ import { formatoPesos, formatoToneladas } from "@/lib/numeros";
 import { Vacio } from "@/components/ui";
 import { consultarInforme, filtrosDesde } from "@/lib/informes/consulta";
 import { EditarFila } from "./editar-fila";
+import { EliminarFila } from "./eliminar-fila";
 
 /** En pantalla se muestran hasta estas filas; el Excel trae todas las del filtro. */
 const MAX_PANTALLA = 500;
@@ -95,6 +96,7 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
                   <td className="p-3 text-right whitespace-nowrap font-semibold">{t.valor == null ? "—" : formatoPesos(t.valor)}</td>
                   <td className="p-2 text-center whitespace-nowrap">
                     <EditarFila t={t} foto={t.imagen_ruta ? fotos[t.imagen_ruta] : undefined} extractoras={extractoras ?? []} compradores={compradores ?? []} />
+                    <EliminarFila t={t} />
                     {t.imagen_ruta && fotos[t.imagen_ruta] ? (
                       <a href={fotos[t.imagen_ruta]} target="_blank" rel="noopener noreferrer" title={`Ver foto del tiquete ${t.numero}`}
                         className="inline-flex size-9 items-center justify-center rounded-lg text-primario hover:bg-primario-suave">

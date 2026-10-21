@@ -83,11 +83,11 @@ scripts/                             aplicar-sql, crear-admin, perfil-admin, pru
 docs/                                ARQUITECTURA.md (decisiones), NOTAS.md (bitácora), DESPLIEGUE.md, especificacion.pdf
 ```
 
-## 6. Base de datos (migraciones aplicadas: 0001 a 0014)
+## 6. Base de datos (migraciones aplicadas: 0001 a 0015)
 
-**Nunca editar una migración ya aplicada; crear la siguiente (`0015_...sql`) y aplicarla con:**
+**Nunca editar una migración ya aplicada; crear la siguiente (`0016_...sql`) y aplicarla con:**
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0015_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0016_nombre.sql
 ```
 (corre en una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`).
 
@@ -102,7 +102,7 @@ Tablas:
 - `notificaciones` (campana), `configuracion` (valores pendientes de decisión), `consumo_ia` (tokens y costo por llamada).
 - Vistas `saldos` y `extracto` (security_invoker). Bucket privado `tiquetes`: `<comprador_id>/...` y `formatos/...`.
 
-Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete`, `rechazar_tiquete`, `asignar_precio_bloque`, `editar_tiquete`, `editar_pendiente`, `generar_enlace_anticipo`, `ver_anticipo_por_enlace`, `responder_anticipo` (por enlace), `responder_anticipo_id` (desde la app), `buscar_duplicado`, `posibles_duplicados`, `es_admin`.
+Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete`, `rechazar_tiquete`, `asignar_precio_bloque`, `editar_tiquete`, `editar_pendiente`, `generar_enlace_anticipo`, `ver_anticipo_por_enlace`, `responder_anticipo` (por enlace), `responder_anticipo_id` (desde la app), `eliminar_tiquete` (con motivo), `buscar_duplicado`, `posibles_duplicados`, `es_admin`.
 
 ## 7. Flujos actuales
 
