@@ -9,11 +9,11 @@ export const MESES_MAXIMOS = 6;
 const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
 
 /**
- * Filtro 2 (acuerdo con el usuario): todos los campos distintos de número y peso neto; si la IA
- * no está 100 % segura, pasan marcados «Revisar» para la administradora.
+ * Filtro 2 (acuerdo con el usuario): todos los campos distintos de los críticos (número, peso neto
+ * y fecha); si la IA no está 100 % segura, pasan marcados «Revisar» para la administradora.
  */
 const OTROS: Record<string, string> = {
-  fecha_entrada: "fecha", placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara", proveedor: "proveedor",
+  placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara", proveedor: "proveedor",
   conductor: "conductor", bascula: "báscula",
 };
 
@@ -41,13 +41,19 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const fecha = interpretarFechaTiquete(cruda.fecha_entrada);
   const fechaOk = !!fecha && new Date(fecha).getTime() <= Date.now() + 36e5;
   add("Fecha", fechaOk, fechaOk ? "Fecha válida" : `Fecha no válida: "${cruda.fecha_entrada ?? ""}"`);
+  // Filtro 1: la fecha es crítica (decisión del usuario). Si la IA duda de un carácter no pasa, y se
+  // revisa antes del límite de 6 meses para que una fecha mal leída no parezca un tiquete viejo.
+  if (fechaOk && cruda.campos_dudosos?.includes("fecha_entrada")) {
+    add("Fecha 100 % legible", false, `La fecha (${cruda.fecha_entrada}) no es 100 % legible`);
+    return { ok: false, motivo: `La fecha del tiquete (${cruda.fecha_entrada}) no es 100 % legible`, controles, cruda };
+  }
 
   // Decisión del usuario: un tiquete de más de 6 meses es síntoma de fraude y no se puede subir.
   const limite = new Date();
   limite.setMonth(limite.getMonth() - MESES_MAXIMOS);
   if (fechaOk && new Date(fecha!).getTime() < limite.getTime()) {
     add("Periodo permitido", false, `El tiquete es de ${fechaHora(fecha)}: tiene más de ${MESES_MAXIMOS} meses`);
-    return { ok: false, motivo: `El tiquete tiene más de ${MESES_MAXIMOS} meses`, controles, cruda, fueraDePeriodo: true };
+    return { ok: false, motivo: `Se leyó la fecha ${fechaHora(fecha)}: el tiquete tiene más de ${MESES_MAXIMOS} meses`, controles, cruda, fueraDePeriodo: true };
   }
 
   const a = kilosDesdeTexto(cruda.peso_bruto_kg);
@@ -61,7 +67,7 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   if (pesosOk && neto <= 0) add("Bruto y tara", false, "El peso bruto debe ser mayor que la tara");
 
   // Filtro 1 (decisión del usuario): el número y el peso neto (neto × precio = valor del tiquete)
-  // deben ser 100 % legibles; si no, el tiquete no pasa y se pide una foto más legible.
+  // también deben ser 100 % legibles; si no, el tiquete no pasa y se pide una foto más legible.
   if (numero && cruda.campos_dudosos?.includes("numero_tiquete")) {
     add("Número 100 % legible", false, `El número del tiquete (${numero}) no es 100 % legible`);
   }

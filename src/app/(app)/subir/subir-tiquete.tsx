@@ -206,9 +206,13 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
         ) : lectura.ilegible && lectura.fueraDePeriodo ? (
           <>
             <Mensaje tono="error">
-              Este tiquete no está dentro del periodo permitido para subirlo: {lectura.motivo.toLowerCase()} desde su fecha de entrada. Solo se pueden subir tiquetes de los últimos {MESES_MAXIMOS} meses.
+              Este tiquete no está dentro del periodo permitido para subirlo. {lectura.motivo}. Solo se pueden subir tiquetes de los últimos {MESES_MAXIMOS} meses.
+              Si esa no es la fecha del tiquete, tome otra foto más nítida.
             </Mensaje>
-            <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button className="boton-primario" onClick={repetirFoto}><RotateCcw className="size-5" /> Tomar otra foto</button>
+              <button className="boton-secundario" onClick={reiniciar}>Volver</button>
+            </div>
           </>
         ) : lectura.ilegible ? (
           <>
