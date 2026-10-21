@@ -66,6 +66,9 @@ igual("proveedor conocido (mayúsculas y puntos distintos): confirmado", p3.ok &
 const p4 = aplicarControles({ ...base, ...pesos, proveedor: null }, conocidos);
 igual("proveedor no leído: marcado", p4.ok && p4.dudosos, ["proveedor"]);
 
+const p5 = aplicarControles({ ...base, ...pesos, proveedor: "OLEUM FOODS S.A.S.", conductor: "DEIVER M", bascula: "B1", campos_dudosos: ["conductor", "bascula"] }, conocidos);
+igual("conductor y báscula dudosos: pasan marcados", p5.ok && p5.dudosos, ["conductor", "báscula"]);
+
 const viejo = new Date(); viejo.setMonth(viejo.getMonth() - 7);
 const r11 = aplicarControles({ ...base, fecha_entrada: `${viejo.getDate()}/${viejo.getMonth() + 1}/${viejo.getFullYear()}`, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("tiquete de hace 7 meses: fuera de periodo", !r11.ok && r11.fueraDePeriodo, true);

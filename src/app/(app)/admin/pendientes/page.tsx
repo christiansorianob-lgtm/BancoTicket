@@ -76,7 +76,7 @@ export default async function Pendientes() {
                         <Dato etiqueta="Bruto − tara (no cuadra)" revisar>{formatoToneladas((t.peso_bruto_kg - t.tara_kg) / 1000)}</Dato>
                       )}
                       {(t.conductor || r.has("conductor")) && <Dato etiqueta="Conductor" revisar={r.has("conductor")}>{t.conductor ?? "—"}</Dato>}
-                      {t.bascula && <Dato etiqueta="Báscula" revisar={r.has("bascula")}>{t.bascula}</Dato>}
+                      {t.bascula && <Dato etiqueta="Báscula" revisar={r.has("báscula")}>{t.bascula}</Dato>}
                       <Dato etiqueta="Subido">{fechaHora(t.cargado_en)}</Dato>
                     </dl>
                   </>

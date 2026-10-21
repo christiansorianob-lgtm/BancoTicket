@@ -8,8 +8,14 @@ export const MESES_MAXIMOS = 6;
 // Placa: 5 a 7 letras y números, con al menos una letra y un número (ej. "284DAF").
 const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
 
-/** Campos del filtro 2: si la IA duda, pasan marcados. */
-const OTROS: Record<string, string> = { fecha_entrada: "fecha", placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara", proveedor: "proveedor" };
+/**
+ * Filtro 2 (acuerdo con el usuario): todos los campos distintos de número y peso neto; si la IA
+ * no está 100 % segura, pasan marcados «Revisar» para la administradora.
+ */
+const OTROS: Record<string, string> = {
+  fecha_entrada: "fecha", placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara", proveedor: "proveedor",
+  conductor: "conductor", bascula: "báscula",
+};
 
 /** Para comparar proveedores sin importar mayúsculas, puntos ni espacios: «Oleum Foods S.A.S» = «OLEUM FOODS SAS». */
 export function claveProveedor(p: string) {

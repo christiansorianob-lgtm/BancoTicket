@@ -17,7 +17,7 @@ export const LecturaCruda = z.object({
   nit_extractora: z.string().nullable().describe("NIT de la extractora tal como está impreso (no el del proveedor); null si no aparece"),
   extractora: z.string().nullable().describe("Nombre EXACTO, tal como aparece en la lista de extractoras registradas, de la extractora que emitió el tiquete; null si no es ninguna de la lista"),
   campos_dudosos: z
-    .array(z.enum(["numero_tiquete", "fecha_entrada", "peso_bruto_kg", "tara_kg", "peso_neto_impreso_kg", "placa", "proveedor"]))
+    .array(z.enum(["numero_tiquete", "fecha_entrada", "peso_bruto_kg", "tara_kg", "peso_neto_impreso_kg", "placa", "proveedor", "conductor", "bascula"]))
     .describe("Campos que no se leyeron con total certeza (cualquier carácter dudoso). Vacío solo si todo es 100 % seguro."),
 });
 export type LecturaCruda = z.infer<typeof LecturaCruda>;
