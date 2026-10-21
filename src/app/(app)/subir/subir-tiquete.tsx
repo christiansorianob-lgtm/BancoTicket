@@ -135,6 +135,8 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
   }
 
   if (paso === "resultado" && lectura) {
+    // Campos que la IA no leyó 100 % seguros: se resaltan y la administradora los revisa.
+    const dudoso = (campo: string) => lectura.ok && lectura.dudosos.includes(campo);
     return (
       <div className="space-y-4">
         <div className="tarjeta grid gap-4 sm:grid-cols-2">
@@ -143,12 +145,12 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
             {lectura.datos && (
               <dl className="grid grid-cols-2 gap-3">
                 <Dato etiqueta="Extractora">{nombreExtractora || "—"}</Dato>
-                <Dato etiqueta="N° tiquete">{lectura.datos.numero}</Dato>
-                <Dato etiqueta="Fecha">{fechaHora(lectura.datos.fecha_entrada)}</Dato>
-                <Dato etiqueta="Placa">{lectura.datos.placa ?? "—"}</Dato>
-                <Dato etiqueta="Peso bruto">{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
-                <Dato etiqueta="Tara">{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
-                <Dato etiqueta="Peso neto">{formatoToneladas((lectura.datos.peso_bruto_kg - lectura.datos.tara_kg) / 1000)}</Dato>
+                <Dato etiqueta="N° tiquete" revisar={dudoso("número")}>{lectura.datos.numero}</Dato>
+                <Dato etiqueta="Fecha" revisar={dudoso("fecha")}>{fechaHora(lectura.datos.fecha_entrada)}</Dato>
+                <Dato etiqueta="Placa" revisar={dudoso("placa")}>{lectura.datos.placa ?? "—"}</Dato>
+                <Dato etiqueta="Peso bruto" revisar={dudoso("peso bruto")}>{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
+                <Dato etiqueta="Tara" revisar={dudoso("tara")}>{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
+                <Dato etiqueta="Peso neto" revisar={dudoso("peso neto impreso")}>{formatoToneladas((lectura.datos.peso_bruto_kg - lectura.datos.tara_kg) / 1000)}</Dato>
                 {lectura.datos.proveedor && <Dato etiqueta="Proveedor">{lectura.datos.proveedor}</Dato>}
                 {lectura.datos.conductor && <Dato etiqueta="Conductor">{lectura.datos.conductor}</Dato>}
                 {lectura.datos.bascula && <Dato etiqueta="Báscula">{lectura.datos.bascula}</Dato>}
@@ -170,7 +172,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
           <>
             <Mensaje tono="alerta">Compare estos datos, incluida la extractora, con el tiquete que tiene en la mano. No se pueden editar: si algo no coincide, tome otra foto.</Mensaje>
             {lectura.dudosos.length > 0 && (
-              <Mensaje tono="alerta">Puede enviarlo, pero llegará marcado para que el administrador verifique: {lectura.dudosos.join(", ")}. Si prefiere, tome otra foto más nítida.</Mensaje>
+              <Mensaje tono="alerta">Estos campos no son 100 % legibles: {lectura.dudosos.join(", ")} (resaltados arriba). Puede enviarlo así y la administradora los revisará con la foto; o tome otra foto más nítida.</Mensaje>
             )}
             {lectura.posiblesDuplicados.length > 0 && (
               <Mensaje tono="alerta">
