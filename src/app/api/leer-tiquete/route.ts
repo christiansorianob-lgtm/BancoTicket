@@ -10,6 +10,7 @@ import { firmar } from "@/lib/lectura/firma";
 import type { LecturaCruda } from "@/lib/lectura/tipos";
 import { extractorasConocidas } from "@/lib/lectura/aprender-guardar";
 import { nitBase } from "@/lib/lectura/aprender";
+import { revisarFotoServidor } from "@/lib/camara/revisar-foto";
 
 export const maxDuration = 60;
 
@@ -38,8 +39,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Todavía no hay extractoras registradas. Pida al administrador que suba un tiquete de ejemplo." }, { status: 400 });
   }
 
-  // La foto se guarda de una vez en la carpeta del comprador.
   const bytes = Buffer.from(await imagen.arrayBuffer());
+  const rechazo = await revisarFotoServidor(bytes).catch(() => "No se pudo abrir la foto");
+  if (rechazo) return NextResponse.json({ error: rechazo }, { status: 422 });
+
+  // La foto se guarda de una vez en la carpeta del comprador.
   const ruta = `${perfil.id}/${randomUUID()}.${imagen.type === "image/webp" ? "webp" : "jpg"}`;
   const subida = await db.storage.from("tiquetes").upload(ruta, bytes, { contentType: imagen.type });
   if (subida.error) return NextResponse.json({ error: "No se pudo guardar la foto" }, { status: 500 });

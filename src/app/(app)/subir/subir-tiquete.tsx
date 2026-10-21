@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImageUp, RotateCcw, XCircle, Loader2 } from "lucide-react";
-import { analizarCuadro, nitidezDeFoto, pareceDocumento, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
+import { analizarCuadro, nitidezDeFoto, pareceDocumento, resolucionSuficiente, UMBRALES, type Verificacion } from "@/lib/camara/analisis";
+import { MENSAJE_BORROSA, MENSAJE_RESOLUCION } from "@/lib/camara/nitidez";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas } from "@/lib/numeros";
@@ -98,13 +99,18 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
       return;
     }
     // Mismas revisiones que la cámara guiada, antes de gastar una lectura de la IA.
+    if (!resolucionSuficiente(img)) {
+      setError(MENSAJE_RESOLUCION);
+      setPaso("inicio");
+      return;
+    }
     if (!pareceDocumento(img)) {
       setError("La imagen no parece un tiquete (no se ve texto impreso). Elija la foto del tiquete.");
       setPaso("inicio");
       return;
     }
     if (nitidezDeFoto(img) < 1) {
-      setError("La foto está borrosa y no se podría leer bien. Tómela de nuevo con el celular quieto y el tiquete enfocado.");
+      setError(MENSAJE_BORROSA);
       setPaso("inicio");
       return;
     }
@@ -397,7 +403,9 @@ function CamaraGuiada({ onCaptura, onCancelar, onCamaraNativa, onGaleria }: {
     const c = await fotoDelSensor(flujoRef.current, v, m);
     // Revisión decisiva: la foto que se va a enviar, a resolución completa, debe estar nítida.
     // Sin texto impreso no se gasta una lectura de la IA.
-    const fallo = !pareceDocumento(c)
+    const fallo = !resolucionSuficiente(c)
+      ? "La foto quedó con poca resolución. Acérquese al tiquete: se tomará otra sola."
+      : !pareceDocumento(c)
       ? "No se ve un tiquete en la foto. Apunte la cámara al tiquete: se tomará otra sola."
       : nitidezDeFoto(c) < 1 ? "La foto salió borrosa. Sostenga el celular quieto: se tomará otra sola." : null;
     if (fallo) {

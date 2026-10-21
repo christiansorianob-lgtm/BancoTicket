@@ -5,7 +5,8 @@
  * baja la calidad y luego el tamaño.
  */
 export async function reducirImagen(fuente: CanvasImageSource & { width: number; height: number }, ladoLargo = 1280): Promise<Blob> {
-  for (const factor of [1, 0.8, 0.65]) {
+  // No se reduce más de 0,85: por debajo la foto pierde la resolución que exige el servidor.
+  for (const factor of [1, 0.85]) {
     const escala = Math.min(1, (ladoLargo * factor) / Math.max(fuente.width, fuente.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(fuente.width * escala);
@@ -15,7 +16,7 @@ export async function reducirImagen(fuente: CanvasImageSource & { width: number;
     const aBlob = (tipo: string, calidad: number) =>
       new Promise<Blob | null>((ok) => canvas.toBlob(ok, tipo, calidad));
 
-    for (const calidad of [0.8, 0.7, 0.6]) {
+    for (const calidad of [0.8, 0.7, 0.6, 0.5]) {
       let blob = await aBlob("image/webp", calidad);
       if (!blob || blob.type !== "image/webp") blob = await aBlob("image/jpeg", calidad);
       if (blob && blob.size <= 500_000) return blob;

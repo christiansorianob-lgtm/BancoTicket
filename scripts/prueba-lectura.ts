@@ -42,7 +42,11 @@ igual("placa obligatoria faltante", r4.ok, false);
 const r5 = aplicarControles({ ...base, placa: "284DAF", peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("placa 284DAF aceptada sin dudas", r5.ok && r5.dudosos, []);
 const r6 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["numero_tiquete", "tara_kg"] }, { placaObligatoria: true });
-igual("IA con dudas: pasa pero marcado", r6.ok && r6.dudosos, ["número", "tara"]);
+igual("IA con dudas en número/tara: se rechaza", r6.ok, false);
+const r6b = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["placa"] }, { placaObligatoria: true });
+igual("IA con duda solo en placa: pasa marcada", r6b.ok && r6b.dudosos, ["placa"]);
+const r8 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: null }, { placaObligatoria: true });
+igual("sin neto impreso: se rechaza", r8.ok, false);
 const r7 = aplicarControles({ ...base, placa: "X1", peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990" }, { placaObligatoria: true });
 igual("placa rara: pasa pero marcada", r7.ok && r7.dudosos, ["placa"]);
 

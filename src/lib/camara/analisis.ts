@@ -2,6 +2,8 @@
  * Análisis en vivo de la zona del marco guía, reducida (≈640 px). Todo corre en el
  * navegador; los umbrales son de partida y se ajustan con tiquetes reales.
  */
+import { FOTO, luminancia as luminanciaRGBA, varianzaLaplaciano } from "./nitidez";
+
 /** bloquea: si no se cumple, no se toma la foto. Las demás son consejos en pantalla. */
 export type Verificacion = { clave: string; ok: boolean; aviso: string; bloquea: boolean };
 
@@ -14,7 +16,7 @@ export const UMBRALES = {
   // ilegible de la segunda prueba dio 85. El video en vivo siempre es menos nítido que la foto
   // del sensor, así que en vivo se pide poco y la revisión decisiva es la de la foto final.
   nitidezMin: 120, // varianza del laplaciano en vivo, a 640 px (filtro suave)
-  nitidezFotoMin: 200, // varianza del laplaciano de la foto final, a 1000 px (revisión decisiva)
+  nitidezFotoMin: FOTO.nitidezMin, // varianza del laplaciano de la foto final, a 1000 px (revisión decisiva)
   movimientoMax: 10, // diferencia media de luz entre cuadros seguidos: más = el celular se mueve
   // Fracción de bloques con texto impreso (fondo claro + trazos oscuros + bordes). Calibrado con
   // fotos reales (2026-10-20): tiquetes 0,31–0,59; mantel, teclado, telas y fondos 0–0,04.
@@ -23,28 +25,11 @@ export const UMBRALES = {
   bordeMax: 0.92, // si el papel cubre todo el borde del marco, el tiquete se sale
 };
 
-function luminancia(img: ImageData): Float32Array {
-  const { data } = img;
-  const lum = new Float32Array(img.width * img.height);
-  for (let i = 0, p = 0; i < lum.length; i++, p += 4) lum[i] = 0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2];
-  return lum;
-}
+const luminancia = (img: ImageData) => luminanciaRGBA(img.data);
 
-/** Varianza del laplaciano en la zona central: alta con letras nítidas, baja si está desenfocado. */
-function varianzaLaplaciano(lum: Float32Array, w: number, h: number): number {
-  let suma = 0, suma2 = 0, cuenta = 0;
-  const x0 = Math.max(1, Math.floor(w * 0.2)), x1 = Math.min(w - 1, Math.floor(w * 0.8));
-  const y0 = Math.max(1, Math.floor(h * 0.2)), y1 = Math.min(h - 1, Math.floor(h * 0.8));
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      const i = y * w + x;
-      const l = 4 * lum[i] - lum[i - 1] - lum[i + 1] - lum[i - w] - lum[i + w];
-      suma += l; suma2 += l * l; cuenta++;
-    }
-  }
-  if (cuenta === 0) return 0;
-  const media = suma / cuenta;
-  return suma2 / cuenta - media * media;
+/** ¿La foto original tiene resolución suficiente para leer cada carácter con certeza? */
+export function resolucionSuficiente(fuente: { width: number; height: number }) {
+  return (fuente.width * fuente.height) / 1e6 >= FOTO.megapixelesMin;
 }
 
 /**
@@ -150,7 +135,7 @@ export function analizarCuadro(img: ImageData, previo?: Float32Array | null) {
  * centro a 1000 px. Devuelve la proporción frente al mínimo (1 = justo en el límite).
  */
 export function nitidezDeFoto(fuente: CanvasImageSource & { width: number; height: number }): number {
-  const escala = Math.min(1, 1000 / Math.max(fuente.width, fuente.height));
+  const escala = Math.min(1, FOTO.ladoMedida / Math.max(fuente.width, fuente.height));
   const c = document.createElement("canvas");
   c.width = Math.round(fuente.width * escala);
   c.height = Math.round(fuente.height * escala);
