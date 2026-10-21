@@ -21,6 +21,8 @@ igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Deb
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
 
 igual("2,070", kilosDesdeTexto("2,070"), 2070);
+igual("Lukeoil 7,990 Kg", kilosDesdeTexto("7,990 Kg"), 7990);
+igual("con punto final 7,990 kg.", kilosDesdeTexto("7,990 kg."), 7990);
 igual("26.500", kilosDesdeTexto("26.500"), 26500);
 igual("10680", kilosDesdeTexto("10680"), 10680);
 igual("17.500 kg", kilosDesdeTexto("17.500 kg"), 17500);

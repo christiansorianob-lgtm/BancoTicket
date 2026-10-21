@@ -7,7 +7,7 @@
 export function kilosDesdeTexto(texto: string | number | null | undefined): number | null {
   if (texto === null || texto === undefined) return null;
   if (typeof texto === "number") return Number.isInteger(texto) && texto >= 0 ? texto : null;
-  const limpio = texto.replace(/kg|kilos?/gi, "").replace(/\s/g, "");
+  const limpio = texto.replace(/kg\.?|kilos?\.?/gi, "").replace(/\s/g, "");
   if (!/^\d{1,3}([.,]\d{3})*$|^\d+$/.test(limpio)) return null;
   const n = Number(limpio.replace(/[.,]/g, ""));
   return Number.isSafeInteger(n) ? n : null;

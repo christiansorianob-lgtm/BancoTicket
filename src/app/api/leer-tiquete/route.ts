@@ -66,6 +66,14 @@ export async function POST(request: Request) {
     console.error("Fallo de lectura", e);
   }
 
+  // Para diagnosticar marcas de duda (se ve en los registros de Vercel). Sin conductor, proveedor ni cédulas.
+  if (cruda) {
+    console.info("lectura", JSON.stringify({
+      extractora: cruda.extractora, numero: cruda.numero_tiquete, bruto: cruda.peso_bruto_kg, tara: cruda.tara_kg,
+      neto: cruda.peso_neto_impreso_kg, dudosos: cruda.campos_dudosos, observaciones: cruda.observaciones,
+    }));
+  }
+
   // La extractora debe ser una de las registradas: primero por NIT impreso, luego por el nombre que devolvió la IA.
   const nit = nitBase(cruda?.nit_extractora);
   const extractora =
