@@ -10,7 +10,7 @@ import { avisar, perfilDestino } from "@/lib/avisos";
 import { interpretarFechaTiquete } from "@/lib/fechas";
 import { formatoPesos, kilosDesdeTexto, montoDesdeTexto } from "@/lib/numeros";
 import { normalizarPlaca } from "@/lib/lectura/controles";
-import { detalleTiquete, textoAvisoResta } from "@/lib/mensajes";
+import { textoAvisoResta } from "@/lib/mensajes";
 import { aprenderDeFoto } from "@/lib/lectura/aprender-guardar";
 
 /** whatsapp: aviso que se abre listo en WhatsApp para enviarlo al comprador. */
@@ -67,10 +67,6 @@ type FilaDetalle = {
   peso_bruto_kg: number; tara_kg: number; neto_impreso_kg: number | null; placa: string | null; conductor: string | null; extractoras: { nombre?: string } | null;
 };
 
-function detalleDe(tp: FilaDetalle) {
-  return detalleTiquete({ ...tp, extractora: tp.extractoras?.nombre });
-}
-
 export async function aprobarTiquete(id: string): Promise<Resultado> {
   await exigirAdmin();
   const supabase = await supabaseServidor();
@@ -82,11 +78,7 @@ export async function aprobarTiquete(id: string): Promise<Resultado> {
   const extractora = tp.extractoras?.nombre ?? "";
   if (comprador) await avisar([comprador], "Tiquete aprobado", `Su tiquete N° ${tp.numero} de ${extractora} fue aprobado.`, "/mis-tiquetes?estado=vigente");
   revalidatePath("/admin", "layout");
-  return {
-    ok: true,
-    whatsapp: `Hola ${comprador?.nombre ?? ""}, su tiquete fue APROBADO en BancoTicket:\n\n${detalleDe(tp)}`,
-    celular: await celularDe(tp.comprador_id),
-  };
+  return { ok: true, mensaje: "Tiquete aprobado. El comprador recibe el aviso en la app." };
 }
 
 export async function rechazarTiquete(id: string, motivo: string): Promise<Resultado> {
@@ -103,8 +95,7 @@ export async function rechazarTiquete(id: string, motivo: string): Promise<Resul
   revalidatePath("/admin", "layout");
   return {
     ok: true,
-    whatsapp: `Hola ${comprador?.nombre ?? ""}, su tiquete fue RECHAZADO en BancoTicket.\nMotivo: ${motivo.trim()}\n\n${detalleDe(tp)}`,
-    celular: await celularDe(tp.comprador_id),
+    mensaje: "Tiquete rechazado. El comprador recibe el aviso en la app.",
   };
 }
 

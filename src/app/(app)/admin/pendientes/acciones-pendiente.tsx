@@ -16,7 +16,7 @@ export function AccionesPendiente({ tiquete, extractoras }: Props) {
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [cargando, iniciar] = useTransition();
 
-  if (resultado?.ok && resultado.whatsapp) return <ResultadoAccion resultado={{ ...resultado, mensaje: "Listo. Avíselo al comprador:" }} />;
+  if (resultado?.ok && resultado.mensaje) return <ResultadoAccion resultado={resultado} />;
 
   return (
     <div className="space-y-3 border-t border-borde pt-3">

@@ -20,7 +20,7 @@ Especificación original: `docs/especificacion.pdf` (fuente de verdad del negoci
 
 ## 2. Personas y roles
 
-- **Administrador** (uno solo): Ingrid (usuario `ingrid`). Ve todo, aprueba/rechaza, fija precios, registra anticipos, enseña extractoras. **Recibe todos los avisos y WhatsApp de los compradores.**
+- **Administrador** (uno solo): Ingrid (usuario `ingrid`). Ve todo, aprueba/rechaza, fija precios, registra anticipos, enseña extractoras. **Recibe todos los avisos de los compradores (campana).**
 - **Desarrollador** (uno solo): Christian Soriano (usuario `christian`, celular 3182542939, christiansorianob@gmail.com). Mismos permisos del administrador, pero no recibe avisos de compradores. Rol `desarrollador` (migraciones 0006–0007); no se asigna desde la app.
 - **Compradores** (intermediarios, sin límite): solo ven lo suyo. Usuario de prueba: `prueba`.
 - **Contraseñas:** usuarios nuevos y restablecidos quedan con **12345678** y pueden seguir trabajando con ella (no se obliga a cambiarla). Cada uno la cambia en la llave del encabezado (`/clave`). «Olvidé mi contraseña» → solicitud → el desarrollador aprueba en «Contraseñas» (`/admin/claves`).
@@ -45,7 +45,7 @@ Especificación original: `docs/especificacion.pdf` (fuente de verdad del negoci
 - **Anthropic SDK** `@anthropic-ai/sdk`:
   - Lectura de tiquetes: `claude-haiku-5-5`, `messages.parse` con `zodOutputFormat`, effort `medium` (`src/lib/lectura/lector-ia.ts`).
   - Aprender formatos de extractora: `claude-opus-5-5`, `beta.messages.parse` con `betaZodOutputFormat`, `betas: ["server-side-fallback-2026-07-01"]`, `fallbacks: "default"`, effort `medium` (`src/lib/lectura/aprender.ts`).
-- Avisos: **solo WhatsApp** (en celular `whatsapp://send?...` abre la app; en computador `wa.me`) + aviso interno en la campana. Sin correo.
+- Avisos: aviso interno en la campana para todo. **WhatsApp solo para anticipos** (y usuario nuevo / contraseña restablecida); los tiquetes no envían WhatsApp. En celular `whatsapp://send?...` abre la app; en computador `wa.me`. Sin correo.
 
 ## 5. Estructura de código (lo importante)
 
@@ -55,7 +55,7 @@ src/lib/supabase/{servidor,admin,cliente}.ts   cliente con sesión (RLS) / servi
 src/lib/sesion.ts                    perfilActual, exigirAdmin, exigirComprador, correoInterno
 src/lib/fechas.ts                    America/Bogota, es-CO, interpretarFechaTiquete (formatos reales)
 src/lib/numeros.ts                   kilosDesdeTexto ("2,070"/"26.500"/"10680"), formatoPesos/Toneladas
-src/lib/mensajes.ts                  detalleTiquete() para WhatsApp (extractora, N°, fecha, proveedor, neto, placa, conductor)
+src/lib/mensajes.ts                  textoAvisoResta() (aviso bruto − tara ≠ neto al corregir)
 src/lib/whatsapp.ts / components/contacto.tsx   enlaces wa.me y whatsapp://, AvisoContacto (abre WhatsApp solo)
 src/lib/avisos.ts                    avisar() = notificación en la campana; contactoAdministracion() = celular del admin más antiguo
 src/lib/camara/analisis.ts           análisis en vivo (luz, quieto, enfoque, texto impreso) y revisión de la foto final
@@ -111,11 +111,11 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 4. Se envía la **foto original** (se probó recorte + efecto escaneo y se descartó). **La IA solo se usa para leer tiquetes** (decisión del usuario). No se gira la foto.
    El servidor repite la revisión de nitidez con `sharp` (`src/lib/camara/revisar-foto.ts`) antes de la IA.
    Servidor: la IA (Haiku) recibe la foto + todas las extractoras activas (NIT, nombres impresos, plantillas). Detecta la extractora (**primero por NIT**, luego por nombre) y lee los campos. Controles + duplicados. Si la IA duda de algún carácter → se puede enviar pero queda **«Verificar: …»** para el admin.
-5. **Regla pactada con el usuario:** valores críticos **N° de tiquete, peso neto impreso y fecha** 100 % legibles o no pasa; todos los demás campos (placa, proveedor, bruto, tara, conductor, báscula) se marcan «Revisar» si no son 100 % seguros. **No se guardan valores de referencia para comparar** (decisión del usuario): la IA lee y marca lo que no lea seguro. **Dos filtros.** Filtro 1: número de tiquete y **peso neto IMPRESO** 100 % legibles o **no pasa** y se pide un tiquete más legible. Filtro 2: fecha, placa, bruto o tara dudosos (o bruto − tara que no da el neto impreso) pasan marcados. **Bruto y tara se leen tal cual; nunca se ajustan ni se dan por buenos porque la resta cuadre (la resta es solo informativa)** («Revisar») para la administradora. Sin límite de cantidad de campos marcados. El comprador ve los datos solo lectura → «Coincide, enviar» → se abre WhatsApp al admin con el detalle y la pantalla **vuelve a «Subir tiquete»**.
+5. **Regla pactada con el usuario:** valores críticos **N° de tiquete, peso neto impreso y fecha** 100 % legibles o no pasa; todos los demás campos (placa, proveedor, bruto, tara, conductor, báscula) se marcan «Revisar» si no son 100 % seguros. **No se guardan valores de referencia para comparar** (decisión del usuario): la IA lee y marca lo que no lea seguro. **Dos filtros.** Filtro 1: número de tiquete y **peso neto IMPRESO** 100 % legibles o **no pasa** y se pide un tiquete más legible. Filtro 2: placa, proveedor, bruto, tara, conductor o báscula dudosos (o bruto − tara que no da el neto impreso) pasan marcados. **Bruto y tara se leen tal cual; nunca se ajustan ni se dan por buenos porque la resta cuadre (la resta es solo informativa)** («Revisar») para la administradora. Sin límite de cantidad de campos marcados. El comprador ve los datos solo lectura → «Coincide, enviar» → aviso en la campana a la administradora (sin WhatsApp) y la pantalla **vuelve a «Subir tiquete»**.
 6. Solo se rechaza si no es tiquete o falta lo indispensable (número, fecha válida, pesos); placa no leída o neto que no cuadra pasan marcados. Si se rechaza → **no se puede enviar**, se muestra el motivo concreto: «El tiquete está ilegible», solo «Tomar la foto con la cámara» o «Elegir otra foto»; la foto se borra. Solo un tiquete legible de una **extractora no registrada** se puede «Enviar a revisión» (va a «Formatos no reconocidos»).
 
 **Administrador**
-- **Pendientes**: aprobar / rechazar con motivo / corregir datos. Abre WhatsApp al comprador con el detalle.
+- **Pendientes**: aprobar / rechazar con motivo / corregir datos. El comprador recibe el aviso en la campana (sin WhatsApp).
 - **Tiquetes y precios**: filtros por fechas (de entrada), extractora, comprador; precio en bloque o individual; editar cualquier dato con motivo; anular.
 - **Anticipos**: registrar → aviso en la campana + WhatsApp **sin enlace** (decisión del usuario: no generar enlaces). El comprador confirma **desde su app** («Anticipos» / «Revisar y confirmar» en inicio).
 - **Proveedor** resaltado en el título de cada tiquete (es la empresa de la administración). Tiquetes de **más de 6 meses** no se pueden subir (síntoma de fraude).
@@ -140,7 +140,7 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 - **Duplicados = extractora + número** (no incluir proveedor).
 - **Solo anticipos** (se quitó el tipo «Pago»); el saldo es la resta.
 - La **galería no fuerza revisión** (misma revisión de nitidez que la cámara). Lo que la IA lee 100 % seguro se acepta; **cada campo dudoso pasa marcado** y se resalta en «Pendientes» («Revisar») para que la administradora lo compare con la foto. No exigir más que eso (el usuario lo pidió tras probar una versión demasiado estricta).
-- **Solo WhatsApp** (se quitaron Brevo y el correo `mailto:`). En celular abre la app de WhatsApp, no WhatsApp Web.
+- **WhatsApp solo para anticipos** (decisión del usuario; los tiquetes avisan solo por la campana). Se quitaron Brevo y el correo `mailto:`. En celular abre la app de WhatsApp, no WhatsApp Web.
 - Tras enviar un tiquete, **volver a «Subir tiquete»**.
 - **Consumo de IA crítico**: cualquier cambio que agregue llamadas o tokens de IA **se consulta antes**. Cada llamada se registra en `consumo_ia`. Costo real según la consola de Anthropic: lectura ≈ US$0,008 (el estimado por tokens da ~0,0018; la consola cobra más); aprender un formato ≈ US$0,05–0,10. El panel se igualó a la consola con una fila `consumo_ia` tipo `ajuste`.
 - Campo **proveedor** obligatorio en el sistema (opcional en el papel).

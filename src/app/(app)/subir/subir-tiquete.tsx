@@ -7,9 +7,8 @@ import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
-import { AvisoContacto, abrirWhatsApp } from "@/components/contacto";
-import { detalleTiquete } from "@/lib/mensajes";
-import { MESES_MAXIMOS } from "@/lib/lectura/controles";import { enviarARevision, enviarTiquete } from "./acciones";
+import { MESES_MAXIMOS } from "@/lib/lectura/controles";
+import { enviarARevision, enviarTiquete } from "./acciones";
 
 type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 type Datos = {
@@ -35,14 +34,14 @@ const CUADROS_ESTABLES = 3;
  * El comprador elige cámara guiada o galería; la IA reconoce la extractora y lee el
  * tiquete. Él compara los datos con el papel y confirma.
  */
-export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: string | null; nombreComprador: string }) {
+export function SubirTiquete() {
   const [paso, setPaso] = useState<Paso>("inicio");
   const [origen, setOrigen] = useState<"camara" | "galeria">("camara");
   const [foto, setFoto] = useState<string | null>(null);
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Lo último que se envió: se muestra en la pantalla de subir, con el WhatsApp de respaldo.
-  const [listo, setListo] = useState<{ texto: string; mensaje: string } | null>(null);
+  // Lo último que se envió: se muestra en la pantalla de subir (sin WhatsApp: decisión del usuario).
+  const [listo, setListo] = useState<string | null>(null);
   const [enviando, iniciar] = useTransition();
   const galeria = useRef<HTMLInputElement>(null);
   const camaraNativa = useRef<HTMLInputElement>(null);
@@ -55,12 +54,11 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
     setPaso("inicio");
   }
 
-  /** Tras enviar: abre la app de WhatsApp con el mensaje y vuelve a la pantalla de subir tiquete. */
-  function terminar(texto: string, mensaje: string) {
-    abrirWhatsApp({ celular: celularAdmin, mensaje });
+  /** Tras enviar: vuelve a la pantalla de subir tiquete con el aviso de que quedó enviado. */
+  function terminar(texto: string) {
     if (foto) URL.revokeObjectURL(foto);
     setFoto(null); setLectura(null); setError(null);
-    setListo({ texto, mensaje });
+    setListo(texto);
     setPaso("inicio");
   }
 
@@ -184,10 +182,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
                 onClick={() => iniciar(async () => {
                   const r = await enviarTiquete(lectura.token);
                   if (!r.ok) return setError(r.error);
-                  terminar(
-                    `Tiquete N° ${r.numero} de ${r.extractora} enviado. Queda pendiente de aprobación.`,
-                    `Hola, soy ${nombreComprador}. Subí este tiquete a BancoTicket para su aprobación:\n\n${detalleTiquete({ ...lectura.datos, extractora: r.extractora })}`,
-                  );
+                  terminar(`Tiquete N° ${r.numero} de ${r.extractora} enviado. Queda pendiente de aprobación.`);
                 })}>
                 <CheckCircle2 className="size-5" /> {enviando ? "Enviando…" : "Coincide, enviar"}
               </button>
@@ -234,10 +229,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
                 onClick={() => iniciar(async () => {
                   const r = await enviarARevision(lectura.tokenRevision);
                   if (!r.ok) return setError(r.error ?? "Error");
-                  terminar(
-                    "La foto pasó a revisión del administrador. Le avisaremos cuando la registre.",
-                    `Hola, soy ${nombreComprador}. Envié a revisión un tiquete${nombreExtractora ? ` de ${nombreExtractora}` : ""} que la app no pudo leer.`,
-                  );
+                  terminar("La foto pasó a revisión del administrador. Le avisaremos cuando la registre.");
                 })}>
                 Enviar a revisión del administrador
               </button>
@@ -254,9 +246,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
       {error && <Mensaje tono="error">{error}</Mensaje>}
       {listo && (
         <div className="tarjeta space-y-3">
-          <Mensaje tono="ok"><span className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-5 shrink-0" /> {listo.texto}</span></Mensaje>
-          <p className="text-xs text-suave">Si WhatsApp no se abrió, toque el botón:</p>
-          <AvisoContacto contacto={{ celular: celularAdmin, mensaje: listo.mensaje }} automatico={false} />
+          <Mensaje tono="ok"><span className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-5 shrink-0" /> {listo}</span></Mensaje>
         </div>
       )}
       <p className="text-center text-sm text-suave">¿Cómo quiere subir el tiquete? La app reconoce sola la extractora y lee los datos.</p>
