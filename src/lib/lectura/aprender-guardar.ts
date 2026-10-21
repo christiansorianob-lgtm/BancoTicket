@@ -70,19 +70,22 @@ export async function aprenderDeFoto(foto: { bytes: Buffer; tipo: "image/webp" |
   }
 
   // 2) ¿Formato nuevo o uno que ya conocía de esta extractora?
+  // La resta bruto − tara es solo informativa: una nota de «verificar la resta» empujaría a la
+  // IA lectora a ajustar los pesos para que cuadren, así que no se guarda.
+  const plantilla = { ...a.plantilla, notas: a.plantilla.notas?.replace(/\s*Verificar que bruto\s*[−-]\s*tara\s*=\s*neto[^.]*\./gi, "").trim() };
   const previo = existente?.formatos.find((f) => f.id === a.formato_existente_id);
   let formato: { id: string; nuevo: boolean };
   if (previo) {
     const { data: viejo } = await supabase.from("formatos_extractora").select("imagen_ruta").eq("id", previo.id).single();
     const { error } = await supabase.from("formatos_extractora")
-      .update({ plantilla: a.plantilla, descripcion: a.descripcion, imagen_ruta: foto.ruta })
+      .update({ plantilla, descripcion: a.descripcion, imagen_ruta: foto.ruta })
       .eq("id", previo.id);
     if (error) throw new Error(error.message);
     if (viejo?.imagen_ruta && viejo.imagen_ruta !== foto.ruta) await supabaseAdmin().storage.from("tiquetes").remove([viejo.imagen_ruta]);
     formato = { id: previo.id, nuevo: false };
   } else {
     const { data, error } = await supabase.from("formatos_extractora")
-      .insert({ extractora_id: extractora.id, plantilla: a.plantilla, descripcion: a.descripcion, imagen_ruta: foto.ruta })
+      .insert({ extractora_id: extractora.id, plantilla, descripcion: a.descripcion, imagen_ruta: foto.ruta })
       .select("id").single();
     if (error) throw new Error(error.message);
     formato = { id: data.id, nuevo: true };

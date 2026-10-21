@@ -61,12 +61,12 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   // Filtro 2: los demás campos dudosos no detienen el tiquete; pasan marcados e informados para
   // que la administradora decida.
   const dudosos = new Set((cruda.campos_dudosos ?? []).filter((c) => OTROS[c]).map((c) => OTROS[c]));
-  // La resta bruto − tara solo comprueba: si da exacto el neto impreso, bruto y tara quedan
-  // confirmados; si no, se marcan (lo que vale es el neto impreso).
+  // La resta bruto − tara es solo informativa (decisión del usuario): bruto y tara se toman como
+  // se leen y nunca se dan por confirmados porque la resta cuadre. Si no da el neto impreso,
+  // se marcan para que la administradora los revise.
   if (pesosOk && netoImpreso !== null && netoImpreso > 0) {
     if (netoImpreso === neto) {
-      dudosos.delete(OTROS.peso_bruto_kg); dudosos.delete(OTROS.tara_kg);
-      add("Bruto − tara = neto impreso", true, "Bruto y tara coinciden con el neto impreso");
+      add("Bruto − tara = neto impreso", true, "La resta bruto − tara da el neto impreso (informativo)");
     } else {
       dudosos.add(OTROS.peso_bruto_kg); dudosos.add(OTROS.tara_kg);
       controles.push({ nombre: "Bruto − tara = neto impreso", ok: true, dudoso: true,

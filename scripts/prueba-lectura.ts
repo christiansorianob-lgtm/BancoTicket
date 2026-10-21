@@ -49,7 +49,7 @@ igual("placa 284DAF aceptada sin dudas", r5.ok && r5.dudosos, []);
 const r6 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["numero_tiquete", "tara_kg"] }, { placaObligatoria: true });
 igual("número dudoso: no pasa", r6.ok, false);
 const r6c = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["tara_kg", "fecha_entrada"] }, { placaObligatoria: true });
-igual("tara dudosa confirmada por el neto, fecha marcada", r6c.ok && r6c.dudosos, ["fecha"]);
+igual("tara dudosa sigue marcada aunque la resta cuadre", r6c.ok && r6c.dudosos, ["tara", "fecha"]);
 const r6b = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: "4990", campos_dudosos: ["placa"] }, { placaObligatoria: true });
 igual("duda en placa: pasa marcada", r6b.ok && r6b.dudosos, ["placa"]);
 const r8 = aplicarControles({ ...base, peso_bruto_kg: "11630", tara_kg: "6640", peso_neto_impreso_kg: null }, { placaObligatoria: true });
