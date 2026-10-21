@@ -28,7 +28,7 @@ export default async function Claves() {
     <>
       <h1 className="titulo">Solicitudes de contraseña ({pendientes.length})</h1>
       <Mensaje tono="alerta">
-        Antes de aprobar, confirme por WhatsApp que la solicitud la hizo esa persona. Al aprobar, su contraseña queda en {CLAVE_POR_DEFECTO} y la app le pide cambiarla al ingresar.
+        Antes de aprobar, confirme por WhatsApp que la solicitud la hizo esa persona. Al aprobar, su contraseña queda en {CLAVE_POR_DEFECTO}; la persona la cambia cuando quiera con el ícono de llave.
       </Mensaje>
       {pendientes.length === 0 && <Vacio>No hay solicitudes pendientes.</Vacio>}
       <ul className="grid gap-3 md:grid-cols-2">

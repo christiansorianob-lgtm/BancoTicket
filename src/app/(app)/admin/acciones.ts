@@ -254,7 +254,7 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   const rolUnico = (m: string) =>
     m.includes("perfiles_un_rol_unico") ? "Ya hay un administrador activo: solo puede haber uno" : m.includes("duplicate") ? "Ese usuario ya existe" : m;
   if (!id) {
-    // Todo usuario nuevo empieza con la contraseña por defecto y debe cambiarla al ingresar.
+    // Todo usuario nuevo empieza con la contraseña por defecto; la cambia cuando quiera.
     const { data, error } = await auth.createUser({ email: correoInterno(usuario), password: CLAVE_POR_DEFECTO, email_confirm: true });
     if (error) return fallo(error.message.includes("already") ? "Ese usuario ya existe" : error.message);
     const { error: e2 } = await supabase.from("perfiles").insert({ id: data.user.id, nombre, usuario, celular, correo, rol, activo, cambiar_clave: true });
@@ -267,7 +267,7 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
       ok: true,
       mensaje: `Usuario creado con la contraseña ${CLAVE_POR_DEFECTO}`,
       celular,
-      whatsapp: `Hola ${nombre}, ya tiene acceso a BancoTicket: ${process.env.NEXT_PUBLIC_APP_URL}\nUsuario: ${usuario}\nContraseña: ${CLAVE_POR_DEFECTO} (la app le pedirá cambiarla al ingresar)`,
+      whatsapp: `Hola ${nombre}, ya tiene acceso a BancoTicket: ${process.env.NEXT_PUBLIC_APP_URL}\nUsuario: ${usuario}\nContraseña: ${CLAVE_POR_DEFECTO} (puede cambiarla con el ícono de llave 🔑)`,
     };
   } else {
     // La contraseña no se cambia aquí: cada usuario cambia la suya o pide restablecerla.
@@ -307,7 +307,7 @@ export async function resolverSolicitudClave(id: string, aprobar: boolean): Prom
     ok: true,
     mensaje: `Contraseña restablecida a ${CLAVE_POR_DEFECTO}`,
     celular: usuario.data?.celular,
-    whatsapp: `Hola ${usuario.data?.nombre ?? ""}, restablecí su contraseña de BancoTicket. Ingrese con su usuario ${usuario.data?.usuario ?? ""} y la contraseña ${CLAVE_POR_DEFECTO}; la app le pedirá escoger una nueva. ${process.env.NEXT_PUBLIC_APP_URL}`,
+    whatsapp: `Hola ${usuario.data?.nombre ?? ""}, restablecí su contraseña de BancoTicket. Ingrese con su usuario ${usuario.data?.usuario ?? ""} y la contraseña ${CLAVE_POR_DEFECTO}; puede cambiarla con el ícono de llave 🔑. ${process.env.NEXT_PUBLIC_APP_URL}`,
   };
 }
 

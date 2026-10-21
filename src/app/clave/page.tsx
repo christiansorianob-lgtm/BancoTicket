@@ -4,7 +4,7 @@ import { cerrarSesion } from "@/app/ingresar/acciones";
 import { Mensaje } from "@/components/ui";
 import { FormularioClave } from "./formulario";
 
-/** Fuera del marco de la app: aquí llega también quien está obligado a cambiar la contraseña. */
+/** Cada usuario cambia su contraseña cuando quiera (se llega con la llave del encabezado). */
 export default async function CambiarClave() {
   const perfil = await exigirSesion();
   return (
@@ -15,11 +15,11 @@ export default async function CambiarClave() {
           <p className="text-sm text-suave">{perfil.nombre} · @{perfil.usuario}</p>
         </div>
         {perfil.cambiar_clave && (
-          <Mensaje tono="alerta">Está usando la contraseña por defecto. Escoja una nueva para continuar.</Mensaje>
+          <Mensaje tono="alerta">Está usando la contraseña por defecto (12345678). Le recomendamos escoger una propia.</Mensaje>
         )}
-        <FormularioClave obligatorio={perfil.cambiar_clave} />
+        <FormularioClave porDefecto={perfil.cambiar_clave} />
         <div className="flex justify-between text-sm font-semibold text-primario">
-          {perfil.cambiar_clave ? <span /> : <Link href="/">Volver</Link>}
+          <Link href="/">Volver</Link>
           <form action={cerrarSesion}><button>Salir</button></form>
         </div>
       </div>

@@ -7,7 +7,7 @@ export default function OlvideClave() {
       <div className="tarjeta w-full max-w-sm space-y-4">
         <div>
           <h1 className="titulo">Olvidé mi contraseña</h1>
-          <p className="text-sm text-suave">Escriba su usuario. La solicitud llega al desarrollador; cuando la apruebe, su contraseña será 12345678 y la app le pedirá cambiarla.</p>
+          <p className="text-sm text-suave">Escriba su usuario. La solicitud llega al desarrollador; cuando la apruebe, su contraseña será 12345678 (puede cambiarla luego con el ícono de llave).</p>
         </div>
         <FormularioOlvide />
         <Link href="/ingresar" className="block text-center text-sm font-semibold text-primario">Volver a ingresar</Link>

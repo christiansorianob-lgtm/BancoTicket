@@ -37,7 +37,7 @@ export async function solicitarClave(_previo: { error?: string; mensaje?: string
         `${perfil.nombre} (@${perfil.usuario}) pide restablecer su contraseña.`, "/admin/claves");
     }
   }
-  return { mensaje: "Solicitud enviada. Cuando sea aprobada le avisarán por WhatsApp para ingresar con la contraseña 12345678 y cambiarla." };
+  return { mensaje: "Solicitud enviada. Cuando sea aprobada le avisarán por WhatsApp para ingresar con la contraseña 12345678. Luego puede cambiarla con el ícono de llave." };
 }
 
 export async function cerrarSesion() {

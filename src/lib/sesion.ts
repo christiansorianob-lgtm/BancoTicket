@@ -11,7 +11,7 @@ export type Perfil = {
   correo: string;
   rol: Rol;
   activo: boolean;
-  /** Tiene la contraseña por defecto (usuario nuevo o restablecido): debe cambiarla. */
+  /** Tiene la contraseña por defecto (usuario nuevo o restablecido). Solo se usa para recomendarle cambiarla. */
   cambiar_clave: boolean;
 };
 

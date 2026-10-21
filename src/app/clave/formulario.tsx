@@ -3,12 +3,12 @@ import { useActionState } from "react";
 import { cambiarClave } from "./acciones";
 import { Mensaje } from "@/components/ui";
 
-export function FormularioClave({ obligatorio }: { obligatorio: boolean }) {
+export function FormularioClave({ porDefecto }: { porDefecto: boolean }) {
   const [estado, accion, cargando] = useActionState(cambiarClave, undefined);
   return (
     <form action={accion} className="space-y-4">
       <div>
-        <label className="etiqueta" htmlFor="actual">{obligatorio ? "Contraseña actual (12345678)" : "Contraseña actual"}</label>
+        <label className="etiqueta" htmlFor="actual">{porDefecto ?"Contraseña actual (12345678)" : "Contraseña actual"}</label>
         <input className="campo" id="actual" name="actual" type="password" autoComplete="current-password" required />
       </div>
       <div>

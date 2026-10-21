@@ -1,5 +1,4 @@
 "use server";
-import { redirect } from "next/navigation";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { correoInterno, exigirSesion } from "@/lib/sesion";
@@ -22,9 +21,6 @@ export async function cambiarClave(_previo: EstadoClave, form: FormData): Promis
   const { error: e2 } = await supabase.auth.updateUser({ password: nueva });
   if (e2) return { error: e2.message };
 
-  if (perfil.cambiar_clave) {
-    await supabaseAdmin().from("perfiles").update({ cambiar_clave: false }).eq("id", perfil.id);
-    redirect("/");
-  }
+  if (perfil.cambiar_clave) await supabaseAdmin().from("perfiles").update({ cambiar_clave: false }).eq("id", perfil.id);
   return { mensaje: "Contraseña cambiada" };
 }

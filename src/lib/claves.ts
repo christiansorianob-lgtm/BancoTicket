@@ -1,4 +1,4 @@
-/** Contraseña con la que queda un usuario nuevo o restablecido; debe cambiarla al ingresar. */
+/** Contraseña con la que queda un usuario nuevo o restablecido. Puede seguir usándola; la cambia cuando quiera con la llave. */
 export const CLAVE_POR_DEFECTO = "12345678";
 
 /** Revisa la contraseña nueva; devuelve el error o null. */
