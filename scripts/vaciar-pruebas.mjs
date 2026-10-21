@@ -1,4 +1,4 @@
-// Borra los datos que se generan al probar: tiquetes, anticipos, avisos, historial y fotos
+// Borra los datos que se generan al probar: tiquetes, anticipos, avisos, solicitudes de contraseña, historial y fotos
 // de compradores. Conserva usuarios, extractoras con sus formatos aprendidos (aprenderlos
 // cuesta IA) y el registro de consumo de IA. Uso:
 //   node --env-file=.env.local scripts/vaciar-pruebas.mjs --si
@@ -12,7 +12,7 @@ if (!process.argv.includes("--si")) {
 
 const c = new pg.Client({ connectionString: process.env.POSTGRES_URL_NON_POOLING.replace(/[?&]sslmode=[^&]*/, ""), ssl: { rejectUnauthorized: false } });
 await c.connect();
-await c.query("truncate tiquetes, tiquetes_pendientes, formatos_no_reconocidos, anticipos, notificaciones, historial restart identity");
+await c.query("truncate tiquetes, tiquetes_pendientes, formatos_no_reconocidos, anticipos, notificaciones, solicitudes_clave, historial restart identity");
 await c.end();
 
 // Fotos de los compradores; la carpeta «formatos» (ejemplos aprendidos) se conserva.
