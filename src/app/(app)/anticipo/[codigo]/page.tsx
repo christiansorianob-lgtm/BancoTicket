@@ -23,12 +23,18 @@ export default async function ConfirmarAnticipo({ params }: PageProps<"/anticipo
     );
   }
 
-  const tipo = "anticipo";
+  // Negativo: no es dinero entregado sino un saldo a favor del comprador (la administración le debe).
+  const negativo = Number(a.monto) < 0;
+  const tipo = negativo ? "saldo a mi favor" : "anticipo";
+  const monto = formatoPesos(Math.abs(Number(a.monto)));
   return (
     <div className="mx-auto max-w-md space-y-4">
       <h1 className="titulo">Confirmar {tipo}</h1>
       <div className="tarjeta space-y-4">
-        <p className="text-4xl font-black text-profundo">{formatoPesos(a.monto)}</p>
+        <p className="text-4xl font-black text-profundo">{monto}</p>
+        <p className="text-sm text-suave">
+          {negativo ? "La administración registra que me debe este valor (por ejemplo, el saldo con el que empezamos)." : "Dinero que me entregaron como anticipo; lo cubro con fruta."}
+        </p>
         <dl className="grid grid-cols-2 gap-3">
           <Dato etiqueta="Fecha">{fecha(a.fecha)}</Dato>
           <Dato etiqueta="Registrado por">{a.registrado_por}</Dato>
@@ -43,7 +49,7 @@ export default async function ConfirmarAnticipo({ params }: PageProps<"/anticipo
       ) : a.vencido ? (
         <Mensaje tono="error">Este enlace venció. Pida a la administradora que le envíe uno nuevo.</Mensaje>
       ) : (
-        <ResponderAnticipo codigo={codigo} tipo={tipo} monto={formatoPesos(a.monto)} nombre={perfil.nombre} celularAdmin={admin.celular} />
+        <ResponderAnticipo codigo={codigo} negativo={negativo} monto={monto} nombre={perfil.nombre} celularAdmin={admin.celular} />
       )}
     </div>
   );

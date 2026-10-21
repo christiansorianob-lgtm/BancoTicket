@@ -36,12 +36,17 @@ export function formatoPesos(v: number | string | null | undefined): string {
   return Number(v).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 }
 
-/** Lee un monto escrito por el administrador: "1.500.000", "1500000", "1,500,000.50". */
-export function montoDesdeTexto(texto: string): number | null {
-  const t = texto.replace(/[$\s]/g, "");
+/**
+ * Lee un monto escrito por el administrador: "1.500.000", "1500000", "1,500,000.50".
+ * Con `negativo` acepta un signo menos ("-2.000.000"), solo para anticipos.
+ */
+export function montoDesdeTexto(texto: string, { negativo = false } = {}): number | null {
+  let t = texto.replace(/[$\s]/g, "").replace(/^[−–]/, "-");
+  const signo = t.startsWith("-") ? -1 : 1;
+  if (signo < 0) { if (!negativo) return null; t = t.slice(1).replace(/^\$/, ""); }
   if (!t) return null;
   // Formato colombiano: punto de miles, coma decimal
   const normal = /,\d{1,2}$/.test(t) ? t.replace(/\./g, "").replace(",", ".") : t.replace(/[.,](?=\d{3}(\D|$))/g, "");
   const n = Number(normal);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  return Number.isFinite(n) && n >= 0 ? signo * n : null;
 }

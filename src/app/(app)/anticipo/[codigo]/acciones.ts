@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { exigirComprador } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { administradores, avisar } from "@/lib/avisos";
-import { formatoPesos } from "@/lib/numeros";
+import { describirAnticipo } from "@/lib/saldo";
 
 async function dispositivo() {
   const h = await headers();
@@ -13,7 +13,7 @@ async function dispositivo() {
 
 async function avisarAdministracion(nombre: string, acepta: boolean, monto: number | undefined, motivo: string) {
   await avisar(await administradores(), `Anticipo ${acepta ? "confirmado" : "en disputa"}`,
-    `${nombre} ${acepta ? "confirmó" : "marcó como no coincide"} el anticipo de ${formatoPesos(monto)}${acepta ? "" : `: ${motivo}`}.`,
+    `${nombre} ${acepta ? "confirmó" : "marcó como no coincide"} el ${describirAnticipo(monto)}${acepta ? "" : `: ${motivo}`}.`,
     "/admin/anticipos");
 }
 

@@ -3,6 +3,7 @@ import { kilosDesdeTexto, montoDesdeTexto } from "../src/lib/numeros";
 import { interpretarFechaTiquete } from "../src/lib/fechas";
 import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
+import { textoSaldo } from "../src/lib/saldo";
 
 let fallos = 0;
 const igual = (nombre: string, real: unknown, esperado: unknown) => {
@@ -10,6 +11,14 @@ const igual = (nombre: string, real: unknown, esperado: unknown) => {
   if (!ok) fallos++;
   console.log(`${ok ? "OK " : "MAL"} ${nombre}: ${JSON.stringify(real)}${ok ? "" : ` (esperado ${JSON.stringify(esperado)})`}`);
 };
+
+igual("anticipo negativo", montoDesdeTexto("-2.000.000", { negativo: true }), -2000000);
+igual("negativo con $ y guion largo", montoDesdeTexto("−$ 1.500.000", { negativo: true }), -1500000);
+igual("precio negativo no se acepta", montoDesdeTexto("-1.000"), null);
+igual("admin: saldo positivo", textoSaldo(5000000, "admin").titulo, "Saldo a mi favor");
+igual("admin: saldo negativo", textoSaldo(-2000000, "admin").titulo, "Le debo");
+igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Debo");
+igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
 
 igual("2,070", kilosDesdeTexto("2,070"), 2070);
 igual("26.500", kilosDesdeTexto("26.500"), 26500);

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { exigirAdmin, exigirDesarrollador, correoInterno } from "@/lib/sesion";
 import { CLAVE_POR_DEFECTO } from "@/lib/claves";
+import { describirAnticipo } from "@/lib/saldo";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { avisar, perfilDestino } from "@/lib/avisos";
@@ -188,28 +189,29 @@ async function enviarEnlace(anticipoId: string): Promise<Resultado> {
   if (error) return fallo(error.message);
   const { data: a } = await supabase.from("anticipos").select("monto, fecha, comprador_id").eq("id", anticipoId).single();
   const enlace = `${process.env.NEXT_PUBLIC_APP_URL}/anticipo/${codigo}`;
-  const tipo = "anticipo";
   const comprador = a ? await perfilDestino(a.comprador_id) : null;
+  const negativo = Number(a?.monto) < 0;
   if (comprador) {
-    await avisar([comprador], `Confirme el ${tipo} recibido`,
-      `Se registró un ${tipo} de ${formatoPesos(a!.monto)} a su nombre. Ingrese y confirme si lo recibió.`, `/anticipo/${codigo}`);
+    await avisar([comprador], negativo ? "Confirme el saldo a su favor" : "Confirme el anticipo recibido",
+      `Se registró un ${describirAnticipo(a!.monto)} a su nombre. Ingrese y confirme si es correcto.`, `/anticipo/${codigo}`);
   }
   revalidatePath("/admin/anticipos");
   return {
     ok: true,
     enlace,
     celular: await celularDe(a?.comprador_id),
-    whatsapp: `Hola ${comprador?.nombre ?? ""}, le registré un ${tipo} de ${formatoPesos(a?.monto)}. Por favor confírmelo en BancoTicket: ${enlace}`,
+    whatsapp: `Hola ${comprador?.nombre ?? ""}, le registré un ${describirAnticipo(a?.monto)}. Por favor confírmelo en BancoTicket: ${enlace}`,
   };
 }
 
 export async function registrarAnticipo(form: FormData): Promise<Resultado> {
   await exigirAdmin();
-  const monto = montoDesdeTexto(String(form.get("monto") ?? ""));
+  // Negativo = dinero que se le debe al comprador (ej. el saldo con el que se empieza).
+  const monto = montoDesdeTexto(String(form.get("monto") ?? ""), { negativo: true });
   const comprador = String(form.get("comprador") ?? "");
   const fecha = String(form.get("fecha") ?? "");
   if (!comprador) return fallo("Elija el comprador");
-  if (!monto || monto <= 0) return fallo("Escriba un monto válido");
+  if (!monto) return fallo("Escriba un monto válido (distinto de cero; negativo si usted le debe al comprador)");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fallo("Fecha no válida");
   const supabase = await supabaseServidor();
   const { data, error } = await supabase.from("anticipos").insert({

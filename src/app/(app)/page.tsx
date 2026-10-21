@@ -22,7 +22,7 @@ export default async function InicioComprador() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <h1 className="titulo">Hola, {perfil.nombre.split(" ")[0]}</h1>
-      <TarjetaSaldo fila={saldo as FilaSaldo | null} />
+      <TarjetaSaldo fila={saldo as FilaSaldo | null} vista="comprador" />
 
       <Link href="/subir" className="boton-primario w-full py-4 text-lg">
         <Camera className="size-6" aria-hidden /> Subir tiquete
@@ -33,7 +33,7 @@ export default async function InicioComprador() {
           <h2 className="mb-2 flex items-center gap-2 font-bold text-alerta"><Wallet className="size-5" /> Por confirmar</h2>
           <ul className="space-y-1 text-sm">
             {porConfirmar!.map((a) => (
-              <li key={a.id}>Anticipo de {formatoPesos(a.monto)} del {fecha(a.fecha)}</li>
+              <li key={a.id}>{Number(a.monto) < 0 ? `Saldo a mi favor de ${formatoPesos(-a.monto)}` : `Anticipo de ${formatoPesos(a.monto)}`} del {fecha(a.fecha)}</li>
             ))}
           </ul>
           <Link href="/anticipos" className="boton-primario mt-3 w-full">Revisar y confirmar</Link>

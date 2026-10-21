@@ -10,9 +10,12 @@ export default async function PaginaExtracto() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <h1 className="titulo">Mi extracto</h1>
-      <TarjetaSaldo fila={saldo as FilaSaldo | null} />
-      <p className="text-sm text-suave">Solo cuentan los anticipos confirmados y los tiquetes aprobados con precio.</p>
-      <Extracto compradorId={perfil.id} />
+      <TarjetaSaldo fila={saldo as FilaSaldo | null} vista="comprador" />
+      <p className="text-sm text-suave">
+        <strong>Debo</strong>: tengo dinero de anticipos que aún debo cubrir con fruta. <strong>Me deben</strong>: entregué más fruta de la que me anticiparon.
+        Solo cuentan los anticipos confirmados y los tiquetes aprobados con precio.
+      </p>
+      <Extracto compradorId={perfil.id} vista="comprador" />
     </div>
   );
 }

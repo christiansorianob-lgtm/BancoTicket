@@ -6,6 +6,14 @@ import { Extracto } from "@/components/extracto";
 import { BotonWhatsApp } from "@/components/ui";
 import { formatoPesos } from "@/lib/numeros";
 
+/** Mensaje al comprador con su estado de cuenta en sus propias palabras (Debo / Me deben). */
+function mensajeSaldo(nombre: string, saldo: number) {
+  if (saldo === 0) return `Hola ${nombre}, su cuenta en BancoTicket está al día: nadie le debe a nadie.`;
+  return saldo > 0
+    ? `Hola ${nombre}, su estado de cuenta en BancoTicket: usted tiene ${formatoPesos(saldo)} de anticipos que aún debe cubrir con fruta.`
+    : `Hola ${nombre}, su estado de cuenta en BancoTicket: le debo ${formatoPesos(-saldo)} por fruta entregada.`;
+}
+
 export default async function CuentaComprador({ params, searchParams }: PageProps<"/admin/compradores/[id]">) {
   const { id } = await params;
   const { desde, hasta } = await searchParams;
@@ -24,11 +32,11 @@ export default async function CuentaComprador({ params, searchParams }: PageProp
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="titulo">{perfil.nombre}</h1>
         <BotonWhatsApp celular={perfil.celular} texto="Escribir por WhatsApp"
-          mensaje={`Hola ${perfil.nombre}, su saldo en BancoTicket es ${formatoPesos(s?.saldo ?? 0)}.`} />
+          mensaje={mensajeSaldo(perfil.nombre, Number(s?.saldo ?? 0))} />
       </div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="space-y-3">
-          <TarjetaSaldo fila={s} />
+          <TarjetaSaldo fila={s} vista="admin" />
           <div className="grid grid-cols-2 gap-3">
             <Link href="/admin/pendientes" className="tarjeta text-center"><p className="text-2xl font-black text-alerta">{pendientes ?? 0}</p><p className="text-xs text-suave">Pendientes</p></Link>
             <Link href={`/admin/tiquetes?comprador=${id}&sin_precio=1`} className="tarjeta text-center"><p className="text-2xl font-black text-primario">{sinPrecio ?? 0}</p><p className="text-xs text-suave">Sin precio</p></Link>
@@ -42,7 +50,7 @@ export default async function CuentaComprador({ params, searchParams }: PageProp
             <label><span className="etiqueta">Hasta</span><input type="date" name="hasta" className="campo" defaultValue={typeof hasta === "string" ? hasta : ""} /></label>
             <button className="boton-primario">Filtrar extracto</button>
           </form>
-          <Extracto compradorId={id} desde={typeof desde === "string" ? desde : undefined} hasta={typeof hasta === "string" ? hasta : undefined} />
+          <Extracto compradorId={id} desde={typeof desde === "string" ? desde : undefined} hasta={typeof hasta === "string" ? hasta : undefined} vista="admin" />
         </div>
       </div>
     </>

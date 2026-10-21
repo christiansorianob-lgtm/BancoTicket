@@ -12,6 +12,7 @@ Aplicación web en español, móvil primero, para controlar los **tiquetes de b�
 - **Anticipos confirmados suman** al saldo del comprador.
 - **Cada tiquete aprobado con precio descuenta** (toneladas netas × precio por tonelada).
 - **Saldo = anticipos confirmados − valor de tiquetes vigentes con precio.** Positivo: el comprador tiene fondos. Negativo: se le debe.
+- **Anticipos negativos** permitidos (dinero que se le debe al comprador, ej. saldo inicial). Palabras del estado de cuenta (`src/lib/saldo.ts`): administración «Saldo a mi favor» / «Le debo»; comprador «Debo» / «Me deben».
 
 Problema que resuelve: los tiquetes son físicos y se podían pagar dos veces. La app evita duplicados (extractora + número de tiquete) y deja control de lo entregado, pagado y pendiente.
 
@@ -80,11 +81,11 @@ scripts/                             aplicar-sql, crear-admin, perfil-admin, pru
 docs/                                ARQUITECTURA.md (decisiones), NOTAS.md (bitácora), DESPLIEGUE.md, especificacion.pdf
 ```
 
-## 6. Base de datos (migraciones aplicadas: 0001 a 0010)
+## 6. Base de datos (migraciones aplicadas: 0001 a 0011)
 
-**Nunca editar una migración ya aplicada; crear la siguiente (`0011_...sql`) y aplicarla con:**
+**Nunca editar una migración ya aplicada; crear la siguiente (`0012_...sql`) y aplicarla con:**
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0011_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0012_nombre.sql
 ```
 (corre en una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`).
 

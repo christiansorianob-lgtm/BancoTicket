@@ -34,11 +34,15 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
                 {compradores?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </label>
-            <label><span className="etiqueta">Monto (COP)</span><input name="monto" inputMode="decimal" className="campo" required placeholder="Ej.: 5.000.000" /></label>
+            <label><span className="etiqueta">Monto (COP)</span><input name="monto" inputMode="text" className="campo" required placeholder="Ej.: 5.000.000 o -2.000.000" /></label>
             <label><span className="etiqueta">Fecha</span><input name="fecha" type="date" className="campo" defaultValue={hoyColombia()} required /></label>
             <label><span className="etiqueta">Nota</span><input name="nota" className="campo" /></label>
           </div>
-          <p className="text-xs text-suave">Queda pendiente hasta que el comprador lo confirme con su enlace (único, de un solo uso y con vencimiento). También se le envía por correo.</p>
+          <p className="text-xs text-suave">
+            <strong>Positivo</strong> (ej. 5.000.000): dinero que le entrego al comprador; queda a mi favor hasta que lo cubra con fruta.{" "}
+            <strong>Negativo</strong> (ej. -2.000.000): dinero que yo le debo al comprador, por ejemplo el saldo con el que empezamos.{" "}
+            Queda pendiente hasta que el comprador lo confirme con su enlace (único, de un solo uso y con vencimiento).
+          </p>
         </FormAccion>
       </section>
 
@@ -55,8 +59,10 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-bold text-profundo">{a.comprador?.nombre}</p>
-                <p className="text-xl font-black">{formatoPesos(a.monto)}</p>
-                <p className="text-sm text-suave">Anticipo del {fecha(a.fecha)} · por {a.registrador?.nombre}</p>
+                <p className={`text-xl font-black ${Number(a.monto) < 0 ? "text-error" : ""}`}>{formatoPesos(Math.abs(Number(a.monto)))}</p>
+                <p className="text-sm text-suave">
+                  {Number(a.monto) < 0 ? "Saldo a favor del comprador (le debo)" : "Anticipo"} del {fecha(a.fecha)} · por {a.registrador?.nombre}
+                </p>
               </div>
               <EstadoChip estado={a.estado} />
             </div>

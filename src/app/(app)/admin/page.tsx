@@ -4,6 +4,7 @@ import { formatoPesos, formatoToneladas } from "@/lib/numeros";
 import { hoyColombia } from "@/lib/fechas";
 import { Vacio } from "@/components/ui";
 import type { FilaSaldo } from "@/components/saldo";
+import { textoSaldo } from "@/lib/saldo";
 
 export default async function PanelAdmin() {
   const supabase = await supabaseServidor();
@@ -46,8 +47,16 @@ export default async function PanelAdmin() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2">
-        <div className="tarjeta"><p className="text-sm text-suave">Fondos en poder de compradores</p><p className="text-2xl font-bold text-ok">{formatoPesos(totalFondos)}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Se les debe a compradores</p><p className="text-2xl font-bold text-error">{formatoPesos(-totalDeuda)}</p></div>
+        <div className="tarjeta">
+          <p className="text-sm font-bold text-ok">Total saldo a mi favor</p>
+          <p className="text-2xl font-bold text-ok">{formatoPesos(totalFondos)}</p>
+          <p className="text-xs text-suave">Anticipos que los compradores aún no han cubierto con fruta.</p>
+        </div>
+        <div className="tarjeta">
+          <p className="text-sm font-bold text-error">Total que les debo</p>
+          <p className="text-2xl font-bold text-error">{formatoPesos(-totalDeuda)}</p>
+          <p className="text-xs text-suave">Fruta entregada que aún no les he pagado.</p>
+        </div>
       </section>
 
       <section className="tarjeta flex flex-wrap items-center justify-between gap-2">
@@ -66,11 +75,18 @@ export default async function PanelAdmin() {
           {filas.map((f) => (
             <Link key={f.comprador_id} href={`/admin/compradores/${f.comprador_id}`} className="tarjeta block transition hover:shadow-md">
               <p className="font-bold text-profundo">{f.nombre}</p>
-              <p className={`text-2xl font-black ${Number(f.saldo) < 0 ? "text-error" : "text-ok"}`}>{formatoPesos(f.saldo)}</p>
-              <p className="text-xs text-suave">{Number(f.saldo) < 0 ? "Se le debe" : "Fondos disponibles"}</p>
+              {(() => {
+                const t = textoSaldo(f.saldo, "admin");
+                return (
+                  <>
+                    <p className={`text-sm font-bold ${t.tono === "debe" ? "text-error" : t.tono === "favor" ? "text-ok" : "text-suave"}`}>{t.titulo}</p>
+                    <p className={`text-2xl font-black ${t.tono === "debe" ? "text-error" : t.tono === "favor" ? "text-ok" : "text-profundo"}`}>{t.monto}</p>
+                  </>
+                );
+              })()}
               <dl className="mt-2 grid grid-cols-3 gap-1 text-xs">
                 <div><dt className="text-suave">Anticipos</dt><dd className="font-semibold">{formatoPesos(f.anticipos_confirmados)}</dd></div>
-                <div><dt className="text-suave">Compras</dt><dd className="font-semibold">{formatoPesos(f.valor_tiquetes)}</dd></div>
+                <div><dt className="text-suave">Fruta</dt><dd className="font-semibold">{formatoPesos(f.valor_tiquetes)}</dd></div>
                 <div><dt className="text-suave">Toneladas</dt><dd className="font-semibold">{formatoToneladas(f.toneladas_valoradas)}</dd></div>
               </dl>
             </Link>
