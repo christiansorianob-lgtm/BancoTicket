@@ -28,11 +28,11 @@ type Paso = "inicio" | "camara" | "leyendo" | "resultado";
 const CUADROS_ESTABLES = 3;
 
 /**
- * El comprador solo toma la foto: la cámara se abre de una vez y la IA reconoce la
- * extractora y lee el tiquete. Él compara los datos con el papel y confirma.
+ * El comprador elige cámara guiada o galería; la IA reconoce la extractora y lee el
+ * tiquete. Él compara los datos con el papel y confirma.
  */
 export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: string | null; nombreComprador: string }) {
-  const [paso, setPaso] = useState<Paso>("camara");
+  const [paso, setPaso] = useState<Paso>("inicio");
   const [origen, setOrigen] = useState<"camara" | "galeria">("camara");
   const [foto, setFoto] = useState<string | null>(null);
   const [lectura, setLectura] = useState<Lectura | null>(null);
@@ -48,7 +48,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
   function reiniciar() {
     if (foto) URL.revokeObjectURL(foto);
     setFoto(null); setLectura(null); setError(null); setListo(null);
-    setPaso("camara");
+    setPaso("inicio");
   }
 
   /** Tras enviar: abre la app de WhatsApp con el mensaje y vuelve a la pantalla de subir tiquete. */
@@ -220,7 +220,7 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
     );
   }
 
-  // Inicio: después de enviar, si el comprador cerró la cámara o si hubo un error.
+  // Inicio: dos opciones, cámara guiada o galería. También se vuelve aquí tras enviar o si hubo un error.
   return (
     <div className="space-y-4">
       {error && <Mensaje tono="error">{error}</Mensaje>}
@@ -231,17 +231,23 @@ export function SubirTiquete({ celularAdmin, nombreComprador }: { celularAdmin: 
           <AvisoContacto contacto={{ celular: celularAdmin, mensaje: listo.mensaje }} automatico={false} />
         </div>
       )}
-      <div className="tarjeta space-y-4">
-        <button className="boton-primario w-full py-4 text-lg" onClick={() => setPaso("camara")}>
-          <Camera className="size-6" /> Tomar foto del tiquete
+      <p className="text-center text-sm text-suave">¿Cómo quiere subir el tiquete? La app reconoce sola la extractora y lee los datos.</p>
+      <div className="grid gap-3">
+        <button className="tarjeta flex items-center gap-4 text-left transition hover:ring-2 hover:ring-primario" onClick={() => setPaso("camara")}>
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primario text-white"><Camera className="size-7" /></span>
+          <span>
+            <span className="block text-lg font-bold text-profundo">Usar la cámara</span>
+            <span className="block text-sm text-suave">Apunte al tiquete y la foto se toma sola cuando esté nítida.</span>
+          </span>
         </button>
-        <p className="text-center text-sm text-suave">La app reconoce sola la extractora y lee los datos.</p>
-        <div className="border-t border-borde pt-3">
-          <button className="w-full text-sm font-medium text-suave underline" onClick={() => galeria.current?.click()}>
-            <ImageUp className="mr-1 inline size-4" /> Subir una foto desde la galería
-          </button>
-          <input ref={galeria} type="file" accept="image/*" className="hidden" onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />
-        </div>
+        <button className="tarjeta flex items-center gap-4 text-left transition hover:ring-2 hover:ring-primario" onClick={() => galeria.current?.click()}>
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primario-suave text-primario"><ImageUp className="size-7" /></span>
+          <span>
+            <span className="block text-lg font-bold text-profundo">Subir desde la galería</span>
+            <span className="block text-sm text-suave">Elija una foto del tiquete que ya tenga guardada.</span>
+          </span>
+        </button>
+        <input ref={galeria} type="file" accept="image/*" className="hidden" onChange={(e) => { desdeArchivo(e.target.files?.[0], "galeria"); e.target.value = ""; }} />
       </div>
     </div>
   );

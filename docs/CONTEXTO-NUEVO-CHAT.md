@@ -104,7 +104,7 @@ Funciones SQL clave: `registrar_pendiente` (solo service_role), `aprobar_tiquete
 ## 7. Flujos actuales
 
 **Comprador sube un tiquete**
-1. «Subir tiquete» abre la **cámara a pantalla completa** (no elige extractora). Marco que ocupa casi toda la pantalla; botón de galería y «Usar cámara normal».
+1. «Subir tiquete» muestra **dos opciones: «Usar la cámara» o «Subir desde la galería»** (no elige extractora). La cámara es a pantalla completa. Marco que ocupa casi toda la pantalla; botón de galería y «Usar cámara normal».
 2. En vivo, en el celular y sin IA: **bloquean** texto impreso (`textoMin 0,15`), luz, quietud (`movimientoMax 10`) y enfoque (`nitidezMin 120` a 640 px); distancia, encuadre y reflejos son solo consejos. Con 3 cuadros en verde, **la foto se toma sola**.
 3. Revisión final en el celular: la foto (del sensor, recortada al marco) debe parecer documento y tener nitidez ≥ 200 a 1000 px; si no, reintenta sola. La galería pasa por las mismas revisiones. **No se gira la foto** (la regla automática fallaba).
 4. Servidor: la IA (Haiku) recibe la foto + todas las extractoras activas (NIT, nombres impresos, plantillas). Detecta la extractora (**primero por NIT**, luego por nombre) y lee los campos. Controles + duplicados. Si la IA duda de algún carácter → se puede enviar pero queda **«Verificar: …»** para el admin.

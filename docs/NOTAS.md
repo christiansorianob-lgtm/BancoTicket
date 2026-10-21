@@ -2,6 +2,7 @@
 
 | Fecha | Qué se hizo |
 |---|---|
+| 2026-10-20 | **Decisión del usuario:** «Subir tiquete» ya no abre la cámara de una vez: muestra dos opciones, «Usar la cámara» (la guiada de siempre) o «Subir desde la galería». Tras enviar o en un error se vuelve a esa misma pantalla. |
 | 2026-10-20 | **Decisión del usuario:** no obligar a cambiar la contraseña por defecto; se puede trabajar con 12345678 y cada uno la cambia cuando quiera con la llave. `cambiar_clave` queda solo para mostrar la recomendación en `/clave`. |
 | 2026-10-20 | **Decisión del usuario:** contraseñas. Todos cambian la suya (llave en el encabezado → `/clave`, pide la actual). «Olvidé mi contraseña» en el ingreso deja una solicitud (`solicitudes_clave`, una pendiente por usuario; misma respuesta exista o no el usuario) y avisa al desarrollador; el desarrollador la aprueba en «Contraseñas» (`/admin/claves`, solo él) y la clave queda en **12345678**. Los usuarios nuevos se crean con 12345678 (campo fijo, no editable); el administrador ya no escribe ni cambia contraseñas. Con `perfiles.cambiar_clave` la app obliga a cambiarla al ingresar. Migración 0008 aplicada. |
 | 2026-10-20 | **Decisión del usuario:** tres perfiles: un administrador (Ingrid), un desarrollador (Christian) y varios compradores. Rol `desarrollador` con los mismos permisos del admin; avisos (campana) y WhatsApp de los compradores van solo al administrador. La base impide un segundo administrador o desarrollador activo. Migraciones 0006 y 0007 aplicadas; Christian pasó a desarrollador. |
