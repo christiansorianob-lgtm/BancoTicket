@@ -5,6 +5,8 @@ import { fecha, fechaHora } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
 import { ResponderAnticipo } from "../anticipo/[codigo]/responder";
+import { Image as ImageIcon } from "lucide-react";
+import { urlsFotos } from "@/lib/fotos";
 
 export default async function MisAnticipos() {
   const perfil = await exigirComprador();
@@ -14,6 +16,7 @@ export default async function MisAnticipos() {
     contactoAdministracion(),
   ]);
   const filas = data ?? [];
+  const soportes = await urlsFotos(filas.map((a) => a.soporte_ruta));
   const pendientes = filas.filter((a) => a.estado === "pendiente").length;
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -35,6 +38,12 @@ export default async function MisAnticipos() {
               <EstadoChip estado={a.estado} />
             </div>
             {a.nota && <p className="text-sm">{a.nota}</p>}
+            {a.soporte_ruta && soportes[a.soporte_ruta] && (
+              <a href={soportes[a.soporte_ruta]} target="_blank" rel="noopener noreferrer"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-primario hover:bg-primario-suave">
+                <ImageIcon className="size-5" aria-hidden /> Ver soporte
+              </a>
+            )}
             {a.respondido_en && <p className="text-xs text-suave">Respondido: {fechaHora(a.respondido_en)}</p>}
             {a.motivo_disputa && <p className="text-sm text-error">Motivo: {a.motivo_disputa}</p>}
             {a.estado === "pendiente" && (

@@ -101,9 +101,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0015.** Nunca editar una aplicada; crear la siguiente (`0016_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0016.** Nunca editar una aplicada; crear la siguiente (`0017_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0016_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0017_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
 
@@ -117,6 +117,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0016_nomb
 | 0012–0013 | se creó y luego se **borró** una tabla `proveedores` (el usuario no quiere listas de referencia) |
 | 0014 | `perfiles.correo` admite null |
 | 0015 | función `eliminar_tiquete(p_id, p_motivo)` (admin, motivo obligatorio, devuelve la ruta de la foto) |
+| 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
 
 Tablas: `perfiles` (rol `admin|desarrollador|comprador`, correo opcional, `cambiar_clave`), `extractoras` (nit, nombres_impresos), `formatos_extractora` (plantilla jsonb, foto de ejemplo en `formatos/`), `anticipos` (monto ≠ 0, estado `pendiente|confirmado|en_disputa`; columnas de enlace ya no se usan), `tiquetes_pendientes` y `tiquetes` (enteros en kilos, `neto_impreso_kg`, proveedor, `requiere_revision` + `motivo_revision` «Verificar: …»), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia` (tipos `lectura`, `aprendizaje`, `ajuste`), `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`). Vistas `saldos` y `extracto`. Bucket privado `tiquetes`: `<comprador_id>/...` y `formatos/...`.
 
@@ -146,6 +147,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - **Tiquetes y precios:** filtros, precio en bloque o individual, editar con motivo, anular. Botón «Reportes y Excel».
 - **Reportes** (`/admin/reportes`): filtros por fechas, comprador, extractora, proveedor, N° de tiquete; resumen; tabla (hasta 500 filas, totales sobre todo) con **Acciones**: ✏️ editar (ventana con foto y formulario), 🗑️ **eliminar** (motivo obligatorio + confirmación **Sí/No**; borra la foto, avisa al comprador, el saldo se ajusta solo; el historial se conserva) y 🖼️ foto. **«Exportar a Excel»** con los mismos filtros: Comprador, Extractora, Proveedor, Fecha, N° Tiquete, Peso neto (t), Precio/t, Precio total; título, filtros, totales con fórmulas (sin foto).
 - **Reportes · «Tiquetes y anticipos»** (`/admin/reportes?tipo=cuenta`, selector «Tipo de reporte» arriba): un comprador + fechas de registro; tiquetes aprobados por fecha de subida y anticipos **confirmados** por fecha de confirmación en una tabla con saldo acumulado; sin precio = «Sin precio aún» (no mueve el saldo); Excel con los mismos filtros. Solo lectura (`src/lib/informes/movimientos.ts`, `cuenta.ts`, `cuenta-excel.ts`). **Todo reporte nuevo debe tener Excel.**
+- **Anticipos:** soporte (foto) opcional al registrar o con el ícono «Subir soporte» en la tarjeta (solo pendientes; una vez puesto no se cambia); «Ver soporte» para admin y comprador.
 - **Anticipos:** registrar (positivo o negativo) → campana + **botón** «Enviar por WhatsApp» (**sin enlaces**); «Recordarle por WhatsApp»; el comprador confirma en su app.
 - **Compradores:** crear (contraseña fija 12345678, correo opcional) / editar; cuenta de cada comprador con estado de cuenta y extracto.
 - **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».

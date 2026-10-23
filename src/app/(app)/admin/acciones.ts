@@ -243,7 +243,48 @@ export async function registrarAnticipo(form: FormData): Promise<Resultado> {
     nota: textoODefecto(form.get("nota")),
   }).select("id").single();
   if (error) return fallo(error.message);
-  return avisarAnticipo(data.id);
+  // El soporte es opcional; si no se pudo subir, el anticipo queda y se sube desde su tarjeta.
+  const soporte = form.get("soporte");
+  const errorSoporte = soporte instanceof File && soporte.size > 0 ? await guardarSoporte(data.id, soporte) : null;
+  const r = await avisarAnticipo(data.id);
+  return errorSoporte && r.ok ? { ...r, aviso: `El soporte no se pudo subir (${errorSoporte}). Súbalo desde la tarjeta del anticipo.` } : r;
+}
+
+/**
+ * Sube la foto del soporte al bucket privado (<comprador>/anticipos/…) y la registra con
+ * `poner_soporte_anticipo` (solo anticipos pendientes y sin soporte). Devuelve el error o null.
+ */
+async function guardarSoporte(anticipoId: string, archivo: File): Promise<string | null> {
+  if (!["image/webp", "image/jpeg"].includes(archivo.type)) return "la foto debe ser WebP o JPEG";
+  if (archivo.size > 600_000) return "la foto pesa más de 600 KB";
+  const supabase = await supabaseServidor();
+  const { data: a } = await supabase.from("anticipos").select("comprador_id, estado, soporte_ruta").eq("id", anticipoId).single();
+  if (!a) return "anticipo no encontrado";
+  if (a.soporte_ruta) return "este anticipo ya tiene soporte y no se puede cambiar";
+  if (a.estado !== "pendiente") return "solo se sube a anticipos pendientes de confirmar";
+
+  const ruta = `${a.comprador_id}/anticipos/${anticipoId}-${randomUUID().slice(0, 8)}.${archivo.type === "image/webp" ? "webp" : "jpg"}`;
+  const almacen = supabaseAdmin().storage.from("tiquetes");
+  const { error: eSubir } = await almacen.upload(ruta, archivo, { contentType: archivo.type });
+  if (eSubir) return eSubir.message;
+  const { error } = await supabase.rpc("poner_soporte_anticipo", { p_id: anticipoId, p_ruta: ruta });
+  if (error) {
+    await almacen.remove([ruta]); // el archivo recién subido no quedó registrado
+    return error.message;
+  }
+  return null;
+}
+
+/** Sube el soporte a un anticipo ya registrado (pendiente y sin soporte). Solo eso: no edita nada más. */
+export async function subirSoporteAnticipo(anticipoId: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const soporte = form.get("soporte");
+  if (!(soporte instanceof File) || soporte.size === 0) return fallo("Elija la foto del soporte");
+  const error = await guardarSoporte(anticipoId, soporte);
+  if (error) return fallo(`No se pudo subir el soporte: ${error}`);
+  revalidatePath("/admin/anticipos");
+  revalidatePath("/anticipos");
+  return { ok: true, mensaje: "Soporte subido. El comprador lo verá al confirmar el anticipo." };
 }
 
 export async function recordarAnticipo(anticipoId: string): Promise<Resultado> {

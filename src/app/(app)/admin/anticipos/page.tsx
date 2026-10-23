@@ -3,8 +3,11 @@ import { fecha, fechaHora, hoyColombia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
 import { FormAccion } from "@/components/form-accion";
-import { registrarAnticipo, recordarAnticipo } from "../acciones";
+import { Image as ImageIcon } from "lucide-react";
+import { urlsFotos } from "@/lib/fotos";
+import { registrarAnticipo, recordarAnticipo, subirSoporteAnticipo } from "../acciones";
 import { BotonReenviar } from "./reenviar";
+import { CampoSoporte, SubirSoporte } from "./soporte";
 
 export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin/anticipos">) {
   const { estado } = await searchParams;
@@ -20,6 +23,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
     supabase.from("perfiles").select("id, nombre").eq("rol", "comprador").eq("activo", true).order("nombre"),
   ]);
   const filas = data ?? [];
+  const soportes = await urlsFotos(filas.map((a) => a.soporte_ruta));
 
   return (
     <>
@@ -37,6 +41,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
             <label><span className="etiqueta">Monto (COP)</span><input name="monto" inputMode="text" className="campo" required placeholder="Ej.: 5.000.000 o -2.000.000" /></label>
             <label><span className="etiqueta">Fecha</span><input name="fecha" type="date" className="campo" defaultValue={hoyColombia()} required /></label>
             <label><span className="etiqueta">Nota</span><input name="nota" className="campo" /></label>
+            <CampoSoporte />
           </div>
           <p className="text-xs text-suave">
             <strong>Positivo</strong> (ej. 5.000.000): dinero que le entrego al comprador; queda a mi favor hasta que lo cubra con fruta.{" "}
@@ -69,6 +74,13 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
             {a.nota && <p className="text-sm">{a.nota}</p>}
             {a.respondido_en && <p className="text-xs text-suave">Respondido {fechaHora(a.respondido_en)} · {a.dispositivo}</p>}
             {a.motivo_disputa && <p className="rounded-lg bg-error-suave p-2 text-sm text-error">Motivo: {a.motivo_disputa}</p>}
+            {a.soporte_ruta && soportes[a.soporte_ruta] && (
+              <a href={soportes[a.soporte_ruta]} target="_blank" rel="noopener noreferrer"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-primario hover:bg-primario-suave">
+                <ImageIcon className="size-5" aria-hidden /> Ver soporte
+              </a>
+            )}
+            {a.estado === "pendiente" && !a.soporte_ruta && <SubirSoporte accion={subirSoporteAnticipo.bind(null, a.id)} />}
             {a.estado === "pendiente" && <BotonReenviar accion={recordarAnticipo.bind(null, a.id)} />}
           </li>
         ))}
