@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { esGestor, perfilActual } from "@/lib/sesion";
+import { perfilActual, puedeConsultar } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { hoyColombia } from "@/lib/fechas";
 import { informeCuentaExcel } from "@/lib/informes/cuenta-excel";
@@ -7,10 +7,10 @@ import { consultarCuenta, filtrosCuentaDesde, textoFiltrosCuenta } from "@/lib/i
 
 export const maxDuration = 60;
 
-/** Excel del reporte «Tiquetes y anticipos» con los mismos filtros de la tabla. Solo administración. */
+/** Excel del reporte «Tiquetes y anticipos» con los mismos filtros de la tabla. Administración y consultores. */
 export async function GET(request: NextRequest) {
   const perfil = await perfilActual();
-  if (!perfil || !esGestor(perfil.rol)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!perfil || !puedeConsultar(perfil.rol)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const f = filtrosCuentaDesde((k) => request.nextUrl.searchParams.get(k));
   if (!f.comprador) return NextResponse.json({ error: "Falta el comprador" }, { status: 400 });

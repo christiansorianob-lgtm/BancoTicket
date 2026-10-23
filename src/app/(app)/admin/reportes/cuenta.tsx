@@ -14,7 +14,7 @@ const colorSaldo = (s: number) => (s > 0 ? "text-ok" : s < 0 ? "text-alerta" : "
  * Reporte «Tiquetes y anticipos»: tiquetes aprobados (fecha de subida) y anticipos confirmados
  * (fecha de confirmación) de un comprador en una sola tabla, con el saldo acumulado. Solo lectura.
  */
-export async function ReporteCuenta({ sp }: { sp: Record<string, string | string[] | undefined> }) {
+export async function ReporteCuenta({ sp, base }: { sp: Record<string, string | string[] | undefined>; base: string }) {
   const f = filtrosCuentaDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
   const supabase = await supabaseServidor();
   const [{ data: compradores }, resultado] = await Promise.all([
@@ -36,7 +36,7 @@ export async function ReporteCuenta({ sp }: { sp: Record<string, string | string
         )}
       </div>
 
-      <SelectorReporte actual="cuenta" />
+      <SelectorReporte actual="cuenta" base={base} />
 
       <form className="tarjeta grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
         <input type="hidden" name="tipo" value="cuenta" />
@@ -50,7 +50,7 @@ export async function ReporteCuenta({ sp }: { sp: Record<string, string | string
         <label><span className="etiqueta">Hasta</span><input type="date" name="hasta" defaultValue={f.hasta} className="campo" /></label>
         <div className="flex items-end gap-2">
           <button className="boton-primario flex-1">Ver reporte</button>
-          {(f.desde || f.hasta || f.comprador) && <Link href="/admin/reportes?tipo=cuenta" className="boton-secundario">Limpiar</Link>}
+          {(f.desde || f.hasta || f.comprador) && <Link href={`${base}?tipo=cuenta`} className="boton-secundario">Limpiar</Link>}
         </div>
         <p className="text-xs text-suave sm:col-span-2 lg:col-span-4">
           Tiquetes aprobados por fecha de subida y anticipos confirmados por fecha de confirmación, con el saldo acumulado.

@@ -15,14 +15,24 @@ export type Perfil = {
   cambiar_clave: boolean;
 };
 
-/** Un administrador, un desarrollador (mismos permisos del admin) y varios compradores. */
-export type Rol = "admin" | "desarrollador" | "comprador";
+/** Un administrador, un desarrollador (mismos permisos del admin), varios compradores y varios consultores (solo ven). */
+export type Rol = "admin" | "desarrollador" | "comprador" | "consultor";
 
-export const NOMBRE_ROL: Record<Rol, string> = { admin: "Administrador", desarrollador: "Desarrollador", comprador: "Comprador" };
+export const NOMBRE_ROL: Record<Rol, string> = { admin: "Administrador", desarrollador: "Desarrollador", comprador: "Comprador", consultor: "Consultor" };
 
 /** Administrador o desarrollador: ven y gestionan todo. */
 export function esGestor(rol: string) {
   return rol === "admin" || rol === "desarrollador";
+}
+
+/** Pueden ver estados de cuenta, reportes, Excel, fotos y soportes: administración y consultores. */
+export function puedeConsultar(rol: string) {
+  return esGestor(rol) || rol === "consultor";
+}
+
+/** Página de inicio de cada perfil. */
+export function inicioDe(rol: string) {
+  return esGestor(rol) ? "/admin" : rol === "consultor" ? "/consulta" : "/";
 }
 
 /** Perfil del usuario con sesión, o null. Se lee una vez por petición. */
@@ -47,6 +57,13 @@ export async function exigirAdmin(): Promise<Perfil> {
   return perfil;
 }
 
+/** Sección «Consulta»: solo lectura (consultores; la administración también puede verla). */
+export async function exigirConsulta(): Promise<Perfil> {
+  const perfil = await exigirSesion();
+  if (!puedeConsultar(perfil.rol)) redirect("/");
+  return perfil;
+}
+
 export async function exigirDesarrollador(): Promise<Perfil> {
   const perfil = await exigirSesion();
   if (perfil.rol !== "desarrollador") redirect("/");
@@ -55,7 +72,7 @@ export async function exigirDesarrollador(): Promise<Perfil> {
 
 export async function exigirComprador(): Promise<Perfil> {
   const perfil = await exigirSesion();
-  if (perfil.rol !== "comprador") redirect("/admin");
+  if (perfil.rol !== "comprador") redirect(inicioDe(perfil.rol));
   return perfil;
 }
 

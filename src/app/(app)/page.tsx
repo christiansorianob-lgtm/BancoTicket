@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Camera, Wallet } from "lucide-react";
-import { esGestor, exigirSesion } from "@/lib/sesion";
+import { exigirSesion, inicioDe } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { TarjetaSaldo, type FilaSaldo } from "@/components/saldo";
 import { formatoPesos } from "@/lib/numeros";
@@ -9,7 +9,7 @@ import { fecha } from "@/lib/fechas";
 
 export default async function InicioComprador() {
   const perfil = await exigirSesion();
-  if (esGestor(perfil.rol)) redirect("/admin");
+  if (perfil.rol !== "comprador") redirect(inicioDe(perfil.rol));
 
   const supabase = await supabaseServidor();
   const [{ data: saldo }, { data: porConfirmar }, { count: pendientes }, { count: rechazados }] = await Promise.all([

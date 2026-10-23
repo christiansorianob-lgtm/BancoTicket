@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { esGestor, perfilActual } from "@/lib/sesion";
+import { perfilActual, puedeConsultar } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { hoyColombia } from "@/lib/fechas";
 import { informeTiquetesExcel } from "@/lib/informes/tiquetes-excel";
@@ -7,10 +7,10 @@ import { consultarInforme, filtrosDesde, textoFiltros } from "@/lib/informes/con
 
 export const maxDuration = 60;
 
-/** Excel de «Reportes» con los mismos filtros de la tabla en pantalla. Solo administración. */
+/** Excel de «Reportes» con los mismos filtros de la tabla en pantalla. Administración y consultores. */
 export async function GET(request: NextRequest) {
   const perfil = await perfilActual();
-  if (!perfil || !esGestor(perfil.rol)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
+  if (!perfil || !puedeConsultar(perfil.rol)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const f = filtrosDesde((k) => request.nextUrl.searchParams.get(k));
   const supabase = await supabaseServidor();

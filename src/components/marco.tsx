@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound, FileSpreadsheet, DatabaseBackup } from "lucide-react";
 import { EnlaceMenu } from "@/components/enlace-menu";
 import { BotonRefrescar } from "@/components/boton-refrescar";
-import { esGestor, type Perfil } from "@/lib/sesion";
+import { esGestor, inicioDe, type Perfil } from "@/lib/sesion";
 import { cerrarSesion } from "@/app/ingresar/acciones";
 
 const COMPRADOR = [
@@ -26,18 +26,26 @@ const ADMIN = [
   { href: "/admin/historial", texto: "Historial", icono: History },
 ];
 
+/** Consultor: solo ve (estado de cuenta, reportes con Excel y fotos, anticipos con soportes). */
+const CONSULTA = [
+  { href: "/consulta", texto: "Saldos", icono: Home },
+  { href: "/consulta/reportes", texto: "Reportes", icono: FileSpreadsheet },
+  { href: "/consulta/anticipos", texto: "Anticipos", icono: Wallet },
+];
+
 /** Solo para el desarrollador. */
 const CLAVES = { href: "/admin/claves", texto: "Contraseñas", icono: KeyRound };
 const BACKUPS = { href: "/admin/backups", texto: "Backups", icono: DatabaseBackup };
 
 export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avisosSinLeer: number; children: ReactNode }) {
   const gestor = esGestor(perfil.rol);
-  const enlaces = gestor ? (perfil.rol === "desarrollador" ? [...ADMIN, CLAVES, BACKUPS] : ADMIN) : COMPRADOR;
+  const consultor = perfil.rol === "consultor";
+  const enlaces = gestor ? (perfil.rol === "desarrollador" ? [...ADMIN, CLAVES, BACKUPS] : ADMIN) : consultor ? CONSULTA : COMPRADOR;
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-white/40 bg-gradient-to-r from-profundo to-primario text-white shadow">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Link href={gestor ? "/admin" : "/"}className="flex items-center gap-2 font-bold">
+          <Link href={inicioDe(perfil.rol)} className="flex items-center gap-2 font-bold">
             <span className="flex size-8 items-center justify-center rounded-lg bg-white/15">B</span>
             <span className="hidden sm:inline">BancoTicket</span>
           </Link>
@@ -56,7 +64,7 @@ export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avi
             <button className="rounded-lg p-2 hover:bg-white/10" aria-label="Salir" title="Salir"><LogOut className="size-5" /></button>
           </form>
         </div>
-        {gestor && (
+        {(gestor || consultor) && (
           <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2 text-sm">
             {enlaces.map((e) => (
               <EnlaceMenu key={e.href} href={e.href} variante="superior">

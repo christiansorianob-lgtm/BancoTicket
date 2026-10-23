@@ -19,7 +19,7 @@ export function CamposUsuario({ u }: { u?: U }) {
         {u?.rol === "desarrollador" ? (
           <input className="campo" value="Desarrollador" disabled />
         ) : (
-          <select name="rol" className="campo" defaultValue={u?.rol ?? "comprador"}><option value="comprador">Comprador</option><option value="admin">Administrador (solo uno)</option></select>
+          <select name="rol" className="campo" defaultValue={u?.rol ?? "comprador"}><option value="comprador">Comprador</option><option value="admin">Administrador (solo uno)</option><option value="consultor">Consultor (solo ve, no modifica)</option></select>
         )}
       </label>
       {u && (

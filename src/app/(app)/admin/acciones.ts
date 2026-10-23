@@ -303,7 +303,7 @@ export async function guardarUsuario(form: FormData): Promise<Resultado> {
   const celular = String(form.get("celular") ?? "").replace(/\D/g, "");
   // Opcional (decisión del usuario): vacío se guarda como null.
   const correo = String(form.get("correo") ?? "").trim().toLowerCase() || null;
-  let rol = form.get("rol") === "admin" ? "admin" : "comprador";
+  let rol = form.get("rol") === "admin" ? "admin" : form.get("rol") === "consultor" ? "consultor" : "comprador";
   const activo = form.get("activo") !== "off";
 
   if (!nombre) return fallo("Escriba el nombre");

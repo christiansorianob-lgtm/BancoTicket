@@ -23,6 +23,7 @@ Problema que resuelve: los tiquetes son físicos y se podían pagar dos veces. L
 | **Administrador** (uno solo, la base lo impide de otro modo) | Ingrid (`ingrid`) | Todo: aprobar/rechazar, precios, anticipos, extractoras, reportes. **Recibe los avisos de los compradores** (campana). |
 | **Desarrollador** (uno solo) | Christian Soriano (`christian`, cel. 3182542939, christiansorianob@gmail.com) | Lo mismo que el admin + **Contraseñas** (`/admin/claves`) y **Backups** (`/admin/backups`). No recibe avisos de compradores. El rol no se asigna desde la app. |
 | **Compradores** (varios) | `prueba` (de prueba), `yudidj` (real) | Solo lo suyo: subir tiquetes, ver sus tiquetes, anticipos y extracto. |
+| **Consultor** (varios) | los crea la administradora | **Solo ve, no modifica nada** (lo garantiza la base, migración 0018): sección `/consulta` con saldos de todos, cuenta y extracto de cada comprador, Reportes (sin editar/eliminar; fotos y Excel sí) y anticipos con soportes. |
 
 - Ingreso con **usuario y contraseña** (Supabase Auth con correo interno `<usuario>@bancoticket.local`). El **correo real es opcional** (`perfiles.correo`).
 - **Contraseñas:** usuario nuevo o restablecido queda con **12345678**; puede seguir trabajando con ella (no se obliga a cambiarla). Cada uno la cambia con la **llave 🔑** del encabezado (`/clave`). «Olvidé mi contraseña» (`/ingresar/olvide`) → solicitud → el desarrollador la aprueba en «Contraseñas».
@@ -101,9 +102,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0016.** Nunca editar una aplicada; crear la siguiente (`0017_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0018.** Nunca editar una aplicada; crear la siguiente (`0019_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0017_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0019_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
 
@@ -118,6 +119,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0017_nomb
 | 0014 | `perfiles.correo` admite null |
 | 0015 | función `eliminar_tiquete(p_id, p_motivo)` (admin, motivo obligatorio, devuelve la ruta de la foto) |
 | 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
+| 0017–0018 | rol `consultor` (varios) y `es_consultor()`: solo lectura de perfiles, anticipos, tiquetes y fotos; políticas restrictivas que le impiden escribir |
 
 Tablas: `perfiles` (rol `admin|desarrollador|comprador`, correo opcional, `cambiar_clave`), `extractoras` (nit, nombres_impresos), `formatos_extractora` (plantilla jsonb, foto de ejemplo en `formatos/`), `anticipos` (monto ≠ 0, estado `pendiente|confirmado|en_disputa`; columnas de enlace ya no se usan), `tiquetes_pendientes` y `tiquetes` (enteros en kilos, `neto_impreso_kg`, proveedor, `requiere_revision` + `motivo_revision` «Verificar: …»), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia` (tipos `lectura`, `aprendizaje`, `ajuste`), `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`). Vistas `saldos` y `extracto`. Bucket privado `tiquetes`: `<comprador_id>/...` y `formatos/...`.
 
