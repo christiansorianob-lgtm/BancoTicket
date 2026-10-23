@@ -2,7 +2,7 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha, fechaHora, hoyColombia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
-import { FormAccion } from "@/components/form-accion";
+import { FormAnticipo } from "./form-anticipo";
 import { Image as ImageIcon } from "lucide-react";
 import { urlsFotos } from "@/lib/fotos";
 import { registrarAnticipo, recordarAnticipo, subirSoporteAnticipo } from "../acciones";
@@ -30,7 +30,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
       <h1 className="titulo">Anticipos</h1>
       <section className="tarjeta">
         <h2 className="mb-3 font-bold text-profundo">Registrar</h2>
-        <FormAccion accion={registrarAnticipo} boton="Registrar y avisar" limpiar>
+        <FormAnticipo accion={registrarAnticipo} compradores={compradores ?? []}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label><span className="etiqueta">Comprador</span>
               <select name="comprador" className="campo" required defaultValue="">
@@ -48,7 +48,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
             <strong>Negativo</strong> (ej. -2.000.000): dinero que yo le debo al comprador, por ejemplo el saldo con el que empezamos.{" "}
             Queda pendiente hasta que el comprador lo confirme en «Anticipos» de su app.
           </p>
-        </FormAccion>
+        </FormAnticipo>
       </section>
 
       <form className="flex flex-wrap gap-2" method="get">
