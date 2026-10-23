@@ -77,6 +77,8 @@ src/lib/lectura/
 src/lib/informes/consulta.ts          consulta de Reportes (filtros) compartida por la tabla y el Excel
 src/lib/informes/tiquetes-excel.ts    Excel ejecutivo de Reportes
 src/lib/informes/backup-excel.ts      backup: una hoja por tabla + Resumen
+src/lib/informes/movimientos.ts       reporte «Tiquetes y anticipos»: orden y saldo acumulado (puro, probado en npm run prueba)
+src/lib/informes/cuenta.ts · cuenta-excel.ts   su consulta y su Excel (ruta /api/exportar/cuenta)
 src/components/marco.tsx              encabezado, menús (admin arriba, comprador abajo), EnlaceMenu, BotonRefrescar
 src/components/{saldo,extracto,campos-tiquete,aviso-resta,form-accion,ui}.tsx
 src/app/api/leer-tiquete/route.ts     foto → nitidez (sharp) → IA → controles → duplicados → lectura firmada
@@ -143,6 +145,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - **Pendientes:** foto + datos (proveedor resaltado en el título; campos «Revisar» en ámbar); aprobar / rechazar con motivo / corregir datos. El comprador recibe el aviso en la campana (sin WhatsApp).
 - **Tiquetes y precios:** filtros, precio en bloque o individual, editar con motivo, anular. Botón «Reportes y Excel».
 - **Reportes** (`/admin/reportes`): filtros por fechas, comprador, extractora, proveedor, N° de tiquete; resumen; tabla (hasta 500 filas, totales sobre todo) con **Acciones**: ✏️ editar (ventana con foto y formulario), 🗑️ **eliminar** (motivo obligatorio + confirmación **Sí/No**; borra la foto, avisa al comprador, el saldo se ajusta solo; el historial se conserva) y 🖼️ foto. **«Exportar a Excel»** con los mismos filtros: Comprador, Extractora, Proveedor, Fecha, N° Tiquete, Peso neto (t), Precio/t, Precio total; título, filtros, totales con fórmulas (sin foto).
+- **Reportes · «Tiquetes y anticipos»** (`/admin/reportes?tipo=cuenta`, selector «Tipo de reporte» arriba): un comprador + fechas de registro; tiquetes aprobados por fecha de subida y anticipos **confirmados** por fecha de confirmación en una tabla con saldo acumulado; sin precio = «Sin precio aún» (no mueve el saldo); Excel con los mismos filtros. Solo lectura (`src/lib/informes/movimientos.ts`, `cuenta.ts`, `cuenta-excel.ts`). **Todo reporte nuevo debe tener Excel.**
 - **Anticipos:** registrar (positivo o negativo) → campana + **botón** «Enviar por WhatsApp» (**sin enlaces**); «Recordarle por WhatsApp»; el comprador confirma en su app.
 - **Compradores:** crear (contraseña fija 12345678, correo opcional) / editar; cuenta de cada comprador con estado de cuenta y extracto.
 - **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».

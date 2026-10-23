@@ -8,6 +8,8 @@ import { Vacio } from "@/components/ui";
 import { consultarInforme, filtrosDesde } from "@/lib/informes/consulta";
 import { EditarFila } from "./editar-fila";
 import { EliminarFila } from "./eliminar-fila";
+import { ReporteCuenta } from "./cuenta";
+import { SelectorReporte } from "./selector";
 
 /** En pantalla se muestran hasta estas filas; el Excel trae todas las del filtro. */
 const MAX_PANTALLA = 500;
@@ -15,7 +17,8 @@ const MAX_PANTALLA = 500;
 /** Reportes de tiquetes aprobados: filtros, tabla y exportación a Excel con los mismos filtros. */
 export default async function Reportes({ searchParams }: PageProps<"/admin/reportes">) {
   const sp = await searchParams;
-  const f = filtrosDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
+  if (sp.tipo === "cuenta") return <ReporteCuenta sp={sp} />;
+  const f =filtrosDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
   const supabase = await supabaseServidor();
 
   const [{ filas, error }, { data: compradores }, { data: extractoras }, { data: conProveedor }] = await Promise.all([
@@ -42,6 +45,8 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
           <FileSpreadsheet className="size-5" aria-hidden /> Exportar a Excel
         </a>
       </div>
+
+      <SelectorReporte actual="tiquetes" />
 
       <form className="tarjeta grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
         <label><span className="etiqueta">Desde (fecha de entrada)</span><input type="date" name="desde" defaultValue={f.desde} className="campo" /></label>

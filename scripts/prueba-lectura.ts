@@ -4,6 +4,7 @@ import { interpretarFechaTiquete } from "../src/lib/fechas";
 import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
+import { armarCuenta } from "../src/lib/informes/movimientos";
 
 let fallos = 0;
 const igual = (nombre: string, real: unknown, esperado: unknown) => {
@@ -19,6 +20,24 @@ igual("admin: saldo positivo", textoSaldo(5000000, "admin").titulo, "Saldo a mi 
 igual("admin: saldo negativo", textoSaldo(-2000000, "admin").titulo, "Le debo");
 igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Debo");
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
+
+// Reporte «Tiquetes y anticipos»: orden por fecha de registro y saldo acumulado.
+const tq = (id: string, cargado_en: string, valor: number | null) => ({ id, cargado_en, extractora: "Babú Palm", numero: id, fecha_entrada: cargado_en, peso_neto_t: 1, precio_tonelada: valor, valor });
+const cuenta = armarCuenta(
+  [tq("t1", "2026-10-01T10:00:00-05:00", 100), tq("t2", "2026-10-03T10:00:00-05:00", 300), tq("t3", "2026-10-06T10:00:00-05:00", null)],
+  [{ id: "a1", confirmado_en: "2026-10-05T09:00:00-05:00", monto: 200, nota: null }, { id: "a0", confirmado_en: "2026-09-30T09:00:00-05:00", monto: -50, nota: null }],
+);
+igual("cuenta: orden por fecha", cuenta.movimientos.map((m) => m.id), ["a0", "t1", "t2", "a1", "t3"]);
+igual("cuenta: saldo acumulado", cuenta.movimientos.map((m) => m.saldo), [-50, -150, -450, -250, -250]);
+igual("cuenta: sin precio no mueve el saldo", [cuenta.sinPrecio, cuenta.movimientos[4].observacion], [1, "Sin precio aún"]);
+igual("cuenta: anticipo negativo", cuenta.movimientos[0].detalle, "Saldo a favor del comprador");
+igual("cuenta: totales", [cuenta.totalTiquetes, cuenta.totalAnticipos, cuenta.saldoFinal], [400, 150, -250]);
+const periodo = armarCuenta(
+  [tq("t1", "2026-10-01T10:00:00-05:00", 100), tq("t2", "2026-10-03T10:00:00-05:00", 300)],
+  [{ id: "a1", confirmado_en: "2026-10-05T09:00:00-05:00", monto: 200, nota: "Transferencia" }],
+  "2026-10-02", "2026-10-04",
+);
+igual("cuenta: periodo con saldo inicial", [periodo.saldoInicial, periodo.movimientos.map((m) => m.id), periodo.saldoFinal], [-100, ["t2"], -400]);
 
 igual("2,070", kilosDesdeTexto("2,070"), 2070);
 igual("Lukeoil 7,990 Kg", kilosDesdeTexto("7,990 Kg"), 7990);
