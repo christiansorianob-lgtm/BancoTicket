@@ -73,10 +73,10 @@ export default async function Reportes({ searchParams }: PageProps<"/admin/repor
       {error && <Vacio>No se pudo cargar el reporte: {error}</Vacio>}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="tarjeta"><p className="text-sm text-suave">Tiquetes</p><p className="text-2xl font-black text-profundo">{filas.length.toLocaleString("es-CO")}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Peso neto</p><p className="text-2xl font-black text-profundo">{formatoToneladas(toneladas)}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Precio total</p><p className="text-2xl font-black text-ok">{formatoPesos(total)}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Sin precio</p><p className={`text-2xl font-black ${sinPrecio ? "text-alerta" : "text-profundo"}`}>{sinPrecio}</p></div>
+        <div className="tarjeta"><p className="text-sm text-suave">Tiquetes</p><p className="text-lg font-black sm:text-2xl text-profundo">{filas.length.toLocaleString("es-CO")}</p></div>
+        <div className="tarjeta"><p className="text-sm text-suave">Peso neto</p><p className="text-lg font-black sm:text-2xl text-profundo">{formatoToneladas(toneladas)}</p></div>
+        <div className="tarjeta"><p className="text-sm text-suave">Precio total</p><p className="text-lg font-black sm:text-2xl text-ok">{formatoPesos(total)}</p></div>
+        <div className="tarjeta"><p className="text-sm text-suave">Sin precio</p><p className={`text-lg font-black sm:text-2xl ${sinPrecio ? "text-alerta" : "text-profundo"}`}>{sinPrecio}</p></div>
       </section>
 
       {filas.length === 0 ? <Vacio>No hay tiquetes con estos filtros.</Vacio> : (

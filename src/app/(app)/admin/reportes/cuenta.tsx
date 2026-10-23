@@ -63,10 +63,10 @@ export async function ReporteCuenta({ sp }: { sp: Record<string, string | string
       {!cuenta ? <Vacio>Elija un comprador y toque «Ver reporte».</Vacio> : (
         <>
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="tarjeta"><p className="text-sm text-suave">Tiquetes con precio</p><p className="text-2xl font-black text-profundo">{formatoPesos(cuenta.totalTiquetes)}</p></div>
-            <div className="tarjeta"><p className="text-sm text-suave">Anticipos confirmados</p><p className="text-2xl font-black text-profundo">{formatoPesos(cuenta.totalAnticipos)}</p></div>
-            <div className="tarjeta"><p className="text-sm text-suave">{final!.titulo}</p><p className={`text-2xl font-black ${colorSaldo(cuenta.saldoFinal)}`}>{final!.monto}</p></div>
-            <div className="tarjeta"><p className="text-sm text-suave">Sin precio</p><p className={`text-2xl font-black ${cuenta.sinPrecio ? "text-alerta" : "text-profundo"}`}>{cuenta.sinPrecio}</p></div>
+            <div className="tarjeta"><p className="text-sm text-suave">Tiquetes con precio</p><p className="text-lg font-black sm:text-2xl text-profundo">{formatoPesos(cuenta.totalTiquetes)}</p></div>
+            <div className="tarjeta"><p className="text-sm text-suave">Anticipos confirmados</p><p className="text-lg font-black sm:text-2xl text-profundo">{formatoPesos(cuenta.totalAnticipos)}</p></div>
+            <div className="tarjeta"><p className="text-sm text-suave">{final!.titulo}</p><p className={`text-lg font-black sm:text-2xl ${colorSaldo(cuenta.saldoFinal)}`}>{final!.monto}</p></div>
+            <div className="tarjeta"><p className="text-sm text-suave">Sin precio</p><p className={`text-lg font-black sm:text-2xl ${cuenta.sinPrecio ? "text-alerta" : "text-profundo"}`}>{cuenta.sinPrecio}</p></div>
           </section>
 
           {cuenta.movimientos.length === 0 && cuenta.saldoInicial === 0 ? <Vacio>No hay tiquetes ni anticipos en este periodo.</Vacio> : (
