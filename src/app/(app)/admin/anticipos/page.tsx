@@ -3,6 +3,7 @@ import { fecha, fechaHora, hoyColombia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
 import { FormAnticipo } from "./form-anticipo";
+import { CampoMonto } from "./campo-monto";
 import { Image as ImageIcon } from "lucide-react";
 import { urlsFotos } from "@/lib/fotos";
 import { registrarAnticipo, recordarAnticipo, subirSoporteAnticipo } from "../acciones";
@@ -38,7 +39,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
                 {compradores?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </label>
-            <label><span className="etiqueta">Monto (COP)</span><input name="monto" inputMode="text" className="campo" required placeholder="Ej.: 5.000.000 o -2.000.000" /></label>
+            <CampoMonto />
             <label><span className="etiqueta">Fecha</span><input name="fecha" type="date" className="campo" defaultValue={hoyColombia()} required /></label>
             <label><span className="etiqueta">Nota</span><input name="nota" className="campo" /></label>
             <CampoSoporte />

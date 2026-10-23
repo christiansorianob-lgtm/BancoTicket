@@ -5,6 +5,7 @@ import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
 import { armarCuenta } from "../src/lib/informes/movimientos";
+import { formatearMonto, montoEnLetras, textoMonto } from "../src/lib/monto";
 
 let fallos = 0;
 const igual = (nombre: string, real: unknown, esperado: unknown) => {
@@ -20,6 +21,20 @@ igual("admin: saldo positivo", textoSaldo(5000000, "admin").titulo, "Saldo a mi 
 igual("admin: saldo negativo", textoSaldo(-2000000, "admin").titulo, "Le debo");
 igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Debo");
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
+
+// Monto del anticipo mientras se escribe y en letras.
+igual("formato: miles", formatearMonto("2500000"), "2.500.000");
+igual("formato: negativo con decimales", formatearMonto("-2500000,567"), "-2.500.000,56");
+igual("formato: puntos escritos a mano", formatearMonto("5.0000.00"), "5.000.000");
+igual("formato: coma sola", formatearMonto(",5"), "0,5");
+igual("formato: se entiende igual al enviar", montoDesdeTexto(formatearMonto("-2500000,5"), { negativo: true }), -2500000.5);
+igual("texto monto", [textoMonto(5000000), textoMonto(-2000000.5)], ["$ 5.000.000", "−$ 2.000.000,50"]);
+igual("letras: millones", montoEnLetras(2500000), "Dos millones quinientos mil pesos");
+igual("letras: millón exacto", montoEnLetras(-1000000), "Un millón de pesos");
+igual("letras: compuesto", montoEnLetras(86796710), "Ochenta y seis millones setecientos noventa y seis mil setecientos diez pesos");
+igual("letras: veintiún mil", montoEnLetras(21100), "Veintiún mil cien pesos");
+igual("letras: mil millones", montoEnLetras(1001000000), "Mil un millones de pesos");
+igual("letras: centavos", montoEnLetras(150.5), "Ciento cincuenta pesos con cincuenta centavos");
 
 // Reporte «Tiquetes y anticipos»: orden por fecha de registro y saldo acumulado.
 const tq = (id: string, cargado_en: string, valor: number | null) => ({ id, cargado_en, extractora: "Babú Palm", numero: id, fecha_entrada: cargado_en, peso_neto_t: 1, precio_tonelada: valor, valor });

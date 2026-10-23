@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import type { Resultado } from "../acciones";
 import { FormAccion } from "@/components/form-accion";
-import { formatoPesos, montoDesdeTexto } from "@/lib/numeros";
+import { montoDesdeTexto } from "@/lib/numeros";
+import { montoEnLetras, textoMonto } from "@/lib/monto";
 
 /**
  * Formulario de registrar anticipo con aviso Sí / No antes de enviar (decisión del usuario):
@@ -29,10 +30,11 @@ export function FormAnticipo({ accion, compradores, children }: {
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-alerta" aria-hidden />
               <span>
                 Está a punto de registrar {negativo ? "un valor NEGATIVO" : "un anticipo POSITIVO"} de{" "}
-                <span className={negativo ? "text-error" : "text-ok"}>{negativo ? "−" : ""}{formatoPesos(Math.abs(monto))}</span>{" "}
+                <span className={`text-base ${negativo ? "text-error" : "text-ok"}`}>{textoMonto(monto)}</span>{" "}
                 al comprador <strong>{comprador}</strong>.
               </span>
             </p>
+            <p className={`font-semibold ${negativo ? "text-error" : "text-ok"}`}>{montoEnLetras(monto)}{negativo ? " (negativo)" : ""}</p>
             <p>
               {negativo
                 ? <>Recuerde: un valor <strong>negativo</strong> es <strong>saldo a favor del comprador</strong>: dinero que usted le debe. En su cuenta suma a <strong>«Le debo»</strong>.</>
