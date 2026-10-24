@@ -1,6 +1,6 @@
 // Prueba rápida de normalización con los formatos reales del documento: npx tsx scripts/prueba-lectura.ts
 import { kilosDesdeTexto, montoDesdeTexto } from "../src/lib/numeros";
-import { interpretarFechaTiquete } from "../src/lib/fechas";
+import { antiguedad, interpretarFechaTiquete } from "../src/lib/fechas";
 import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
@@ -22,6 +22,15 @@ igual("admin: saldo positivo", textoSaldo(5000000, "admin").titulo, "Saldo a mi 
 igual("admin: saldo negativo", textoSaldo(-2000000, "admin").titulo, "Le debo");
 igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Debo");
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
+
+// Antigüedad del tiquete (días de Colombia).
+const hoyP = new Date("2026-10-23T20:00:00-05:00");
+igual("antigüedad: mismo día", antiguedad("2026-10-23T06:00:00-05:00", hoyP).texto, "hoy");
+igual("antigüedad: días", antiguedad("2026-10-20T16:09:00-05:00", hoyP).texto, "hace 3 días");
+igual("antigüedad: meses y días", antiguedad("2026-08-18T10:00:00-05:00", hoyP), { texto: "hace 2 meses y 5 días", meses: 2 });
+igual("antigüedad: meses exactos", antiguedad("2026-04-23T10:00:00-05:00", hoyP).texto, "hace 6 meses");
+igual("antigüedad: cruza fin de mes", antiguedad("2026-09-30T10:00:00-05:00", hoyP).texto, "hace 23 días");
+igual("antigüedad: 1 mes y 1 día", antiguedad("2026-09-22T23:30:00-05:00", hoyP).texto, "hace 1 mes y 1 día");
 
 // Monto del anticipo mientras se escribe y en letras.
 igual("formato: miles", formatearMonto("2500000"), "2.500.000");

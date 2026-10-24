@@ -1,6 +1,7 @@
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { urlsFotos } from "@/lib/fotos";
-import { fechaHora } from "@/lib/fechas";
+import { antiguedad, fechaHora } from "@/lib/fechas";
+import { MESES_MAXIMOS } from "@/lib/lectura/controles";
 import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
@@ -10,6 +11,20 @@ import { sonParecidos } from "@/lib/lectura/parecidos";
 function camposARevisar(motivo: string | null): Set<string> {
   if (!motivo?.startsWith("Verificar:")) return new Set();
   return new Set(motivo.slice("Verificar:".length).split(",").map((c) => c.trim()).filter(Boolean));
+}
+
+/**
+ * Cuánto lleva el tiquete desde la entrada (decisión del usuario): al aprobar se ve cuántos meses van
+ * y, si la fecha es dudosa, se contrasta. Rojo: pasa del límite de 6 meses; ámbar: le falta menos de un mes.
+ */
+function EtiquetaAntiguedad({ fecha }: { fecha: string }) {
+  const a = antiguedad(fecha);
+  const tono = a.meses >= MESES_MAXIMOS ? "bg-error text-white" : a.meses >= MESES_MAXIMOS - 1 ? "bg-alerta text-white" : "bg-primario-suave text-profundo";
+  return (
+    <span className={`mt-1 block w-fit rounded-full px-2.5 py-0.5 text-xs font-bold ${tono}`}>
+      {a.texto}{a.meses >= MESES_MAXIMOS ? ` · más de ${MESES_MAXIMOS} meses` : ""}
+    </span>
+  );
 }
 
 export default async function Pendientes() {
@@ -91,7 +106,10 @@ export default async function Pendientes() {
                     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <Dato etiqueta="N° tiquete" revisar={r.has("número")}>{t.numero}</Dato>
                       <Dato etiqueta="Comprador">{t.perfiles?.nombre}</Dato>
-                      <Dato etiqueta="Fecha de entrada" revisar={r.has("fecha")}>{fechaHora(t.fecha_entrada)}</Dato>
+                      <Dato etiqueta="Fecha de entrada" revisar={r.has("fecha")}>
+                        {fechaHora(t.fecha_entrada)}
+                        <EtiquetaAntiguedad fecha={t.fecha_entrada} />
+                      </Dato>
                       <Dato etiqueta="Placa" revisar={r.has("placa")}>{t.placa ?? "—"}</Dato>
                       <Dato etiqueta="Bruto" revisar={r.has("peso bruto")}>{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>
                       <Dato etiqueta="Tara" revisar={r.has("tara")}>{formatoToneladas(t.tara_kg / 1000)}</Dato>

@@ -24,6 +24,31 @@ export function hoyColombia(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: ZONA }).format(new Date());
 }
 
+/** Día de Colombia de una fecha, como [año, mes (1-12), día]. */
+function diaColombia(d: Date): [number, number, number] {
+  const [a, m, dd] = new Intl.DateTimeFormat("en-CA", { timeZone: ZONA }).format(d).split("-").map(Number);
+  return [a, m, dd];
+}
+
+/**
+ * Tiempo transcurrido desde la fecha de entrada hasta hoy, en días de Colombia (decisión del
+ * usuario: la administradora ve cuántos meses lleva el tiquete al aprobarlo). Ej.: «hace 2 meses y 5 días».
+ */
+export function antiguedad(valor: string | Date, hoy: Date = new Date()): { texto: string; meses: number } {
+  const [a1, m1, d1] = diaColombia(new Date(valor));
+  const [a2, m2, d2] = diaColombia(hoy);
+  let meses = (a2 - a1) * 12 + (m2 - m1);
+  let dias = d2 - d1;
+  if (dias < 0) {
+    meses -= 1;
+    dias += new Date(Date.UTC(a2, m2 - 1, 0)).getUTCDate(); // días del mes anterior a hoy
+  }
+  if (meses < 0) return { texto: "fecha futura", meses: 0 };
+  const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+  const partes = [meses > 0 && plural(meses, "mes", "meses"), (dias > 0 || meses === 0) && plural(dias, "día", "días")].filter(Boolean);
+  return { texto: meses === 0 && dias === 0 ? "hoy" : `hace ${partes.join(" y ")}`, meses };
+}
+
 const MESES: Record<string, number> = {
   enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8,
   septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
