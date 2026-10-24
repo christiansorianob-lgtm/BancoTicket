@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha, fechaHora, hoyColombia } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
@@ -11,7 +13,9 @@ import { BotonReenviar } from "./reenviar";
 import { CampoSoporte, SubirSoporte } from "./soporte";
 
 export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin/anticipos">) {
-  const { estado } = await searchParams;
+  const { estado, comprador: compradorParam } = await searchParams;
+  // Memoria de navegación: desde la cuenta de un comprador se ven solo sus anticipos.
+  const comprador = typeof compradorParam === "string" ? compradorParam : "";
   const supabase = await supabaseServidor();
   let q = supabase
     .from("anticipos")
@@ -19,22 +23,32 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
     .order("registrado_en", { ascending: false })
     .limit(200);
   if (typeof estado === "string" && estado) q = q.eq("estado", estado);
+  if (comprador) q = q.eq("comprador_id", comprador);
   const [{ data }, { data: compradores }] = await Promise.all([
     q,
     supabase.from("perfiles").select("id, nombre").eq("rol", "comprador").eq("activo", true).order("nombre"),
   ]);
   const filas = data ?? [];
   const soportes = await urlsFotos(filas.map((a) => a.soporte_ruta));
+  const nombreComprador = compradores?.find((c) => c.id === comprador)?.nombre;
 
   return (
     <>
-      <h1 className="titulo">Anticipos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="titulo">Anticipos{nombreComprador ? ` de ${nombreComprador}` : ""}</h1>
+        {comprador && (
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/admin/compradores/${comprador}`} className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a la cuenta</Link>
+            <Link href="/admin/anticipos" className="boton-secundario min-h-9 text-sm">Ver todos los compradores</Link>
+          </div>
+        )}
+      </div>
       <section className="tarjeta">
         <h2 className="mb-3 font-bold text-profundo">Registrar</h2>
         <FormAnticipo accion={registrarAnticipo} compradores={compradores ?? []}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label><span className="etiqueta">Comprador</span>
-              <select name="comprador" className="campo" required defaultValue="">
+              <select name="comprador" className="campo" required defaultValue={nombreComprador ? comprador : ""}>
                 <option value="" disabled>Elija</option>
                 {compradores?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
@@ -53,6 +67,7 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
       </section>
 
       <form className="flex flex-wrap gap-2" method="get">
+        {comprador && <input type="hidden" name="comprador" value={comprador} />}
         {[["", "Todos"], ["pendiente", "Pendientes"], ["confirmado", "Confirmados"], ["en_disputa", "En disputa"]].map(([v, t]) => (
           <button key={v} name="estado" value={v} className={`rounded-full px-4 py-2 text-sm font-semibold ${(estado ?? "") === v ? "bg-primario text-white" : "bg-white/70 text-suave"}`}>{t}</button>
         ))}
