@@ -102,9 +102,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0018.** Nunca editar una aplicada; crear la siguiente (`0019_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0019.** Nunca editar una aplicada; crear la siguiente (`0020_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0019_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0020_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
 
@@ -120,6 +120,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0019_nomb
 | 0015 | función `eliminar_tiquete(p_id, p_motivo)` (admin, motivo obligatorio, devuelve la ruta de la foto) |
 | 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
 | 0017–0018 | rol `consultor` (varios) y `es_consultor()`: solo lectura de perfiles, anticipos, tiquetes y fotos; políticas restrictivas que le impiden escribir |
+| 0019 | el Consultor no ve a los compradores de `configuracion.compradores_ocultos_consultor` (hoy `["prueba"]`) |
 
 Tablas: `perfiles` (rol `admin|desarrollador|comprador`, correo opcional, `cambiar_clave`), `extractoras` (nit, nombres_impresos), `formatos_extractora` (plantilla jsonb, foto de ejemplo en `formatos/`), `anticipos` (monto ≠ 0, estado `pendiente|confirmado|en_disputa`; columnas de enlace ya no se usan), `tiquetes_pendientes` y `tiquetes` (enteros en kilos, `neto_impreso_kg`, proveedor, `requiere_revision` + `motivo_revision` «Verificar: …»), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia` (tipos `lectura`, `aprendizaje`, `ajuste`), `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`). Vistas `saldos` y `extracto`. Bucket privado `tiquetes`: `<comprador_id>/...` y `formatos/...`.
 
