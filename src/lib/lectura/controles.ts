@@ -9,13 +9,17 @@ export const MESES_MAXIMOS = 6;
 const PLACA = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9]{5,7}$/;
 
 /**
- * Filtro 2 (acuerdo con el usuario): todos los campos distintos de los críticos (número, peso neto
- * y fecha); si la IA no está 100 % segura, pasan marcados «Revisar» para la administradora.
+ * Campos que, si la IA no está 100 % segura, pasan marcados «Revisar» para la administradora.
+ * Los vitales (número, peso neto y fecha) también (decisión del usuario, 2026-10-23): con duda pasan
+ * a revisión en vez de rechazarse; solo se rechazan si no se pueden leer.
  */
 const OTROS: Record<string, string> = {
   placa: "placa", peso_bruto_kg: "peso bruto", tara_kg: "tara", proveedor: "proveedor",
   conductor: "conductor", bascula: "báscula",
 };
+
+/** Nombres con que se guardan los vitales dudosos («Verificar: número, peso neto»). */
+const VITALES: Record<string, string> = { numero_tiquete: "número", peso_neto_impreso_kg: "peso neto", fecha_entrada: "fecha" };
 
 export function normalizarPlaca(p: string | null | undefined) {
   const t = (p ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -41,17 +45,21 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const fecha = interpretarFechaTiquete(cruda.fecha_entrada);
   const fechaOk = !!fecha && new Date(fecha).getTime() <= Date.now() + 36e5;
   add("Fecha", fechaOk, fechaOk ? "Fecha válida" : `Fecha no válida: "${cruda.fecha_entrada ?? ""}"`);
-  // Filtro 1: la fecha es crítica (decisión del usuario). Si la IA duda de un carácter no pasa, y se
-  // revisa antes del límite de 6 meses para que una fecha mal leída no parezca un tiquete viejo.
-  if (fechaOk && cruda.campos_dudosos?.includes("fecha_entrada")) {
-    add("Fecha 100 % legible", false, `La fecha (${cruda.fecha_entrada}) no es 100 % legible`);
-    return { ok: false, motivo: `La fecha del tiquete (${cruda.fecha_entrada}) no es 100 % legible`, controles, cruda };
-  }
+  const dudososIA = new Set(cruda.campos_dudosos ?? []);
+  const vitalesDudosos: string[] = [];
+  // Fecha dudosa: pasa a revisión. Se revisa antes del límite de 6 meses para que una fecha mal
+  // leída no parezca un tiquete viejo: la administradora la confirma con la foto.
+  const fechaDudosa = fechaOk && dudososIA.has("fecha_entrada");
+  if (fechaDudosa) vitalesDudosos.push(VITALES.fecha_entrada);
 
   // Decisión del usuario: un tiquete de más de 6 meses es síntoma de fraude y no se puede subir.
   const limite = new Date();
   limite.setMonth(limite.getMonth() - MESES_MAXIMOS);
-  if (fechaOk && new Date(fecha!).getTime() < limite.getTime()) {
+  const pareceViejo = fechaOk && new Date(fecha!).getTime() < limite.getTime();
+  if (pareceViejo && fechaDudosa) {
+    controles.push({ nombre: "Periodo permitido", ok: true, dudoso: true,
+      mensaje: `La fecha leída (${fechaHora(fecha)}) tiene más de ${MESES_MAXIMOS} meses, pero no es 100 % segura: la administradora la confirma` });
+  } else if (pareceViejo) {
     add("Periodo permitido", false, `El tiquete es de ${fechaHora(fecha)}: tiene más de ${MESES_MAXIMOS} meses`);
     return { ok: false, motivo: `Se leyó la fecha ${fechaHora(fecha)}: el tiquete tiene más de ${MESES_MAXIMOS} meses`, controles, cruda, fueraDePeriodo: true };
   }
@@ -66,24 +74,25 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const neto = bruto - tara;
   if (pesosOk && neto <= 0) add("Bruto y tara", false, "El peso bruto debe ser mayor que la tara");
 
-  // Filtro 1 (decisión del usuario): el número y el peso neto (neto × precio = valor del tiquete)
-  // también deben ser 100 % legibles; si no, el tiquete no pasa y se pide una foto más legible.
-  if (numero && cruda.campos_dudosos?.includes("numero_tiquete")) {
-    add("Número 100 % legible", false, `El número del tiquete (${numero}) no es 100 % legible`);
-  }
-  // El peso neto que vale es el IMPRESO (con él se cobra), no la resta: debe leerse 100 % seguro.
+  // Número y peso neto (neto × precio = valor del tiquete): si no se leyeron, no pasa; si la IA
+  // duda de un dígito, pasan a revisión de la administradora con la duda que explicó la IA.
+  if (numero && dudososIA.has("numero_tiquete")) vitalesDudosos.push(VITALES.numero_tiquete);
+  // El N° y la fecha se muestran en ámbar (pasan, pero con duda).
+  for (const c of controles) if ((c.nombre === "Número" && vitalesDudosos.includes("número")) || (c.nombre === "Fecha" && fechaDudosa)) c.dudoso = true;
+  // El peso neto que vale es el IMPRESO (con él se cobra), no la resta.
   const netoImpreso = kilosDesdeTexto(cruda.peso_neto_impreso_kg);
   if (netoImpreso === null || netoImpreso <= 0) {
-    add("Peso neto 100 % legible", false, "No se pudo leer el peso neto impreso");
-  } else if (cruda.campos_dudosos?.includes("peso_neto_impreso_kg")) {
-    add("Peso neto 100 % legible", false, `El peso neto impreso (${cruda.peso_neto_impreso_kg}) no es 100 % legible`);
+    add("Peso neto legible", false, "No se pudo leer el peso neto impreso");
+  } else if (dudososIA.has("peso_neto_impreso_kg")) {
+    vitalesDudosos.push(VITALES.peso_neto_impreso_kg);
+    controles.push({ nombre: "Peso neto", ok: true, dudoso: true, mensaje: `Peso neto ${netoImpreso.toLocaleString("es-CO")} kg (no 100 % seguro)` });
   } else {
     add("Peso neto", true, `Peso neto ${netoImpreso.toLocaleString("es-CO")} kg`);
   }
 
   // Filtro 2: los demás campos dudosos no detienen el tiquete; pasan marcados e informados para
   // que la administradora decida.
-  const dudosos = new Set((cruda.campos_dudosos ?? []).filter((c) => OTROS[c]).map((c) => OTROS[c]));
+  const dudosos = new Set([...vitalesDudosos, ...[...dudososIA].filter((c) => OTROS[c]).map((c) => OTROS[c])]);
   // La resta bruto − tara es solo informativa (decisión del usuario): bruto y tara se toman como
   // se leen y nunca se dan por confirmados porque la resta cuadre. Si no da el neto impreso,
   // se marcan para que la administradora los revise.
@@ -113,8 +122,13 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
     controles.push({ nombre: "Proveedor", ok: true, dudoso: true, mensaje: "No se leyó el proveedor" });
   }
 
-  if (dudosos.size > 0) {
-    controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `Otros datos no 100 % seguros: ${[...dudosos].join(", ")}. La administradora los revisará con la foto.` });
+  if (vitalesDudosos.length > 0) {
+    controles.push({ nombre: "Datos vitales", ok: true, dudoso: true,
+      mensaje: `No 100 % seguros: ${vitalesDudosos.join(", ")}${cruda.observaciones ? ` (${cruda.observaciones})` : ""}. La administradora los revisará con la foto antes de aprobar.` });
+  }
+  const otros = [...dudosos].filter((d) => !vitalesDudosos.includes(d));
+  if (otros.length > 0) {
+    controles.push({ nombre: "Certeza", ok: true, dudoso: true, mensaje: `Otros datos no 100 % seguros: ${otros.join(", ")}. La administradora los revisará con la foto.` });
   }
 
   const fallos = controles.filter((c) => !c.ok);
@@ -126,6 +140,8 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
     controles,
     cruda,
     dudosos: [...dudosos],
+    // Lo que explicó la IA de sus dudas en los datos vitales, para mostrárselo a la administradora.
+    notaIA: vitalesDudosos.length > 0 ? cruda.observaciones?.trim() || null : null,
     datos: {
       numero,
       fecha_entrada: fecha!,

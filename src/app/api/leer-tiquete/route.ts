@@ -117,7 +117,16 @@ export async function POST(request: Request) {
   const { data: duplicado } = await supabase.rpc("buscar_duplicado", { p_extractora: ext.id, p_numero: resultado.datos.numero });
   if (duplicado && duplicado.length > 0) {
     await db.storage.from("tiquetes").remove([ruta]);
-    return NextResponse.json({ ok: false, duplicado: duplicado[0], datos: resultado.datos, controles: resultado.controles, extractora: ext });
+    // Decisión del usuario: si choca con un tiquete PENDIENTE cuyo N° quedó dudoso, puede ser ese el
+    // mal leído: el comprador avisa por su cuenta a la administración (sin botones) y no lo sube
+    // hasta que ella lo revise. Los aprobados ya los revisó ella: duplicado normal.
+    const { data: dudoso } = await db.from("tiquetes_pendientes").select("id")
+      .eq("extractora_id", ext.id).eq("numero", resultado.datos.numero).eq("estado", "pendiente")
+      .eq("requiere_revision", true).like("motivo_revision", "%número%").limit(1);
+    return NextResponse.json({
+      ok: false, duplicado: { ...duplicado[0], numeroDudoso: (dudoso ?? []).length > 0 },
+      datos: resultado.datos, controles: resultado.controles, extractora: ext,
+    });
   }
 
   const { data: parecidos } = await supabase.rpc("posibles_duplicados", {
@@ -132,6 +141,6 @@ export async function POST(request: Request) {
     dudosos: resultado.dudosos,
     extractora: ext,
     posiblesDuplicados: parecidos ?? [],
-    token: firmar({ ...base, tipo: "lectura", extractora_id: ext.id, datos: resultado.datos, dudosos: resultado.dudosos }),
+    token: firmar({ ...base, tipo: "lectura", extractora_id: ext.id, datos: resultado.datos, dudosos: resultado.dudosos, notaIA: resultado.notaIA }),
   });
 }

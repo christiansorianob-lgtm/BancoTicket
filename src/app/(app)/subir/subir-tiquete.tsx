@@ -18,7 +18,7 @@ type Datos = {
 /** extractora: la que detectó la IA entre las registradas (null si no la reconoció). */
 type Lectura = { extractora?: { id: string; nombre: string } | null } & (
   | { ok: true; datos: Datos; controles: Control[]; dudosos: string[]; token: string; posiblesDuplicados: { extractora: string; numero: string; fecha_entrada: string }[] }
-  | { ok: false; duplicado: { quien: string; cuando: string; estado: string }; datos: Datos; controles: Control[]; ilegible?: undefined }
+  | { ok: false; duplicado: { quien: string; cuando: string; estado: string; numeroDudoso?: boolean }; datos: Datos; controles: Control[]; ilegible?: undefined }
   // Ilegible: no se puede enviar; el comprador debe conseguir una foto clara.
   | { ok: false; ilegible: true; fueraDePeriodo: boolean; motivo: string; controles: Control[]; duplicado?: undefined; datos?: undefined }
   // Tiquete legible de una extractora que no está registrada: va a revisión para aprenderla.
@@ -148,7 +148,7 @@ export function SubirTiquete() {
                 <Dato etiqueta="Placa" revisar={dudoso("placa")}>{lectura.datos.placa ?? "—"}</Dato>
                 <Dato etiqueta="Peso bruto" revisar={dudoso("peso bruto")}>{formatoToneladas(lectura.datos.peso_bruto_kg / 1000)}</Dato>
                 <Dato etiqueta="Tara" revisar={dudoso("tara")}>{formatoToneladas(lectura.datos.tara_kg / 1000)}</Dato>
-                <Dato etiqueta="Peso neto">{formatoToneladas(netoKg(lectura.datos) / 1000)}</Dato>
+                <Dato etiqueta="Peso neto" revisar={dudoso("peso neto")}>{formatoToneladas(netoKg(lectura.datos) / 1000)}</Dato>
                 <Dato etiqueta="Proveedor" revisar={dudoso("proveedor")}>{lectura.datos.proveedor ?? "—"}</Dato>
                 {lectura.datos.conductor && <Dato etiqueta="Conductor" revisar={dudoso("conductor")}>{lectura.datos.conductor}</Dato>}
                 {lectura.datos.bascula && <Dato etiqueta="Báscula" revisar={dudoso("báscula")}>{lectura.datos.bascula}</Dato>}
@@ -170,7 +170,7 @@ export function SubirTiquete() {
           <>
             <Mensaje tono="alerta">Compare estos datos, incluida la extractora, con el tiquete que tiene en la mano. No se pueden editar: si algo no coincide, tome otra foto.</Mensaje>
             {lectura.dudosos.length > 0 && (
-              <Mensaje tono="alerta">El número y el peso neto se leyeron con certeza. Estos otros datos no son 100 % legibles: {lectura.dudosos.join(", ")} (resaltados arriba). Puede enviarlo así y la administradora los revisará con la foto.</Mensaje>
+              <Mensaje tono="alerta">Estos datos no son 100 % legibles: {lectura.dudosos.join(", ")} (resaltados arriba). Puede enviarlo así y la administradora los revisará con la foto antes de aprobarlo.</Mensaje>
             )}
             {lectura.posiblesDuplicados.length > 0 && (
               <Mensaje tono="alerta">
@@ -190,6 +190,16 @@ export function SubirTiquete() {
                 <RotateCcw className="size-5" /> No coincide, tomar otra foto
               </button>
             </div>
+          </>
+        ) : lectura.duplicado?.numeroDudoso ? (
+          <>
+            {/* Decisión del usuario: sin botones; el comprador llama a la administradora por su cuenta. */}
+            <Mensaje tono="alerta">
+              Ya hay un tiquete de {nombreExtractora} con el N° {lectura.datos.numero} (lo registró {lectura.duplicado.quien} el {fechaHora(lectura.duplicado.cuando)}),
+              pero el número de ese tiquete quedó marcado como dudoso y está en revisión: puede ser un tiquete distinto mal leído.
+              Informe a la administración para que lo revise. Cuando ella le confirme, vuelva a intentar subir este tiquete.
+            </Mensaje>
+            <button className="boton-secundario w-full" onClick={reiniciar}>Volver</button>
           </>
         ) : lectura.duplicado ? (
           <>

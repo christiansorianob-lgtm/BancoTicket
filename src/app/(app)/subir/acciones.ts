@@ -28,7 +28,8 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
       // Va a revisión solo si la IA no está 100 % segura de algún dato (no por venir de la galería).
       requiere_revision: aVerificar.length > 0,
       motivo_revision: aVerificar.length > 0 ? `Verificar: ${aVerificar.join(", ")}` : null,
-      datos_leidos: l.datos,
+      // nota_ia: qué dígito dudó la IA en los datos vitales; se le muestra a la administradora.
+      datos_leidos: l.notaIA ? { ...l.datos, nota_ia: l.notaIA } : l.datos,
     },
   });
   if (error) {

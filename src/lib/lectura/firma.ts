@@ -6,7 +6,8 @@ type Base = { comprador_id: string; imagen_ruta: string; origen: "camara" | "gal
 
 /** Lectura que pasó los controles: el comprador solo puede confirmarla (no editarla). */
 /** La extractora la detectó la IA entre las registradas. */
-export type LecturaFirmada = Base & { tipo: "lectura"; extractora_id: string; datos: DatosTiquete; dudosos: string[] };
+/** notaIA: explicación de la IA cuando duda de un dato vital (número, peso neto o fecha). */
+export type LecturaFirmada = Base & { tipo: "lectura"; extractora_id: string; datos: DatosTiquete; dudosos: string[]; notaIA?: string | null };
 /** Lectura fallida que el comprador decide mandar a revisión del administrador. */
 /** extractora_id: null si la IA no la reconoció; el administrador la elige en «Formatos». */
 export type RevisionFirmada = Base & { tipo: "revision"; extractora_id: string | null; cruda: LecturaCruda | null; motivo: string };

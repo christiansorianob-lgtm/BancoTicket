@@ -4,6 +4,7 @@ import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
+import { sonParecidos } from "@/lib/lectura/parecidos";
 
 /** Campos que la lectura no leyó 100 % segura, guardados como «Verificar: número, tara». */
 function camposARevisar(motivo: string | null): Set<string> {
@@ -22,6 +23,17 @@ export default async function Pendientes() {
   const { data: extractoras } = await supabase.from("extractoras").select("id, nombre").order("nombre");
   const filas = data ?? [];
   const fotos = await urlsFotos(filas.map((f) => f.imagen_ruta));
+
+  // N° dudoso: números parecidos ya registrados en la misma extractora (posible duplicado disfrazado).
+  const conNumeroDudoso = filas.filter((t) => camposARevisar(t.requiere_revision ? t.motivo_revision : null).has("número"));
+  const extIds = [...new Set(conNumeroDudoso.map((t) => t.extractora_id as string))];
+  const { data: registrados } = extIds.length
+    ? await supabase.from("tiquetes").select("extractora_id, numero").in("extractora_id", extIds).limit(20000)
+    : { data: [] };
+  const parecidosDe = (t: (typeof filas)[number]) => [
+    ...(registrados ?? []).filter((x) => x.extractora_id === t.extractora_id && sonParecidos(x.numero, t.numero)).map((x) => `${x.numero} (aprobado)`),
+    ...filas.filter((x) => x.id !== t.id && x.extractora_id === t.extractora_id && sonParecidos(x.numero, t.numero)).map((x) => `${x.numero} (pendiente)`),
+  ];
 
   return (
     <>
@@ -63,6 +75,18 @@ export default async function Pendientes() {
                       <Mensaje tono="alerta">
                         Compare con la foto antes de aprobar: la lectura no fue 100 % segura en {[...r].join(", ")}. Si algo no coincide, use «Corregir datos».
                       </Mensaje>
+                    )}
+                    {(r.has("número") || netoRevisar || r.has("fecha")) && (
+                      <div className="space-y-1 rounded-xl border-2 border-error bg-error-suave p-3 text-sm text-error">
+                        <p className="font-bold">Dato vital dudoso: {[r.has("número") && "N° de tiquete", netoRevisar && "peso neto", r.has("fecha") && "fecha"].filter(Boolean).join(", ")}. Verifíquelo dígito por dígito en la foto.</p>
+                        {(t.datos_leidos as { nota_ia?: string } | null)?.nota_ia && <p>Duda de la lectura: {(t.datos_leidos as { nota_ia: string }).nota_ia}</p>}
+                        {r.has("número") && (() => {
+                          const p = parecidosDe(t);
+                          return p.length > 0
+                            ? <p className="font-semibold">Números parecidos ya registrados en {t.extractoras?.nombre}: {p.join(", ")}. Revise que no sea el mismo tiquete.</p>
+                            : <p>No hay números parecidos registrados en {t.extractoras?.nombre}.</p>;
+                        })()}
+                      </div>
                     )}
                     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <Dato etiqueta="N° tiquete" revisar={r.has("número")}>{t.numero}</Dato>

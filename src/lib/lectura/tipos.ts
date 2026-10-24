@@ -39,7 +39,7 @@ export type DatosTiquete = {
 export type Control = { nombre: string; ok: boolean; mensaje: string; dudoso?: boolean };
 
 export type ResultadoLectura =
-  | { ok: true; datos: DatosTiquete; controles: Control[]; cruda: LecturaCruda; dudosos: string[] }
+  | { ok: true; datos: DatosTiquete; controles: Control[]; cruda: LecturaCruda; dudosos: string[]; notaIA: string | null }
   | { ok: false; motivo: string; controles: Control[]; cruda: LecturaCruda | null; fueraDePeriodo?: boolean };
 
 /** Extractora con todo lo que se aprendió de ella, para que la IA la reconozca y la lea. */
