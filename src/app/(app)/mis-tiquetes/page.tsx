@@ -4,7 +4,8 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { leerConfiguracion } from "@/lib/config";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
-import { formatoPesos, formatoToneladas, netoKg } from "@/lib/numeros";
+import { netoKg } from "@/lib/numeros";
+import { ValorTiquete } from "@/components/valor-tiquete";
 import { Dato, EstadoChip, Vacio } from "@/components/ui";
 import { BotonEliminarRechazado } from "./eliminar";
 
@@ -54,15 +55,12 @@ export default async function MisTiquetes({ searchParams }: PageProps<"/mis-tiqu
                 </div>
                 <EstadoChip estado={t.estado} />
               </div>
-              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {(estado !== "vigente" || conPrecio || config.comprador_ve_toneladas_sin_precio) && (
-                  <Dato etiqueta="Peso neto">{formatoToneladas(neto / 1000)}</Dato>
-                )}
+              <dl className="mt-3 grid grid-cols-2 gap-3">
                 <Dato etiqueta="Placa">{t.placa ?? "—"}</Dato>
                 {t.proveedor && <Dato etiqueta="Proveedor">{t.proveedor}</Dato>}
-                {estado === "vigente" && <Dato etiqueta="Precio / t">{conPrecio ? formatoPesos(t.precio_tonelada) : "Sin precio"}</Dato>}
-                {estado === "vigente" && <Dato etiqueta="Valor">{conPrecio ? formatoPesos(t.valor) : "—"}</Dato>}
               </dl>
+              <ValorTiquete toneladas={neto / 1000} precio={t.precio_tonelada} valor={t.valor} conPrecio={estado === "vigente"}
+                verPeso={estado !== "vigente" || conPrecio || config.comprador_ve_toneladas_sin_precio} />
               {t.estado === "rechazado" && (
                 <p className="mt-3 rounded-lg bg-error-suave p-2 text-sm text-error"><b>Motivo:</b> {t.motivo_rechazo}</p>
               )}

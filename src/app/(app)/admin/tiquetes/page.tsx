@@ -5,6 +5,7 @@ import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
 import { formatoPesos, formatoToneladas } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
+import { ValorTiquete } from "@/components/valor-tiquete";
 import { FormAccion } from "@/components/form-accion";
 import { asignarPrecioBloque } from "../acciones";
 import { EditarTiquete } from "./editar-tiquete";
@@ -93,17 +94,12 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
       <ul className="space-y-3">
         {filas.map((t) => (
           <li key={t.id} className="tarjeta">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-bold text-profundo">{t.extractoras?.nombre} · N° {t.numero} · {t.perfiles?.nombre}</p>
-                <p className="mt-0.5"><span className="rounded-md bg-profundo px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">Proveedor: {t.proveedor ?? "no leído"}</span></p>
-                <p className="mt-1 text-sm text-suave">{fechaHora(t.fecha_entrada)} · Placa {t.placa ?? "—"}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold">{formatoToneladas(t.peso_neto_t)}</p>
-                <p className="text-sm">{t.precio_tonelada != null ? `${formatoPesos(t.precio_tonelada)}/t = ${formatoPesos(t.valor)}` : <span className="font-semibold text-alerta">Sin precio</span>}</p>
-              </div>
+            <div className="min-w-0">
+              <p className="font-bold text-profundo">{t.extractoras?.nombre} · N° {t.numero} · {t.perfiles?.nombre}</p>
+              <p className="mt-1"><span className="inline-block max-w-full rounded-md bg-profundo px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">Proveedor: {t.proveedor ?? "no leído"}</span></p>
+              <p className="mt-1 text-sm text-suave">{fechaHora(t.fecha_entrada)} · Placa {t.placa ?? "—"}</p>
             </div>
+            <ValorTiquete toneladas={Number(t.peso_neto_t)} precio={t.precio_tonelada} valor={t.valor} />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <EstadoChip estado={t.estado} />
               {t.imagen_ruta && fotos[t.imagen_ruta] && <a className="text-sm font-semibold text-primario" href={fotos[t.imagen_ruta]} target="_blank" rel="noopener noreferrer">Ver foto</a>}
