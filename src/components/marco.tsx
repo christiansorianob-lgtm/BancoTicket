@@ -46,7 +46,7 @@ export function Marco({ perfil, avisosSinLeer, children }: { perfil: Perfil; avi
       <header className="sticky top-0 z-20 border-b border-white/40 bg-gradient-to-r from-profundo to-primario text-white shadow">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <Link href={inicioDe(perfil.rol)} className="flex items-center gap-2 font-bold">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-white/15">B</span>
+            <img src="/logo.webp" alt="" width={32} height={32} className="size-8 rounded-lg shadow" />
             <span className="hidden sm:inline">BancoTicket</span>
           </Link>
           <span className="min-w-0 flex-1 truncate text-sm text-white/80">{perfil.nombre}</span>

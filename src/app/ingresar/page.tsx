@@ -6,7 +6,7 @@ export default async function Ingresar({ searchParams }: PageProps<"/ingresar">)
     <main className="flex flex-1 items-center justify-center px-4 py-10">
       <div className="tarjeta w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primario to-profundo text-2xl font-black text-white shadow-lg">B</div>
+          <img src="/logo.webp" alt="Logo de BancoTicket" width={96} height={96} className="mx-auto mb-3 size-24 rounded-3xl shadow-lg" />
           <h1 className="titulo">BancoTicket</h1>
           <p className="text-sm text-suave">Tiquetes de fruta y cuentas de compradores</p>
         </div>
