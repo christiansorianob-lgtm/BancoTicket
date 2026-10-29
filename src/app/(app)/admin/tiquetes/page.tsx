@@ -6,6 +6,8 @@ import { fechaHora } from "@/lib/fechas";
 import { formatoPesos, formatoToneladas } from "@/lib/numeros";
 import { EstadoChip, Vacio } from "@/components/ui";
 import { ValorTiquete } from "@/components/valor-tiquete";
+import { EnviarTiquete } from "@/components/enviar-tiquete";
+import { mensajeTiquete } from "@/lib/mensajes";
 import { FormAccion } from "@/components/form-accion";
 import { asignarPrecioBloque } from "../acciones";
 import { EditarTiquete } from "./editar-tiquete";
@@ -22,7 +24,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
 
   let q = supabase
     .from("tiquetes")
-    .select("*, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre)")
+    .select("*, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre, celular)")
     .eq("estado", f.estado === "anulado" ? "anulado" : "vigente")
     .order("fecha_entrada", { ascending: false })
     .limit(300);
@@ -38,7 +40,11 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
     supabase.from("perfiles").select("id, nombre").eq("rol", "comprador").order("nombre"),
   ]);
   const filas = data ?? [];
-  const fotos = await urlsFotos(filas.map((t) => t.imagen_ruta));
+  const [fotos, fotosEnlace] = await Promise.all([
+    urlsFotos(filas.map((t) => t.imagen_ruta)),
+    // Enlace de 7 días para el WhatsApp al comprador (cuando el equipo no puede compartir la foto).
+    urlsFotos(filas.map((t) => t.imagen_ruta), 60 * 60 * 24 * 7),
+  ]);
   const totalT = filas.reduce((s, t) => s + Number(t.peso_neto_t), 0);
   const totalV = filas.reduce((s, t) => s + Number(t.valor ?? 0), 0);
 
@@ -103,6 +109,10 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <EstadoChip estado={t.estado} />
               {t.imagen_ruta && fotos[t.imagen_ruta] && <a className="text-sm font-semibold text-primario" href={fotos[t.imagen_ruta]} target="_blank" rel="noopener noreferrer">Ver foto</a>}
+              <EnviarTiquete celular={t.perfiles?.celular ?? null} numero={t.numero}
+                foto={t.imagen_ruta ? fotos[t.imagen_ruta] : undefined} fotoEnlace={t.imagen_ruta ? fotosEnlace[t.imagen_ruta] : undefined}
+                mensaje={mensajeTiquete({ extractora: t.extractoras?.nombre ?? "", numero: t.numero, fecha: fechaHora(t.fecha_entrada), placa: t.placa,
+                  proveedor: t.proveedor, toneladas: Number(t.peso_neto_t), precio: t.precio_tonelada, valor: t.valor, estado: t.estado })} />
             </div>
             <EditarTiquete tiquete={t} extractoras={extractoras ?? []} compradores={compradores ?? []} />
           </li>

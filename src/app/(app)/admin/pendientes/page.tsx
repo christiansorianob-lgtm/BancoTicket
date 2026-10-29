@@ -6,6 +6,8 @@ import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
 import { sonParecidos } from "@/lib/lectura/parecidos";
+import { EnviarTiquete } from "@/components/enviar-tiquete";
+import { mensajeTiquete } from "@/lib/mensajes";
 
 /** Campos que la lectura no leyó 100 % segura, guardados como «Verificar: número, tara». */
 function camposARevisar(motivo: string | null): Set<string> {
@@ -31,13 +33,17 @@ export default async function Pendientes() {
   const supabase = await supabaseServidor();
   const { data } = await supabase
     .from("tiquetes_pendientes")
-    .select("*, extractoras(nombre), perfiles!tiquetes_pendientes_comprador_id_fkey(nombre)")
+    .select("*, extractoras(nombre), perfiles!tiquetes_pendientes_comprador_id_fkey(nombre, celular)")
     .eq("estado", "pendiente")
     .order("requiere_revision", { ascending: false })
     .order("cargado_en", { ascending: true });
   const { data: extractoras } = await supabase.from("extractoras").select("id, nombre").order("nombre");
   const filas = data ?? [];
-  const fotos = await urlsFotos(filas.map((f) => f.imagen_ruta));
+  const [fotos, fotosEnlace] = await Promise.all([
+    urlsFotos(filas.map((f) => f.imagen_ruta)),
+    // Enlace de 7 días para el WhatsApp al comprador (cuando el equipo no puede compartir la foto).
+    urlsFotos(filas.map((f) => f.imagen_ruta), 60 * 60 * 24 * 7),
+  ]);
 
   // N° dudoso: números parecidos ya registrados en la misma extractora (posible duplicado disfrazado).
   const conNumeroDudoso = filas.filter((t) => camposARevisar(t.requiere_revision ? t.motivo_revision : null).has("número"));
@@ -124,6 +130,10 @@ export default async function Pendientes() {
                   </>
                 );
               })()}
+              <EnviarTiquete celular={t.perfiles?.celular ?? null} numero={t.numero}
+                foto={t.imagen_ruta ? fotos[t.imagen_ruta] : undefined} fotoEnlace={t.imagen_ruta ? fotosEnlace[t.imagen_ruta] : undefined}
+                mensaje={mensajeTiquete({ extractora: t.extractoras?.nombre ?? "", numero: t.numero, fecha: fechaHora(t.fecha_entrada), placa: t.placa,
+                  proveedor: t.proveedor, toneladas: netoKg(t) / 1000, precio: null, valor: null, estado: "pendiente" })} />
               <AccionesPendiente tiquete={t} extractoras={extractoras ?? []} />
             </div>
           </li>

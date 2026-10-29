@@ -156,7 +156,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».
 - **Desarrollador además:** Contraseñas (aprobar/rechazar solicitudes) y **Backups** (botón «Descargar backup ahora»: Excel con una hoja por tabla + Resumen; no incluye fotos ni contraseñas).
 
-**WhatsApp:** nunca se abre solo; siempre es un botón. Se usa para **anticipos** (y bienvenida de usuario nuevo, contraseña restablecida, «Escribir por WhatsApp» en la cuenta del comprador, «Confirmar por WhatsApp» en Contraseñas). **Los tiquetes no usan WhatsApp.**
+**WhatsApp:** nunca se abre solo; siempre es un botón. Se usa para **anticipos** (y bienvenida de usuario nuevo, contraseña restablecida, «Escribir por WhatsApp» en la cuenta del comprador, «Confirmar por WhatsApp» en Contraseñas). **Tiquetes (desde 2026-10-28):** botón «Enviar por WhatsApp» en Pendientes y Tiquetes y precios: comparte la foto real + datos (o abre el chat con enlace a la foto de 7 días).
 
 ## 9. Decisiones del usuario (no revertir sin consultar)
 
@@ -164,7 +164,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - Duplicados = extractora + número. Solo anticipos (sin «Pago»); anticipos negativos permitidos; **sin enlaces** de confirmación.
 - Reglas de lectura de §7 (críticos: número, neto impreso, fecha). Se cobra el neto impreso.
 - La IA solo para leer tiquetes. **Consumo de IA crítico: consultar antes de cualquier cambio que agregue llamadas o tokens.**
-- WhatsApp solo con botón y solo para anticipos (ver §8). Avisos de tiquetes solo por la campana.
+- WhatsApp solo con botón (nunca automático): anticipos y, por pedido de la administradora, el envío de un tiquete con su foto (ver §8). Los avisos automáticos de tiquetes siguen solo por la campana.
 - Un administrador y un desarrollador; contraseña por defecto 12345678 sin obligar a cambiarla; correo opcional.
 - Tras enviar un tiquete, volver a «Subir tiquete». Tiquetes de más de 6 meses no se suben.
 
