@@ -156,7 +156,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».
 - **Desarrollador además:** Contraseñas (aprobar/rechazar solicitudes) y **Backups** (botón «Descargar backup ahora»: Excel con una hoja por tabla + Resumen; no incluye fotos ni contraseñas).
 
-**WhatsApp:** nunca se abre solo; siempre es un botón. Se usa para **anticipos** (y bienvenida de usuario nuevo, contraseña restablecida, «Escribir por WhatsApp» en la cuenta del comprador, «Confirmar por WhatsApp» en Contraseñas). **Tiquetes (desde 2026-10-28):** botón «Enviar por WhatsApp» en Pendientes y Tiquetes y precios: comparte la foto real + datos (o abre el chat con enlace a la foto de 7 días).
+**WhatsApp:** nunca se abre solo; siempre es un botón. Se usa para **anticipos** (y bienvenida de usuario nuevo, contraseña restablecida, «Escribir por WhatsApp» en la cuenta del comprador, «Confirmar por WhatsApp» en Contraseñas). **Tiquetes (desde 2026-10-28):** botón «Enviar foto por WhatsApp» junto a la imagen (Pendientes, Tiquetes y precios, Reportes): comparte solo la foto (WhatsApp pide elegir el chat) o abre el chat del comprador con enlace a la foto de 7 días.
 
 ## 9. Decisiones del usuario (no revertir sin consultar)
 

@@ -4,7 +4,6 @@ import { antiguedad, interpretarFechaTiquete } from "../src/lib/fechas";
 import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
-import { mensajeTiquete } from "../src/lib/mensajes";
 import { sonParecidos } from "../src/lib/lectura/parecidos";
 import { armarCuenta } from "../src/lib/informes/movimientos";
 import { formatearMonto, montoEnLetras, textoMonto } from "../src/lib/monto";
@@ -23,14 +22,6 @@ igual("admin: saldo positivo", textoSaldo(5000000, "admin").titulo, "Saldo a mi 
 igual("admin: saldo negativo", textoSaldo(-2000000, "admin").titulo, "Le debo");
 igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Debo");
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
-
-// Mensaje de WhatsApp del tiquete: con precio va precio y valor; sin precio, el estado.
-const mt = { extractora: "Babú Palm", numero: "16764", fecha: "23/10/2026, 04:09 p. m.", placa: "XLK767", proveedor: "INVERSIONES AGROPALNORT S.A.S.", toneladas: 6.24 };
-const lineas = (s: string) => s.replace(/ /g, " ").split("\n"); // «$ » usa espacio que no se parte
-igual("whatsapp tiquete con precio", lineas(mensajeTiquete({ ...mt, precio: 660000, valor: 4118400, estado: "vigente" })).slice(4),
-  ["Peso neto: 6,240 t", "Precio por tonelada: $ 660.000", "*Valor: $ 4.118.400*", "Estado: Aprobado"]);
-igual("whatsapp tiquete sin precio", lineas(mensajeTiquete({ ...mt, precio: null, valor: null, estado: "vigente" })).at(-1), "Estado: Aprobado, sin precio aún");
-igual("whatsapp tiquete pendiente", lineas(mensajeTiquete({ ...mt, precio: null, valor: null, estado: "pendiente" })).at(-1), "Estado: Pendiente de aprobación");
 
 // Antigüedad del tiquete (días de Colombia).
 const hoyP = new Date("2026-10-23T20:00:00-05:00");

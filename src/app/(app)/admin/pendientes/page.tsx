@@ -6,8 +6,7 @@ import { formatoToneladas, netoKg } from "@/lib/numeros";
 import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
 import { sonParecidos } from "@/lib/lectura/parecidos";
-import { EnviarTiquete } from "@/components/enviar-tiquete";
-import { mensajeTiquete } from "@/lib/mensajes";
+import { EnviarFoto } from "@/components/enviar-tiquete";
 
 /** Campos que la lectura no leyó 100 % segura, guardados como «Verificar: número, tara». */
 function camposARevisar(motivo: string | null): Set<string> {
@@ -69,6 +68,11 @@ export default async function Pendientes() {
                   <img src={fotos[t.imagen_ruta]} alt={`Tiquete ${t.numero}`} className="max-h-[28rem] w-full rounded-xl border border-borde object-contain" />
                 </a>
               ) : <Vacio>Sin foto</Vacio>}
+              {t.imagen_ruta && fotos[t.imagen_ruta] && (
+                <div className="mt-2">
+                  <EnviarFoto celular={t.perfiles?.celular ?? null} numero={t.numero} foto={fotos[t.imagen_ruta]} fotoEnlace={fotosEnlace[t.imagen_ruta]} />
+                </div>
+              )}
             </div>
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -130,10 +134,6 @@ export default async function Pendientes() {
                   </>
                 );
               })()}
-              <EnviarTiquete celular={t.perfiles?.celular ?? null} numero={t.numero}
-                foto={t.imagen_ruta ? fotos[t.imagen_ruta] : undefined} fotoEnlace={t.imagen_ruta ? fotosEnlace[t.imagen_ruta] : undefined}
-                mensaje={mensajeTiquete({ extractora: t.extractoras?.nombre ?? "", numero: t.numero, fecha: fechaHora(t.fecha_entrada), placa: t.placa,
-                  proveedor: t.proveedor, toneladas: netoKg(t) / 1000, precio: null, valor: null, estado: "pendiente" })} />
               <AccionesPendiente tiquete={t} extractoras={extractoras ?? []} />
             </div>
           </li>

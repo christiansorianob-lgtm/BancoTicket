@@ -8,6 +8,7 @@ import { Vacio } from "@/components/ui";
 import { consultarInforme, filtrosDesde } from "@/lib/informes/consulta";
 import { EditarFila } from "./editar-fila";
 import { EliminarFila } from "./eliminar-fila";
+import { EnviarFoto } from "@/components/enviar-tiquete";
 import { SelectorReporte } from "./selector";
 
 /** En pantalla se muestran hasta estas filas; el Excel trae todas las del filtro. */
@@ -32,6 +33,8 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
   ]);
   // Enlaces firmados (30 min) a las fotos de las filas que se ven en pantalla.
   const fotos = await urlsFotos(filas.slice(0, MAX_PANTALLA).map((t) => t.imagen_ruta));
+  // Enlace de 7 días para enviar la foto por WhatsApp (solo administración).
+  const fotosEnlace = soloLectura ? {} : await urlsFotos(filas.slice(0, MAX_PANTALLA).map((t) => t.imagen_ruta), 60 * 60 * 24 * 7);
   const proveedores = [...new Set((conProveedor ?? []).map((p) => p.proveedor as string))].sort((a, b) => a.localeCompare(b, "es"));
 
   const toneladas = filas.reduce((s, t) => s + t.peso_neto_t, 0);
@@ -113,6 +116,9 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
                         <ImageIcon className="size-5" aria-label={`Ver foto del tiquete ${t.numero}`} />
                       </a>
                     ) : null}
+                    {!soloLectura && t.imagen_ruta && fotos[t.imagen_ruta] && (
+                      <EnviarFoto compacto celular={t.comprador_celular} numero={t.numero} foto={fotos[t.imagen_ruta]} fotoEnlace={fotosEnlace[t.imagen_ruta]} />
+                    )}
                   </td>
                 </tr>
               ))}
