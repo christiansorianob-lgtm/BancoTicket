@@ -16,11 +16,14 @@ export default async function PanelAdmin() {
     supabase.from("anticipos").select("id", { count: "exact", head: true }).eq("estado", "en_disputa"),
     supabase.from("tiquetes").select("id", { count: "exact", head: true }).eq("estado", "vigente").is("precio_tonelada", null),
     supabase.from("formatos_no_reconocidos").select("id", { count: "exact", head: true }).eq("estado", "nuevo"),
-    supabase.from("consumo_ia").select("tipo, costo_usd").gte("creado_en", inicioMes),
+    supabase.from("consumo_ia").select("tipo, costo_usd, modulo").gte("creado_en", inicioMes),
   ]);
   const usos = consumo ?? [];
   const costoMes = usos.reduce((s, u) => s + Number(u.costo_usd), 0);
-  const lecturasMes = usos.filter((u) => u.tipo === "lectura").length;
+  const lecturasMes = usos.filter((u) => u.tipo === "lectura" && u.modulo !== "facturas").length;
+  // Módulo de facturas: categoría aparte (no cambia las cifras de los tiquetes).
+  const facturasUsos = usos.filter((u) => u.modulo === "facturas");
+  const costoFacturas = facturasUsos.reduce((s, u) => s + Number(u.costo_usd), 0);
   const aprendizajesMes = usos.filter((u) => u.tipo === "aprendizaje").length;
   const filas = (saldos ?? []) as FilaSaldo[];
   const totalFondos = filas.reduce((s, f) => s + Math.max(0, Number(f.saldo)), 0);
@@ -67,7 +70,8 @@ export default async function PanelAdmin() {
         <p className="text-sm text-suave">
           {lecturasMes} lectura{lecturasMes === 1 ? "" : "s"} de tiquetes · {aprendizajesMes} formato{aprendizajesMes === 1 ? "" : "s"} aprendido{aprendizajesMes === 1 ? "" : "s"}
           {/* Con el gasto total (incluye el ajuste a la consola de Anthropic), no solo el estimado por tokens. */}
-          {lecturasMes > 0 && ` · US$ ${(costoMes / lecturasMes).toLocaleString("es-CO", { maximumFractionDigits: 4 })} por lectura`}
+          {lecturasMes > 0 && ` · US$ ${((costoMes - costoFacturas) / lecturasMes).toLocaleString("es-CO", { maximumFractionDigits: 4 })} por lectura`}
+          {facturasUsos.length > 0 && ` · Facturas: ${facturasUsos.length} lectura${facturasUsos.length === 1 ? "" : "s"} (US$ ${costoFacturas.toLocaleString("es-CO", { maximumFractionDigits: 4 })})`}
         </p>
       </section>
 

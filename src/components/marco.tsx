@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound, FileSpreadsheet, DatabaseBackup } from "lucide-react";
+import { Bell, Camera, FileText, Home, LogOut, Wallet, ListChecks, Tags, Users, Factory, History, ScanSearch, Receipt, KeyRound, FileSpreadsheet, DatabaseBackup, ReceiptText } from "lucide-react";
 import { EnlaceMenu } from "@/components/enlace-menu";
 import { BotonRefrescar } from "@/components/boton-refrescar";
 import { esGestor, inicioDe, type Perfil } from "@/lib/sesion";
@@ -19,6 +19,8 @@ const ADMIN = [
   { href: "/admin/pendientes", texto: "Pendientes", icono: ListChecks },
   { href: "/admin/tiquetes", texto: "Tiquetes y precios", icono: Tags },
   { href: "/admin/reportes", texto: "Reportes", icono: FileSpreadsheet },
+  // Módulo de facturas de venta a las extractoras (solo administración y desarrollador).
+  { href: "/facturas", texto: "Facturas", icono: ReceiptText },
   { href: "/admin/anticipos", texto: "Anticipos", icono: Wallet },
   { href: "/admin/compradores", texto: "Compradores", icono: Users },
   { href: "/admin/extractoras", texto: "Extractoras", icono: Factory },
