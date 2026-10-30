@@ -45,7 +45,9 @@ export default async function MisAnticipos() {
               </a>
             )}
             {a.respondido_en && <p className="text-xs text-suave">Respondido: {fechaHora(a.respondido_en)}</p>}
-            {a.motivo_disputa && <p className="text-sm text-error">Motivo: {a.motivo_disputa}</p>}
+            {a.motivo_disputa && (a.estado === "en_disputa"
+              ? <p className="text-sm text-error">Motivo de su disputa: {a.motivo_disputa}</p>
+              : <p className="rounded-lg bg-alerta-suave p-2 text-sm text-alerta">La administración corrigió este registro después de su disputa («{a.motivo_disputa}»). Revíselo y confírmelo si ahora está correcto.</p>)}
             {a.estado === "pendiente" && (
               <ResponderAnticipo id={a.id} negativo={Number(a.monto) < 0} monto={formatoPesos(Math.abs(Number(a.monto)))} nombre={perfil.nombre} celularAdmin={admin.celular} />
             )}

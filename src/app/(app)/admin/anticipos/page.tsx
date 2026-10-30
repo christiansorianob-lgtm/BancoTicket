@@ -8,7 +8,8 @@ import { FormAnticipo } from "./form-anticipo";
 import { CampoMonto } from "./campo-monto";
 import { Image as ImageIcon } from "lucide-react";
 import { urlsFotos } from "@/lib/fotos";
-import { registrarAnticipo, recordarAnticipo, subirSoporteAnticipo } from "../acciones";
+import { corregirAnticipo, registrarAnticipo, recordarAnticipo, subirSoporteAnticipo } from "../acciones";
+import { CorregirAnticipo } from "./corregir";
 import { BotonReenviar } from "./reenviar";
 import { CampoSoporte, SubirSoporte } from "./soporte";
 
@@ -89,7 +90,12 @@ export default async function AnticiposAdmin({ searchParams }: PageProps<"/admin
             </div>
             {a.nota && <p className="text-sm">{a.nota}</p>}
             {a.respondido_en && <p className="text-xs text-suave">Respondido {fechaHora(a.respondido_en)} · {a.dispositivo}</p>}
-            {a.motivo_disputa && <p className="rounded-lg bg-error-suave p-2 text-sm text-error">Motivo: {a.motivo_disputa}</p>}
+            {a.motivo_disputa && (a.estado === "en_disputa"
+              ? <p className="rounded-lg bg-error-suave p-2 text-sm text-error">Motivo de la disputa: {a.motivo_disputa}</p>
+              : <p className="rounded-lg bg-alerta-suave p-2 text-sm text-alerta">Corregido tras la disputa del comprador («{a.motivo_disputa}»). Espera su confirmación.</p>)}
+            {a.estado === "en_disputa" && (
+              <CorregirAnticipo accion={corregirAnticipo.bind(null, a.id)} monto={Number(a.monto)} fecha={a.fecha} nota={a.nota} />
+            )}
             {a.soporte_ruta && soportes[a.soporte_ruta] && (
               <a href={soportes[a.soporte_ruta]} target="_blank" rel="noopener noreferrer"
                 className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-primario hover:bg-primario-suave">

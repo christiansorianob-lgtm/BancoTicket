@@ -102,9 +102,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0021.** Nunca editar una aplicada; crear la siguiente (`0022_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0022.** Nunca editar una aplicada; crear la siguiente (`0023_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0022_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0023_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
 
@@ -121,6 +121,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0022_nomb
 | 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
 | 0017–0018 | rol `consultor` (varios) y `es_consultor()`: solo lectura de perfiles, anticipos, tiquetes y fotos; políticas restrictivas que le impiden escribir |
 | 0020 | **módulo de facturas** independiente: `fact_facturas`, `fact_pagos`, `fact_auditoria`, vistas `fact_facturas_estado` y `fact_totales`, funciones `fact_*`, bucket privado `facturas` |
+| 0022 | `corregir_anticipo`: un anticipo en disputa se corrige con motivo y vuelve a pendiente |
 | 0021 | `consumo_ia` + `modulo` ('tiquetes'/'facturas'), `tipo_archivo`, `resultado`, `referencia_id` |
 | 0019 | el Consultor no ve a los compradores de `configuracion.compradores_ocultos_consultor` (hoy `["prueba"]`) |
 
@@ -154,6 +155,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - **Reportes · «Tiquetes y anticipos»** (`/admin/reportes?tipo=cuenta`, selector «Tipo de reporte» arriba): un comprador + fechas de registro; tiquetes aprobados por fecha de subida y anticipos **confirmados** por fecha de confirmación en una tabla con saldo acumulado; sin precio = «Sin precio aún» (no mueve el saldo); Excel con los mismos filtros. Solo lectura (`src/lib/informes/movimientos.ts`, `cuenta.ts`, `cuenta-excel.ts`). **Todo reporte nuevo debe tener Excel.**
 - **Facturas** (`/facturas`, administradora y desarrollador): facturas de venta a las extractoras leídas con IA (PDF o imagen elegida, sin cámara), abonos con retenciones, anulaciones con motivo y auditoría, estado de cobro calculado, Excel. Código en `src/lib/facturas/` y `src/app/(app)/facturas/`. Variable opcional `FACTURAS_MODELO`.
 - **Anticipos:** soporte (foto) opcional al registrar o con el ícono «Subir soporte» en la tarjeta (solo pendientes; una vez puesto no se cambia); «Ver soporte» para admin y comprador.
+- **Anticipos en disputa:** «Corregir y volver a enviar» (monto, fecha, nota + motivo) → vuelve a pendiente y el comprador confirma de nuevo.
 - **Anticipos:** registrar (positivo o negativo) → campana + **botón** «Enviar por WhatsApp» (**sin enlaces**); «Recordarle por WhatsApp»; el comprador confirma en su app.
 - **Compradores:** crear (contraseña fija 12345678, correo opcional) / editar; cuenta de cada comprador con estado de cuenta y extracto.
 - **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».

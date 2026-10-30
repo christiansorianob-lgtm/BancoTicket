@@ -287,6 +287,39 @@ export async function subirSoporteAnticipo(anticipoId: string, form: FormData): 
   return { ok: true, mensaje: "Soporte subido. El comprador lo verá al confirmar el anticipo." };
 }
 
+/**
+ * Decisión del usuario: un anticipo en disputa se corrige (monto, fecha, nota) con motivo y vuelve a
+ * pendiente para que el comprador lo confirme. El historial guarda el antes, el después y el motivo.
+ */
+export async function corregirAnticipo(anticipoId: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const monto = montoDesdeTexto(String(form.get("monto") ?? ""), { negativo: true });
+  const fecha = String(form.get("fecha") ?? "");
+  const motivo = String(form.get("motivo") ?? "").trim();
+  if (!monto) return fallo("Escriba un monto válido (distinto de cero)");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fallo("Fecha no válida");
+  if (!motivo) return fallo("Escriba el motivo de la corrección");
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.rpc("corregir_anticipo", {
+    p_id: anticipoId, p_monto: monto, p_fecha: fecha, p_nota: textoODefecto(form.get("nota")), p_motivo: motivo,
+  });
+  if (error) return fallo(error.message);
+  const { data: a } = await supabase.from("anticipos").select("comprador_id").eq("id", anticipoId).single();
+  const comprador = a ? await perfilDestino(a.comprador_id) : null;
+  if (comprador) {
+    await avisar([comprador], "Anticipo corregido: confírmelo",
+      `La administración corrigió el anticipo que usted disputó: ahora es un ${describirAnticipo(monto)}. Motivo: ${motivo}. Revíselo en «Anticipos».`, "/anticipos");
+  }
+  revalidatePath("/admin/anticipos");
+  revalidatePath("/anticipos");
+  return {
+    ok: true,
+    mensaje: "Anticipo corregido: volvió a pendiente y el comprador debe confirmarlo.",
+    celular: a ? await celularDe(a.comprador_id) : undefined,
+    whatsapp: `Hola ${comprador?.nombre ?? ""}, corregí el anticipo que usted disputó: ahora es un ${describirAnticipo(monto)}. Por favor revíselo y confírmelo en BancoTicket, en «Anticipos».`,
+  };
+}
+
 export async function recordarAnticipo(anticipoId: string): Promise<Resultado> {
   await exigirAdmin();
   return avisarAnticipo(anticipoId);

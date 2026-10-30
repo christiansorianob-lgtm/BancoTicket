@@ -63,7 +63,9 @@ export default async function AnticiposConsulta({ searchParams }: PageProps<"/co
               </a>
             ) : <p className="text-xs text-suave">Sin soporte</p>}
             {a.respondido_en && <p className="text-xs text-suave">Respondido {fechaHora(a.respondido_en)}</p>}
-            {a.motivo_disputa && <p className="rounded-lg bg-error-suave p-2 text-sm text-error">Motivo: {a.motivo_disputa}</p>}
+            {a.motivo_disputa && (a.estado === "en_disputa"
+              ? <p className="rounded-lg bg-error-suave p-2 text-sm text-error">Motivo de la disputa: {a.motivo_disputa}</p>
+              : <p className="rounded-lg bg-alerta-suave p-2 text-sm text-alerta">Corregido tras la disputa del comprador («{a.motivo_disputa}»).</p>)}
           </li>
         ))}
       </ul>

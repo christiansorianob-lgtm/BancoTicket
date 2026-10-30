@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { montoDesdeTexto } from "@/lib/numeros";
 import { formatearMonto, montoEnLetras, textoMonto } from "@/lib/monto";
 
@@ -19,9 +19,11 @@ function posicionTras(formateado: string, cifras: number): number {
  * favor») o en rojo si es negativo (saldo a favor del comprador, suma a «Le debo»); abajo lo
  * muestra en letras. El botón ± cambia el signo (algunos teclados del celular no tienen «-»).
  */
-export function CampoMonto() {
+export function CampoMonto({ inicial }: { inicial?: number } = {}) {
   const ref = useRef<HTMLInputElement>(null);
-  const [valor, setValor] = useState("");
+  const idEtiqueta = useId();
+  // Valor inicial (al corregir un anticipo): la coma decimal es la colombiana.
+  const [valor, setValor] = useState(inicial == null ? "" : formatearMonto(String(inicial).replace(".", ",")));
   const monto = montoDesdeTexto(valor.replace(/,$/, ""), { negativo: true });
   const negativo = valor.startsWith("-");
 
@@ -34,7 +36,7 @@ export function CampoMonto() {
 
   return (
     <div className="sm:col-span-2">
-      <span className="etiqueta" id="monto-etiqueta">Monto (COP)</span>
+      <span className="etiqueta" id={idEtiqueta}>Monto (COP)</span>
       {!monto ? (
         <p className="mb-2 rounded-lg bg-primario-suave px-3 py-2 text-sm text-suave">
           Escriba el valor. <strong className="text-ok">Positivo</strong>: dinero que le entrego al comprador.{" "}
@@ -50,7 +52,7 @@ export function CampoMonto() {
         </p>
       )}
       <div className="flex gap-2">
-        <input ref={ref} name="monto" inputMode="decimal" autoComplete="off" required aria-labelledby="monto-etiqueta"
+        <input ref={ref} name="monto" inputMode="decimal" autoComplete="off" required aria-labelledby={idEtiqueta}
           placeholder="Ej.: 5.000.000 o -2.000.000" value={valor}
           className={`campo flex-1 text-lg font-bold tabular-nums ${!monto ? "" : negativo ? "border-error text-error" : "border-ok text-ok"}`}
           onChange={(e) => {
