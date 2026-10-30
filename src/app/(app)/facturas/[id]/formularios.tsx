@@ -14,7 +14,7 @@ export function ConMotivo({ accion, boton, pregunta, placeholder }: {
   accion: (form: FormData) => Promise<Resultado>; boton: string; pregunta: string; placeholder: string;
 }) {
   return (
-    <FormAccion accion={accion} boton={boton} tonoBoton="peligro"
+    <FormAccion accion={accion} boton={boton} tonoBoton="peligro" textoSi="Sí, continuar"
       confirmarCon={(d) => String(d.get("motivo") ?? "").trim()
         ? <p className="flex items-start gap-2 text-sm font-semibold text-error"><AlertTriangle className="mt-0.5 size-5 shrink-0" />{pregunta} ¿Desea continuar?</p>
         : null}>

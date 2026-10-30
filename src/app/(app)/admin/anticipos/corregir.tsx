@@ -7,6 +7,32 @@ import { montoEnLetras, textoMonto } from "@/lib/monto";
 import { CampoMonto } from "./campo-monto";
 
 /**
+ * Eliminar un anticipo EN DISPUTA (decisión del usuario): motivo obligatorio y advertencia
+ * «¿Está seguro…?» con Sí / No antes de borrar. Queda en el historial.
+ */
+export function EliminarAnticipo({ accion, monto }: { accion: (form: FormData) => Promise<Resultado>; monto: number }) {
+  return (
+    <details className="rounded-xl border-2 border-error/40 p-3">
+      <summary className="cursor-pointer font-semibold text-error">Eliminar este anticipo</summary>
+      <div className="mt-3">
+        <FormAccion accion={accion} boton="Eliminar anticipo" tonoBoton="peligro" textoSi="Sí, eliminar"
+          confirmarCon={(d) => String(d.get("motivo") ?? "").trim() ? (
+            <div className="space-y-1 text-sm font-semibold text-error">
+              <p className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden />
+                ¿Está seguro de que desea eliminar el anticipo de {textoMonto(monto)}?</p>
+              <p className="font-normal text-texto">No afecta el saldo (un anticipo en disputa nunca contó). El registro queda en el historial con el motivo y el comprador recibe el aviso.</p>
+            </div>
+          ) : null}>
+          <label className="block"><span className="etiqueta">Motivo (obligatorio)</span>
+            <input name="motivo" required className="campo" placeholder="Ej.: ya se registró otro anticipo correcto" />
+          </label>
+        </FormAccion>
+      </div>
+    </details>
+  );
+}
+
+/**
  * Corregir un anticipo EN DISPUTA (decisión del usuario): monto, fecha y nota con motivo obligatorio;
  * vuelve a pendiente para que el comprador lo confirme. Confirmación Sí / No antes de enviar.
  */

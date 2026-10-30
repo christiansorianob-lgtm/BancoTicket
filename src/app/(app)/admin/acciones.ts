@@ -320,6 +320,28 @@ export async function corregirAnticipo(anticipoId: string, form: FormData): Prom
   };
 }
 
+/**
+ * Decisión del usuario: eliminar un anticipo EN DISPUTA (ej. ya se registró otro correcto). Nunca contó
+ * en el saldo; el registro completo queda en el historial con el motivo.
+ */
+export async function eliminarAnticipo(anticipoId: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const motivo = String(form.get("motivo") ?? "").trim();
+  if (!motivo) return fallo("Escriba el motivo");
+  const supabase = await supabaseServidor();
+  const { data: a } = await supabase.from("anticipos").select("comprador_id, monto").eq("id", anticipoId).single();
+  const { error } = await supabase.rpc("eliminar_anticipo", { p_id: anticipoId, p_motivo: motivo });
+  if (error) return fallo(error.message);
+  const comprador = a ? await perfilDestino(a.comprador_id) : null;
+  if (comprador && a) {
+    await avisar([comprador], "Anticipo en disputa eliminado",
+      `La administración eliminó el ${describirAnticipo(a.monto)} que usted disputó. Motivo: ${motivo}.`, "/anticipos");
+  }
+  revalidatePath("/admin/anticipos");
+  revalidatePath("/anticipos");
+  return { ok: true, mensaje: "Anticipo eliminado. Queda registrado en el historial." };
+}
+
 export async function recordarAnticipo(anticipoId: string): Promise<Resultado> {
   await exigirAdmin();
   return avisarAnticipo(anticipoId);

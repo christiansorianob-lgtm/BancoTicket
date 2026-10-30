@@ -10,7 +10,7 @@ import { AvisoContacto } from "@/components/contacto";
  * (si devuelve null, se envía sin preguntar).
  */
 export function FormAccion({
-  accion, boton, children, className = "", limpiar = false, confirmar, confirmarCon, tonoBoton = "primario",
+  accion, boton, children, className = "", limpiar = false, confirmar, confirmarCon, textoSi = "Sí, enviar", tonoBoton = "primario",
 }: {
   accion: (form: FormData) => Promise<Resultado>;
   boton: string;
@@ -19,6 +19,8 @@ export function FormAccion({
   limpiar?: boolean;
   confirmar?: string;
   confirmarCon?: (datos: FormData) => ReactNode | null;
+  /** Texto del botón que acepta el aviso (ej. «Sí, eliminar»). */
+  textoSi?: string;
   tonoBoton?: "primario" | "secundario" | "peligro";
 }) {
   const [resultado, setResultado] = useState<Resultado | null>(null);
@@ -54,7 +56,7 @@ export function FormAccion({
         <div className="space-y-3 rounded-xl border-2 border-alerta bg-alerta-suave p-3" role="alertdialog" aria-label="Confirmar envío">
           {pendiente.aviso}
           <div className="grid grid-cols-2 gap-2 sm:max-w-sm">
-            <button type="button" className="boton-primario" disabled={cargando} onClick={() => enviar(pendiente.datos)}>{cargando ? "Guardando…" : "Sí, enviar"}</button>
+            <button type="button" className={tonoBoton === "peligro" ? "boton-peligro" : "boton-primario"} disabled={cargando} onClick={() => enviar(pendiente.datos)}>{cargando ? "Guardando…" : textoSi}</button>
             <button type="button" className="boton-secundario" disabled={cargando} onClick={() => setPendiente(null)}>No</button>
           </div>
         </div>
