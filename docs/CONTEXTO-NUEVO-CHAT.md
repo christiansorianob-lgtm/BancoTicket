@@ -102,9 +102,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0023.** Nunca editar una aplicada; crear la siguiente (`0024_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0024.** Nunca editar una aplicada; crear la siguiente (`0025_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0024_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0025_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
 
@@ -121,6 +121,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0024_nomb
 | 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
 | 0017–0018 | rol `consultor` (varios) y `es_consultor()`: solo lectura de perfiles, anticipos, tiquetes y fotos; políticas restrictivas que le impiden escribir |
 | 0020 | **módulo de facturas** independiente: `fact_facturas`, `fact_pagos`, `fact_auditoria`, vistas `fact_facturas_estado` y `fact_totales`, funciones `fact_*`, bucket privado `facturas` |
+| 0024 | `configuracion.dias_aviso_respaldo = 15` (aviso de respaldo; la app escribe `ultimo_respaldo`) |
 | 0023 | `eliminar_anticipo`: solo anticipos en disputa, con motivo (queda en el historial) |
 | 0022 | `corregir_anticipo`: un anticipo en disputa se corrige con motivo y vuelve a pendiente |
 | 0021 | `consumo_ia` + `modulo` ('tiquetes'/'facturas'), `tipo_archivo`, `resultado`, `referencia_id` |
@@ -160,7 +161,7 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 - **Anticipos:** registrar (positivo o negativo) → campana + **botón** «Enviar por WhatsApp» (**sin enlaces**); «Recordarle por WhatsApp»; el comprador confirma en su app.
 - **Compradores:** crear (contraseña fija 12345678, correo opcional) / editar; cuenta de cada comprador con estado de cuenta y extracto.
 - **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».
-- **Desarrollador además:** Contraseñas (aprobar/rechazar solicitudes) y **Backups** (botón «Descargar backup ahora»: Excel con una hoja por tabla + Resumen; no incluye fotos ni contraseñas).
+- **Desarrollador además:** Contraseñas (aprobar/rechazar solicitudes) y **Backups** — **respaldo completo restaurable** (.zip con datos + archivos, aviso cada 15 días; restaurar con `scripts/restaurar-respaldo.mjs`, ver `docs/RESPALDO.md`) y (botón «Descargar backup ahora»: Excel con una hoja por tabla + Resumen; no incluye fotos ni contraseñas).
 
 **WhatsApp:** nunca se abre solo; siempre es un botón. Se usa para **anticipos** (y bienvenida de usuario nuevo, contraseña restablecida, «Escribir por WhatsApp» en la cuenta del comprador, «Confirmar por WhatsApp» en Contraseñas). **Tiquetes (desde 2026-10-28):** botón «Enviar foto por WhatsApp» junto a la imagen (Pendientes, Tiquetes y precios, Reportes): comparte solo la foto (WhatsApp pide elegir el chat) o abre el chat del comprador con enlace a la foto de 7 días.
 
