@@ -6,6 +6,7 @@ import { MENSAJE_BORROSA } from "@/lib/camara/nitidez";
 import { imagenDesdeArchivo, reducirImagen } from "@/lib/imagen";
 import { fechaHora } from "@/lib/fechas";
 import { formatoToneladas, netoKg } from "@/lib/numeros";
+import Link from "next/link";
 import { Dato, Mensaje } from "@/components/ui";
 import { MESES_MAXIMOS } from "@/lib/lectura/controles";
 import { enviarARevision, enviarTiquete } from "./acciones";
@@ -42,6 +43,8 @@ export function SubirTiquete() {
   const [error, setError] = useState<string | null>(null);
   // Lo último que se envió: se muestra en la pantalla de subir (sin WhatsApp: decisión del usuario).
   const [listo, setListo] = useState<string | null>(null);
+  // Ventana de confirmación (decisión del usuario): sale SOLO cuando la base confirmó que guardó el tiquete.
+  const [registrado, setRegistrado] = useState<{ numero: string; extractora: string } | null>(null);
   const [enviando, iniciar] = useTransition();
   const galeria = useRef<HTMLInputElement>(null);
   const camaraNativa = useRef<HTMLInputElement>(null);
@@ -180,9 +183,16 @@ export function SubirTiquete() {
             <div className="grid gap-2 sm:grid-cols-2">
               <button className="boton-primario py-4" disabled={enviando}
                 onClick={() => iniciar(async () => {
-                  const r = await enviarTiquete(lectura.token);
-                  if (!r.ok) return setError(r.error);
-                  terminar(`Tiquete N° ${r.numero} de ${r.extractora} enviado. Queda pendiente de aprobación.`);
+                  setError(null);
+                  // Si falla o se corta la señal, el tiquete pudo haber quedado guardado: que lo revise antes de repetir.
+                  const revisar = " Antes de intentarlo de nuevo, revise en «Mis tiquetes → Pendientes» si ya quedó registrado.";
+                  try {
+                    const r = await enviarTiquete(lectura.token);
+                    if (!r.ok) return setError(`${r.error}.${revisar}`);
+                    setRegistrado({ numero: r.numero, extractora: r.extractora });
+                  } catch {
+                    setError(`No se pudo confirmar el envío (revise la conexión).${revisar}`);
+                  }
                 })}>
                 <CheckCircle2 className="size-5" /> {enviando ? "Enviando…" : "Coincide, enviar"}
               </button>
@@ -245,6 +255,27 @@ export function SubirTiquete() {
               </button>
             </div>
           </>
+        )}
+
+        {registrado && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-profundo/60 p-4" role="alertdialog" aria-modal="true" aria-labelledby="registrado-titulo">
+            <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 text-center shadow-2xl">
+              <CheckCircle2 className="mx-auto size-16 text-ok" aria-hidden />
+              <div className="space-y-1">
+                <h2 id="registrado-titulo" className="text-xl font-black text-profundo">Tiquete registrado correctamente</h2>
+                <p className="text-lg font-bold text-texto">{registrado.extractora} · N° {registrado.numero}</p>
+              </div>
+              <p className="text-sm text-suave">Queda pendiente de aprobación. Puede verlo en <strong>Mis tiquetes → Pendientes</strong>.</p>
+              <div className="grid gap-2">
+                <button className="boton-primario w-full py-3" autoFocus onClick={() => {
+                  const r = registrado;
+                  setRegistrado(null);
+                  terminar(`Tiquete N° ${r.numero} de ${r.extractora} enviado. Queda pendiente de aprobación.`);
+                }}>Entendido</button>
+                <Link href="/mis-tiquetes?estado=pendiente" className="boton-secundario w-full">Ver mis tiquetes</Link>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );
