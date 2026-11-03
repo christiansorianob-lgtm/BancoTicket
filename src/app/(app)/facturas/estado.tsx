@@ -3,7 +3,8 @@ import { Chip } from "@/components/ui";
 import { NOMBRE_ESTADO, type EstadoCobro } from "@/lib/facturas/tipos";
 
 const TONO: Record<EstadoCobro, "ok" | "alerta" | "error" | "neutro" | "primario"> = {
-  PENDIENTE_PAGO: "primario", ABONADA_PARCIAL: "alerta", PAGADA: "ok", ANULADA: "error",
+  // Gris y no azul: las tarjetas de factura tienen fondo azul claro.
+  PENDIENTE_PAGO: "neutro", ABONADA_PARCIAL: "alerta", PAGADA: "ok", ANULADA: "error",
 };
 
 /**

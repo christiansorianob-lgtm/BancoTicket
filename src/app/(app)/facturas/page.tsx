@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, FileSpreadsheet, Search, Upload } from "lucide-react";
+import { Building2, Eye, FileSpreadsheet, FileText, HandCoins, Search, Upload } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
@@ -78,7 +78,10 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
 
       {emisores.length > 0 && (
         <section className="space-y-2">
-          <h2 className="flex items-center gap-2 font-bold text-profundo"><Building2 className="size-5" aria-hidden /> Por emisor <span className="text-sm font-normal text-suave">· toque uno para ver solo sus facturas</span></h2>
+          <div>
+            <h2 className="flex items-center gap-2 font-bold text-profundo"><Building2 className="size-5" aria-hidden /> Por emisor</h2>
+            <p className="text-sm text-suave">Toque un emisor para ver solo sus facturas.</p>
+          </div>
           <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {emisores.map((e) => {
               const elegido = f.emisor === e.clave;
@@ -114,10 +117,12 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
       )}
 
       {filas.length === 0 ? <Vacio>No hay facturas con estos filtros.</Vacio> : (
-        <ul className="grid gap-3 md:grid-cols-2">
-          {filas.map((x) => (
-            <li key={x.id}>
-              <Link href={`/facturas/${x.id}`} className={`tarjeta block space-y-2 transition hover:shadow-md ${x.estado_cobro === "ANULADA" ? "opacity-60" : ""}`}>
+        <section className="space-y-2">
+          <h2 className="flex items-center gap-2 font-bold text-profundo"><FileText className="size-5" aria-hidden /> Facturas ({filas.length})</h2>
+          <ul className="grid gap-3 md:grid-cols-2">
+            {/* Fondo azul claro: se distinguen de las tarjetas de totales y de emisores. */}
+            {filas.map((x) => (
+              <li key={x.id} className={`space-y-3 rounded-2xl border-2 border-primario/25 bg-primario-suave p-4 shadow-sm sm:p-5 ${x.estado_cobro === "ANULADA" ? "opacity-60" : ""}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-bold text-profundo">{x.numero_factura} · {x.extractora_razon_social ?? "—"}</p>
@@ -125,15 +130,21 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
                   </div>
                   <ChipsFactura f={x} />
                 </div>
-                <dl className="grid grid-cols-3 gap-2 text-sm tabular-nums">
-                  <div><dt className="text-suave">Facturado</dt><dd className="font-semibold">{formatoPesos(x.total_cobrar)}</dd></div>
-                  <div><dt className="text-suave">Pagado</dt><dd className="font-semibold text-ok">{formatoPesos(x.total_aplicado)}</dd></div>
-                  <div><dt className="text-suave">Saldo</dt><dd className={`font-black ${x.saldo_pendiente > 1 ? "text-alerta" : "text-ok"}`}>{formatoPesos(x.saldo_pendiente)}</dd></div>
+                <dl className="space-y-1 rounded-xl bg-white/80 p-3 text-sm tabular-nums">
+                  <div className="flex justify-between gap-2"><dt className="text-suave">Facturado</dt><dd className="font-semibold">{formatoPesos(x.total_cobrar)}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-suave">Pagado</dt><dd className="font-semibold text-ok">{formatoPesos(x.total_aplicado)}</dd></div>
+                  <div className="flex justify-between gap-2 border-t border-borde pt-1"><dt className="font-semibold text-profundo">Saldo</dt><dd className={`font-black ${x.saldo_pendiente > 1 ? "text-alerta" : "text-ok"}`}>{formatoPesos(x.saldo_pendiente)}</dd></div>
                 </dl>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                <div className={`grid gap-2 ${x.estado_cobro === "ANULADA" || x.saldo_pendiente <= 1 ? "" : "grid-cols-2"}`}>
+                  <Link href={`/facturas/${x.id}`} className="boton-secundario min-h-10 text-sm"><Eye className="size-4" aria-hidden /> Ver detalle</Link>
+                  {x.estado_cobro !== "ANULADA" && x.saldo_pendiente > 1 && (
+                    <Link href={`/facturas/${x.id}?abonar=1#abonos`} className="boton-primario min-h-10 text-sm"><HandCoins className="size-4" aria-hidden /> Registrar abono</Link>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {aprobadas.length > 0 && (

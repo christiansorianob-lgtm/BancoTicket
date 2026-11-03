@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, HandCoins } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha, fechaHora } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
@@ -13,8 +13,10 @@ import { leerConfiguracion } from "@/lib/config";
 import { ConMotivo, CorregirFactura, FormAbono } from "./formularios";
 
 /** Detalle de una factura: datos, cobro, abonos (con retenciones) y anulaciones con motivo. */
-export default async function DetalleFactura({ params }: PageProps<"/facturas/[id]">) {
+export default async function DetalleFactura({ params, searchParams }: PageProps<"/facturas/[id]">) {
   const { id } = await params;
+  // ?abonar=1 (botón «Registrar abono» de la lista o de arriba): llega con el formulario abierto.
+  const abrirAbono = (await searchParams).abonar === "1";
   const supabase = await supabaseServidor();
   const [{ data: f }, { data: pagos }] = await Promise.all([
     supabase.from("fact_facturas_estado").select("*").eq("id", id).maybeSingle(),
@@ -41,7 +43,12 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="titulo">Factura {f.numero_factura}</h1>
-        <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
+        <div className="flex flex-wrap gap-2">
+          {!f.anulada && n(f.saldo_pendiente) > 1 && (
+            <Link href={`/facturas/${id}?abonar=1#abonos`} className="boton-primario min-h-9 text-sm"><HandCoins className="size-4" aria-hidden /> Registrar abono</Link>
+          )}
+          <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
+        </div>
       </div>
       <ChipsFactura f={{ ...f, estado_cobro: f.estado_cobro as EstadoCobro, dias_mora: n(f.dias_mora) }} />
       {f.anulada && <Mensaje tono="error">Factura ANULADA el {fechaHora(f.anulada_at)}: no suma en los totales. Motivo: {f.anulada_motivo}</Mensaje>}
@@ -90,7 +97,7 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
         )}
       </section>
 
-      <section className="tarjeta space-y-3">
+      <section id="abonos" className="tarjeta scroll-mt-4 space-y-3">
         <h2 className="font-bold text-profundo">Abonos ({vigentes.length} vigente{vigentes.length === 1 ? "" : "s"})</h2>
         {abonos.length === 0 && <Vacio>Aún no hay abonos.</Vacio>}
         <ul className="space-y-3">
@@ -118,8 +125,8 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
           ))}
         </ul>
         {!f.anulada && (
-          <details>
-            <summary className="cursor-pointer font-semibold text-primario">Registrar abono</summary>
+          <details open={abrirAbono}>
+            <summary className="boton-primario w-full cursor-pointer list-none sm:w-auto [&::-webkit-details-marker]:hidden"><HandCoins className="size-5" aria-hidden /> Registrar abono</summary>
             <div className="mt-3"><FormAbono accion={registrarAbono.bind(null, id)} saldo={n(f.saldo_pendiente)} /></div>
           </details>
         )}
