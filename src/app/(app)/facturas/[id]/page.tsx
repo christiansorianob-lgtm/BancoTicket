@@ -31,7 +31,7 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
     extractora_razon_social: f.extractora_razon_social, extractora_nit: f.extractora_nit, fecha_emision: f.fecha_emision,
     fecha_vencimiento: f.fecha_vencimiento, periodo_desde: f.periodo_desde, periodo_hasta: f.periodo_hasta,
     kilos: f.kilos == null ? null : n(f.kilos), precio_kilo: f.precio_kilo == null ? null : n(f.precio_kilo), subtotal: n(f.subtotal), iva: n(f.iva),
-    total_retenciones_esperadas: n(f.total_retenciones_esperadas), total_a_pagar: n(f.total_a_pagar),
+    retefuente: n(f.retefuente), reteiva: n(f.reteiva), reteica: n(f.reteica), total_a_pagar: n(f.total_a_pagar),
   };
   const enRevision = f.estado_lectura === "PENDIENTE_REVISION";
 
@@ -45,7 +45,13 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
       {f.anulada && <Mensaje tono="error">Factura ANULADA el {fechaHora(f.anulada_at)}. Motivo: {f.anulada_motivo}</Mensaje>}
       {enRevision && <Mensaje tono="error">Pendiente de revisión: {f.motivo_revision ?? "verifique los datos"}. Corrija abajo y guarde.</Mensaje>}
       {f.alerta_sobrepago && <Mensaje tono="alerta">Sobrepago: lo aplicado ({formatoPesos(f.total_aplicado)}) supera el subtotal + IVA ({formatoPesos(f.total_cobrar)}).</Mensaje>}
-      {f.alerta_retenciones && <Mensaje tono="alerta">Retenciones practicadas ({formatoPesos(f.retenciones_practicadas)}) distintas de las esperadas ({formatoPesos(f.total_retenciones_esperadas)}).</Mensaje>}
+      {f.alerta_retenciones && (
+        <Mensaje tono="alerta">
+          Retenciones que no coinciden: {([["ReteFuente", f.retefuente_practicada, f.retefuente], ["ReteIVA", f.reteiva_practicada, f.reteiva], ["ReteICA", f.reteica_practicada, f.reteica]] as const)
+            .filter(([, p, e]) => Math.abs(n(p) - n(e)) > 1)
+            .map(([nombre, p, e]) => `${nombre} practicada ${formatoPesos(p)}, esperada ${formatoPesos(e)}`).join(" · ")}.
+        </Mensaje>
+      )}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="tarjeta"><p className="text-sm text-suave">Subtotal + IVA</p><p className="text-lg font-black text-profundo sm:text-2xl">{formatoPesos(f.total_cobrar)}</p></div>
@@ -65,8 +71,11 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
           <Dato etiqueta="Emisión / vencimiento">{fecha(f.fecha_emision)} · {fecha(f.fecha_vencimiento)}</Dato>
           <Dato etiqueta="Periodo">{fecha(f.periodo_desde)} al {fecha(f.periodo_hasta)}</Dato>
           <Dato etiqueta="Kilos × precio">{n(f.kilos).toLocaleString("es-CO")} kg × {formatoPesos(f.precio_kilo)}</Dato>
-          <Dato etiqueta="Subtotal · IVA">{formatoPesos(f.subtotal)} · {formatoPesos(f.iva)}</Dato>
-          <Dato etiqueta="Retenciones esperadas">{formatoPesos(f.total_retenciones_esperadas)}<span className="block text-xs text-suave">practicadas {formatoPesos(f.retenciones_practicadas)}</span></Dato>
+          <Dato etiqueta="Subtotal (total bruto)">{formatoPesos(f.subtotal)}</Dato>
+          <Dato etiqueta="IVA">{formatoPesos(f.iva)}</Dato>
+          <Dato etiqueta="ReteFuente">{formatoPesos(f.retefuente)}<span className="block text-xs text-suave">practicada {formatoPesos(f.retefuente_practicada)}</span></Dato>
+          <Dato etiqueta="ReteIVA">{formatoPesos(f.reteiva)}<span className="block text-xs text-suave">practicada {formatoPesos(f.reteiva_practicada)}</span></Dato>
+          <Dato etiqueta="ReteICA">{formatoPesos(f.reteica)}<span className="block text-xs text-suave">practicada {formatoPesos(f.reteica_practicada)}</span></Dato>
           <Dato etiqueta="Estado de la lectura">{enRevision ? "Pendiente de revisión" : "Confirmada"}</Dato>
         </dl>
         <p className="break-all text-xs text-suave">CUFE: {f.cufe ?? "—"}</p>

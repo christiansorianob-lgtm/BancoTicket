@@ -2,7 +2,7 @@
  * Validaciones de una factura antes de guardarla (sin dependencias: navegador, servidor y pruebas).
  * Si alguna falla, la factura se guarda como PENDIENTE_REVISION y se muestra resaltada.
  */
-import type { FacturaLeida } from "./tipos";
+import { totalRetenciones, type FacturaLeida } from "./tipos";
 
 export type Validacion = { nombre: string; ok: boolean; mensaje: string };
 
@@ -28,9 +28,9 @@ export function validarFactura(d: FacturaLeida): Validacion[] {
   v.push({ nombre: "Fechas", ok: fechas.length === 0, mensaje: fechas.length ? `Fecha no válida: ${fechas.map(([n]) => n).join(", ")}` : "Fechas válidas" });
 
   if (d.subtotal != null && d.iva != null && d.total_a_pagar != null) {
-    const calculado = d.subtotal + d.iva - (d.total_retenciones_esperadas ?? 0);
+    const calculado = d.subtotal + d.iva - totalRetenciones(d);
     const ok = Math.abs(calculado - d.total_a_pagar) <= 1;
-    v.push({ nombre: "Subtotal + IVA − retenciones = total a pagar", ok,
+    v.push({ nombre: "Subtotal + IVA − ReteFuente − ReteIVA − ReteICA = total a pagar", ok,
       mensaje: ok ? "Cuadra" : `Da ${pesos(calculado)} y la factura dice ${pesos(d.total_a_pagar)}` });
   }
   if (d.kilos != null && d.precio_kilo != null && d.subtotal != null) {

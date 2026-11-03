@@ -102,9 +102,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0024.** Nunca editar una aplicada; crear la siguiente (`0025_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0025.** Nunca editar una aplicada; crear la siguiente (`0026_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0025_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0026_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
 
@@ -121,6 +121,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0025_nomb
 | 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
 | 0017–0018 | rol `consultor` (varios) y `es_consultor()`: solo lectura de perfiles, anticipos, tiquetes y fotos; políticas restrictivas que le impiden escribir |
 | 0020 | **módulo de facturas** independiente: `fact_facturas`, `fact_pagos`, `fact_auditoria`, vistas `fact_facturas_estado` y `fact_totales`, funciones `fact_*`, bucket privado `facturas` |
+| 0025 | facturas: `retefuente`, `reteiva`, `reteica` por separado (el total de retenciones es la suma); alerta por cada impuesto |
 | 0024 | `configuracion.dias_aviso_respaldo = 15` (aviso de respaldo; la app escribe `ultimo_respaldo`) |
 | 0023 | `eliminar_anticipo`: solo anticipos en disputa, con motivo (queda en el historial) |
 | 0022 | `corregir_anticipo`: un anticipo en disputa se corrige con motivo y vuelve a pendiente |

@@ -15,7 +15,7 @@ Devuelve solo los campos pedidos, como están en el documento:
 - Números como número, sin separadores de miles. Estas facturas suelen usar coma para miles y punto para decimales (ej. 142,060,536.75); si hay duda, interpreta según el formato del documento.
 - kilos siempre en kilos, aunque la unidad de medida diga "unidad". precio_kilo: el valor unitario si aparece.
 - total_a_pagar es el valor neto final ("Total a Pagar"), NO el "Vr. Total" de la línea del ítem.
-- total_retenciones_esperadas = retefuente + ReteIVA (+ ReteICA si aparece); 0 si no hay retenciones.
+- Retenciones, cada una por separado tal como aparecen en el bloque de totales: retefuente (Retefuente), reteiva (ReteIVA), reteica (ReteICA); 0 la que no aparezca.
 - La imagen puede venir girada, con sombra o baja resolución. Si un campo no está o no se lee con claridad, devuelve null: no inventes valores.`;
 
 export type ArchivoFactura = { bytes: Buffer; tipo: "pdf" | "jpeg" | "png" | "webp" };

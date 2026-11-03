@@ -7,7 +7,7 @@ import type { FacturaLeida } from "./tipos";
 
 export const CAMPOS_TEXTO = ["numero_factura", "cufe", "emisor_razon_social", "emisor_nit", "extractora_razon_social", "extractora_nit"] as const;
 export const CAMPOS_FECHA = ["fecha_emision", "fecha_vencimiento", "periodo_desde", "periodo_hasta"] as const;
-export const CAMPOS_NUMERO = ["kilos", "precio_kilo", "subtotal", "iva", "total_retenciones_esperadas", "total_a_pagar"] as const;
+export const CAMPOS_NUMERO = ["kilos", "precio_kilo", "subtotal", "iva", "retefuente", "reteiva", "reteica", "total_a_pagar"] as const;
 
 /** Número para mostrar en un campo editable: 142060536.75 → "142.060.536,75". */
 export function numeroEnCampo(n: number | null | undefined): string {
@@ -22,6 +22,6 @@ export function facturaDesde(leer: (clave: string) => string | null | undefined)
   for (const k of CAMPOS_FECHA) datos[k] = t(k);
   for (const k of CAMPOS_NUMERO) datos[k] = t(k) == null ? null : montoDesdeTexto(t(k)!);
   // Retenciones: 0 si no aplican, nunca null (decisión del usuario).
-  if (datos.total_retenciones_esperadas == null) datos.total_retenciones_esperadas = 0;
+  for (const k of ["retefuente", "reteiva", "reteica"]) if (datos[k] == null) datos[k] = 0;
   return datos as FacturaLeida;
 }

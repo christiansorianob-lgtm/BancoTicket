@@ -26,24 +26,27 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
   });
   hoja.columns = [
     { width: 14 }, { width: 30 }, { width: 30 }, { width: 13 }, { width: 13 }, { width: 13 },
-    { width: 19 }, { width: 19 }, { width: 19 }, { width: 18 }, { width: 10 }, { width: 26 },
+    { width: 19 }, { width: 17 }, { width: 17 }, { width: 17 }, { width: 17 }, { width: 19 },
+    { width: 19 }, { width: 19 }, { width: 18 }, { width: 10 }, { width: 26 },
   ];
-  hoja.mergeCells("A1:L1");
+  hoja.mergeCells("A1:Q1");
   const t = hoja.getCell("A1");
   t.value = "BancoTicket · Facturas de venta";
   t.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } };
   t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
   t.alignment = { vertical: "middle", indent: 1 };
   hoja.getRow(1).height = 34;
-  hoja.mergeCells("A2:L2");
+  hoja.mergeCells("A2:Q2");
   hoja.getCell("A2").value = filtros;
   hoja.getCell("A2").font = { color: { argb: GRIS } };
-  hoja.mergeCells("A3:L3");
+  hoja.mergeCells("A3:Q3");
   hoja.getCell("A3").value = `Generado el ${new Intl.DateTimeFormat("es-CO", { timeZone: ZONA, dateStyle: "long", timeStyle: "short" }).format(new Date())} por ${generadoPor}`;
   hoja.getCell("A3").font = { size: 10, italic: true, color: { argb: GRIS } };
 
   const enc = hoja.getRow(5);
-  enc.values = ["Factura", "Extractora", "Emisor", "Emisión", "Vencimiento", "Kilos", "Subtotal + IVA", "Aplicado", "Saldo", "Estado", "Días mora", "Alertas"];
+  // Cada impuesto en su propia columna (decisión del usuario), como el bloque de totales de la factura.
+  enc.values = ["Factura", "Extractora", "Emisor", "Emisión", "Vencimiento", "Kilos", "Subtotal", "IVA", "ReteFuente", "ReteIVA", "ReteICA",
+    "Total a pagar", "Aplicado", "Saldo", "Estado", "Días mora", "Alertas"];
   enc.height = 24;
   enc.eachCell((c) => {
     c.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -57,14 +60,14 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
     const anulada = f.estado_cobro === "ANULADA";
     r.values = [
       f.numero_factura, f.extractora_razon_social ?? "—", f.emisor_razon_social ?? "—", dia(f.fecha_emision), dia(f.fecha_vencimiento), f.kilos,
-      anulada ? 0 : f.total_cobrar, anulada ? 0 : f.total_aplicado, anulada ? 0 : f.saldo_pendiente,
+      ...(anulada ? [0, 0, 0, 0, 0, 0, 0, 0] : [f.subtotal, f.iva, f.retefuente, f.reteiva, f.reteica, f.total_a_pagar, f.total_aplicado, f.saldo_pendiente]),
       NOMBRE_ESTADO[f.estado_cobro] + (f.estado_lectura === "PENDIENTE_REVISION" ? " (en revisión)" : ""), f.vencida ? f.dias_mora : null,
       [f.vencida && "Vencida", f.alerta_sobrepago && "Sobrepago", f.alerta_retenciones && "Retenciones"].filter(Boolean).join(", ") || null,
     ];
     r.getCell(4).numFmt = "dd/mm/yyyy";
     r.getCell(5).numFmt = "dd/mm/yyyy";
     r.getCell(6).numFmt = "#,##0";
-    for (const c of [7, 8, 9]) r.getCell(c).numFmt = PESOS;
+    for (let c = 7; c <= 14; c++) r.getCell(c).numFmt = PESOS;
     r.eachCell({ includeEmpty: true }, (c) => {
       c.border = { bottom: BORDE, left: BORDE, right: BORDE };
       if (i % 2 === 1) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL_SUAVE } };
@@ -79,16 +82,16 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
   const suma = (col: string, valor: number) => (hay ? { formula: `SUM(${col}${primera}:${col}${ultima})`, result: valor } : 0);
   total.values = [`TOTAL (${vig.length} factura${vig.length === 1 ? "" : "s"} vigentes)`, null, null, null, null,
     suma("F", vig.reduce((s, f) => s + (f.kilos ?? 0), 0)),
-    suma("G", vig.reduce((s, f) => s + f.total_cobrar, 0)), suma("H", vig.reduce((s, f) => s + f.total_aplicado, 0)),
-    suma("I", vig.reduce((s, f) => s + f.saldo_pendiente, 0))];
+    ...(["subtotal", "iva", "retefuente", "reteiva", "reteica", "total_a_pagar", "total_aplicado", "saldo_pendiente"] as const)
+      .map((k, j) => suma(String.fromCharCode(71 + j), vig.reduce((s, f) => s + f[k], 0)))];
   hoja.mergeCells(`A${ultima + 1}:E${ultima + 1}`);
   total.getCell(6).numFmt = "#,##0";
-  for (const c of [7, 8, 9]) total.getCell(c).numFmt = PESOS;
+  for (let c = 7; c <= 14; c++) total.getCell(c).numFmt = PESOS;
   total.eachCell({ includeEmpty: true }, (c) => {
     c.font = { bold: true, size: 12, color: { argb: AZUL } };
     c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBE4F7" } };
     c.border = { top: { style: "double", color: { argb: AZUL } } };
   });
-  if (hay) hoja.autoFilter = { from: "A5", to: `L${ultima}` };
+  if (hay) hoja.autoFilter = { from: "A5", to: `Q${ultima}` };
   return Buffer.from(await libro.xlsx.writeBuffer());
 }

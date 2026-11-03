@@ -13,7 +13,8 @@ const ETIQUETAS: [keyof FacturaLeida, string, "texto" | "fecha" | "numero"][] = 
   ["periodo_desde", "Periodo desde", "fecha"], ["periodo_hasta", "Periodo hasta", "fecha"],
   ["kilos", "Kilos", "numero"], ["precio_kilo", "Precio por kilo", "numero"],
   ["subtotal", "Subtotal", "numero"], ["iva", "IVA", "numero"],
-  ["total_retenciones_esperadas", "Retenciones esperadas", "numero"], ["total_a_pagar", "Total a pagar", "numero"],
+  ["retefuente", "ReteFuente", "numero"], ["reteiva", "ReteIVA", "numero"],
+  ["reteica", "ReteICA", "numero"], ["total_a_pagar", "Total a pagar", "numero"],
 ];
 
 /**
@@ -44,6 +45,7 @@ export function CamposFactura({ inicial }: { inicial: FacturaLeida }) {
       <div className="grid gap-3 sm:grid-cols-2">
         {ETIQUETAS.map(([k, etiqueta, tipo]) => {
           const valor = inicial[k];
+          // Las retenciones en 0 son normales (no aplican): no se resaltan como «no se leyó».
           const vacio = valor == null || valor === "";
           return (
             <label key={k} className={k === "cufe" ? "sm:col-span-2" : ""}>

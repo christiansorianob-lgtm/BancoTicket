@@ -16,10 +16,15 @@ export const FacturaLeida = z.object({
   precio_kilo: z.number().nullable(),
   subtotal: z.number().nullable(),
   iva: z.number().nullable(),
-  total_retenciones_esperadas: z.number().nullable(),
+  retefuente: z.number().nullable().describe("Valor de la línea Retefuente del bloque de totales; 0 si no aparece"),
+  reteiva: z.number().nullable().describe("Valor de la línea ReteIVA; 0 si no aparece"),
+  reteica: z.number().nullable().describe("Valor de la línea ReteICA; 0 si no aparece"),
   total_a_pagar: z.number().nullable().describe("Total a Pagar (neto final), no el Vr. Total del ítem"),
 });
 export type FacturaLeida = z.infer<typeof FacturaLeida>;
+
+/** Total de retenciones esperadas: ReteFuente + ReteIVA + ReteICA (cada una va en su propio campo). */
+export const totalRetenciones = (d: Pick<FacturaLeida, "retefuente" | "reteiva" | "reteica">) => (d.retefuente ?? 0) + (d.reteiva ?? 0) + (d.reteica ?? 0);
 
 export const ESTADOS_COBRO = ["PENDIENTE_PAGO", "ABONADA_PARCIAL", "PAGADA", "ANULADA"] as const;
 export type EstadoCobro = (typeof ESTADOS_COBRO)[number];

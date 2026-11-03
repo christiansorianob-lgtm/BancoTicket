@@ -26,10 +26,10 @@ igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Deb
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
 
 // Facturas de venta: validaciones con las 3 facturas reales y tipo real del archivo.
-const fac = (numero: string, kilos: number, precio: number | null, subtotal: number, iva: number, ret: number, total: number) => ({
+const fac = (numero: string, kilos: number, precio: number | null, subtotal: number, iva: number, ret: number, total: number, reteiva = 0) => ({
   numero_factura: numero, cufe: "x", emisor_razon_social: "E", emisor_nit: "1", extractora_razon_social: "X", extractora_nit: "2",
   fecha_emision: "2026-10-19", fecha_vencimiento: "2026-10-20", periodo_desde: "2026-10-06", periodo_hasta: "2026-10-19",
-  kilos, precio_kilo: precio, subtotal, iva, total_retenciones_esperadas: ret, total_a_pagar: total });
+  kilos, precio_kilo: precio, subtotal, iva, retefuente: ret, reteiva, reteica: 0, total_a_pagar: total });
 const todasOk = (d: Parameters<typeof validarFactura>[0]) => validarFactura(completarPrecio(d)).every((v) => v.ok);
 igual("factura FEIA 669 cuadra", todasOk(fac("FEIA 669", 186670, 730, 136269100, 6813455, 1022018.25, 142060536.75)), true);
 igual("factura GLFE 8 cuadra (precio calculado)", todasOk(fac("GLFE 8", 11690, null, 8241450, 412072.5, 185432.63, 8468089.87)), true);
@@ -38,7 +38,9 @@ igual("precio por kilo calculado", completarPrecio(fac("GLFE 8", 11690, null, 82
 igual("total que no cuadra: falla", validarFactura(fac("FEIA 669", 186670, 730, 136269100, 6813455, 1022018.25, 136269100)).find((v) => v.nombre.startsWith("Subtotal"))?.ok, false);
 igual("falta el CUFE: falla", validarFactura({ ...fac("A", 1, 1, 1, 0, 0, 1), cufe: null }).find((v) => v.nombre === "Campos completos")?.ok, false);
 igual("formulario: número colombiano", facturaDesde((k) => ({ total_a_pagar: "142.060.536,75", kilos: "186.670" } as Record<string, string>)[k]).total_a_pagar, 142060536.75);
-igual("formulario: retenciones vacías = 0", facturaDesde(() => "").total_retenciones_esperadas, 0);
+igual("formulario: retenciones vacías = 0", [facturaDesde(() => "").retefuente, facturaDesde(() => "").reteiva, facturaDesde(() => "").reteica], [0, 0, 0]);
+igual("factura FEPA 12 cuadra (ReteFuente y ReteIVA separadas)", todasOk(fac("FEPA 12", 692540, 678, 469542120, 23477106, 7043131.80, 482454528.30, 3521565.90)), true);
+igual("FEPA 12: si falta la ReteIVA no cuadra", todasOk(fac("FEPA 12", 692540, 678, 469542120, 23477106, 7043131.80, 482454528.30, 0)), false);
 igual("formulario: ida y vuelta", montoDesdeTexto(numeroEnCampo(8468089.87)), 8468089.87);
 igual("tipo real: pdf / jpeg / png / webp / otro", [
   tipoReal(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])), tipoReal(new Uint8Array([0xff, 0xd8, 0xff, 0xe0])),
