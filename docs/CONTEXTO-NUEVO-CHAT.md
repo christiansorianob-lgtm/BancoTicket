@@ -194,4 +194,9 @@ Local: `.env.local` tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con 
 
 ## 13. Pendientes
 
-Ninguno. Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
+Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
+
+**Ideas para armar un plan (Facturas, 2026-11-03; aún sin plan aprobado):**
+1. **Comprobación de cálculos:** la app recalcula la factura (subtotal, IVA, cada retención, total a pagar, kilos × precio) y muestra en la misma factura, de forma didáctica y profesional, cada cuenta que hizo y si coincide o no con lo facturado. Hacerlo con código, sin IA (no sube el consumo).
+2. **Dos estados: Aprobada y Anulada.** La administradora lee la factura y la aprueba para que quede guardada; si el contador indica anularla, se anula en cualquier momento y deja de sumar.
+3. **Panel por emisor + buscador:** cuánto suman las facturas de cada emisor (visual) y filtros de búsqueda como los de tiquetes. Todo dentro de la pestaña **Facturas** (sin agregar más botones al menú).
