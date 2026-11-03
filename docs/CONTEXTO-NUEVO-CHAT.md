@@ -192,13 +192,6 @@ Local: `.env.local` tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con 
 - El usuario prueba en el celular (a veces por Remote Control) y manda capturas. Español sencillo, sin discursos; antes de cambios grandes mostrar el plan y esperar «procede».
 - Registrar cada decisión en `docs/NOTAS.md` (fila nueva arriba) y mantener este archivo al día.
 
-## 13. Pendientes y cosas a vigilar
+## 13. Pendientes
 
-- **Hacer el primer respaldo completo** (Backups) y guardarlo en un lugar privado; luego cada 15 días.
-- **Subir la FEPA 12** en Facturas y verificar que la IA lea cada impuesto por separado.
-- **Anticipo confirmado con valor errado:** hoy se corrige con un anticipo de ajuste por la diferencia (Opción B). Propuesta pendiente de decisión (Opción A): permitir «corregir y volver a enviar» también en confirmados (deja de contar hasta que el comprador reconfirme).
-- Opcionales propuestos y no aprobados: evitar anticipos/abonos duplicados al reintentar; avisos que fallan en silencio; pantalla propia de «base no disponible»; limpiar avisos leídos viejos; optimizar políticas RLS.
-- **Supabase:** vigilar memoria y reinicios al hacer cada respaldo; no dejar abiertas las páginas de Observability.
-- **Lukeoil:** enseñar un tiquete nítido con NIT. Renombrar Agrovaspalma → NodoLa4 si el usuario quiere.
-- **Fotos huérfanas** (lecturas no enviadas) quedan hasta el cron de 6 meses.
-- Seguridad: confirmar «Allow new users to sign up» desactivado en Supabase; borrar la clave de Anthropic que salió en una captura; marcar `CRON_SECRET` como Sensitive.
+Ninguno. Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
