@@ -1,8 +1,8 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
-> **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y pega este archivo completo como primer mensaje, o escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-10-21. **Estado:** Fase 1 terminada y **en producción** (el 21-oct se dejó la base en blanco de tiquetes para empezar a operar). Fase 2 iniciada (Reportes + Excel + Backups).
-> La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba).
+> **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
+> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0025**.
+> La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
 
@@ -11,8 +11,9 @@
 App web en español, **móvil primero**, para controlar los **tiquetes de báscula de entrega de fruta de palma de aceite** y llevar la **cuenta de cada comprador como un banco**:
 - **Anticipos confirmados suman** al saldo del comprador. Pueden ser **negativos** (dinero que la administración le debe al comprador, ej. saldo inicial).
 - **Cada tiquete aprobado con precio descuenta**: **peso neto IMPRESO** (toneladas) × precio por tonelada.
-- **Saldo = anticipos confirmados − valor de tiquetes vigentes con precio.** No se guarda: se calcula (vista `saldos`).
+- **Saldo = anticipos confirmados − valor de tiquetes vigentes con precio.** No se guarda: se calcula (vista `saldos`). Los anticipos pendientes o en disputa **no cuentan**.
 - Palabras del estado de cuenta (`src/lib/saldo.ts`): administración **«Saldo a mi favor»** (saldo > 0) / **«Le debo»** (saldo < 0); comprador **«Debo»** / **«Me deben»**; 0 = «Cuenta al día».
+- **Módulo aparte de FACTURAS** (desde 2026-10-29): facturas de venta que las empresas de la administración emiten a las extractoras y los abonos que estas pagan (§8).
 
 Problema que resuelve: los tiquetes son físicos y se podían pagar dos veces. La app evita duplicados (**extractora + número**) y deja control de lo entregado, pagado y pendiente. Especificación original: `docs/especificacion.pdf` (varias decisiones posteriores la cambiaron; ver §9).
 
@@ -20,14 +21,14 @@ Problema que resuelve: los tiquetes son físicos y se podían pagar dos veces. L
 
 | Rol | Quién | Puede |
 |---|---|---|
-| **Administrador** (uno solo, la base lo impide de otro modo) | Ingrid (`ingrid`) | Todo: aprobar/rechazar, precios, anticipos, extractoras, reportes. **Recibe los avisos de los compradores** (campana). |
+| **Administrador** (uno solo) | Ingrid García (`ingrid`) | Todo: aprobar/rechazar, precios, anticipos, extractoras, reportes, facturas. **Recibe los avisos de los compradores** (campana). |
 | **Desarrollador** (uno solo) | Christian Soriano (`christian`, cel. 3182542939, christiansorianob@gmail.com) | Lo mismo que el admin + **Contraseñas** (`/admin/claves`) y **Backups** (`/admin/backups`). No recibe avisos de compradores. El rol no se asigna desde la app. |
-| **Compradores** (varios) | `prueba` (de prueba), `yudidj` (real) | Solo lo suyo: subir tiquetes, ver sus tiquetes, anticipos y extracto. |
-| **Consultor** (varios) | los crea la administradora | **Solo ve, no modifica nada** (lo garantiza la base, migración 0018): sección `/consulta` con saldos de todos, cuenta y extracto de cada comprador, Reportes (sin editar/eliminar; fotos y Excel sí) y anticipos con soportes. |
+| **Compradores** (varios) | Gabriel, Javier, Rocío, Yudid Jaime (`yudidj`) y `prueba` (de pruebas) | Solo lo suyo: subir tiquetes, ver sus tiquetes, anticipos y extracto. |
+| **Consultor** (varios; hay 1) | los crea la administradora en «Compradores» | **Solo ve, no modifica nada** (lo garantiza la base, migraciones 0017–0019): `/consulta` con saldos, cuenta y extracto de cada comprador, Reportes (sin editar/eliminar; fotos y Excel sí) y anticipos con soportes. **No ve al comprador `prueba`** (`configuracion.compradores_ocultos_consultor`). |
 
-- Ingreso con **usuario y contraseña** (Supabase Auth con correo interno `<usuario>@bancoticket.local`). El **correo real es opcional** (`perfiles.correo`).
-- **Contraseñas:** usuario nuevo o restablecido queda con **12345678**; puede seguir trabajando con ella (no se obliga a cambiarla). Cada uno la cambia con la **llave 🔑** del encabezado (`/clave`). «Olvidé mi contraseña» (`/ingresar/olvide`) → solicitud → el desarrollador la aprueba en «Contraseñas».
-- Encabezado de **todos los perfiles**: botón **↻ refrescar**, campana de avisos, llave y salir. El **menú resalta la sección abierta** (`EnlaceMenu`).
+- Ingreso con **usuario y contraseña** (Supabase Auth con correo interno `<usuario>@bancoticket.local`). El **correo real es opcional**.
+- **Contraseñas:** usuario nuevo o restablecido queda con **12345678** (no se obliga a cambiarla). Se cambia con la **llave 🔑** (`/clave`). «Olvidé mi contraseña» → solicitud → el desarrollador la aprueba en «Contraseñas».
+- Encabezado de **todos los perfiles**: **logo oficial** (`public/logo.webp`; favicon e íconos en `src/app/`), ↻ refrescar, campana, llave y salir. El menú resalta la sección abierta. `inicioDe(rol)` lleva a cada perfil a su inicio.
 
 ## 3. Dónde está todo
 
@@ -36,68 +37,55 @@ Problema que resuelve: los tiquetes son físicos y se podían pagar dos veces. L
 | Código local | `C:\PROYECTOS WEB\BANCOTICKET` (Windows, ruta con espacio: usar comillas) |
 | GitHub (privado) | https://github.com/christiansorianob-lgtm/BancoTicket — rama `main` |
 | Producción | https://bancoticket.vercel.app (Vercel, equipo `christian-alexanders-projects-b132b23e`, proyecto `bancoticket` id `prj_iejWvEPXl3XhpggwnXzNNz7SzEOC`, plan Hobby) |
-| Despliegue | Cada push a `main` despliega solo, **pero a veces llega con mucho retraso**. Por eso se viene desplegando a mano con el MCP de Vercel: `create_deployment` con `gitSource {type:"github", org:"christiansorianob-lgtm", repo:"BancoTicket", ref:"main"}`, `target:"production"`, slug del equipo; luego `vercel ls bancoticket` hasta «Ready». **No** usar `vercel --prod` local (subiría `.env.local` y `tiquetes-ejemplo/`). |
-| Base de datos | Supabase creado desde Vercel Storage (plan gratis, Washington). |
-| IA | Anthropic API (`ANTHROPIC_API_KEY` solo en Vercel, tipo Secret). Saldo prepagado en la consola (≈ US$ 9,56 el 21-oct). |
-| Registros del servidor | Vercel runtime logs (Hobby guarda **1 hora**). Cada lectura escribe `console.info("lectura", {...})` con extractora, número, proveedor, pesos, `dudosos` y `observaciones` de la IA (sin conductor ni cédulas): sirve para diagnosticar por qué la IA marcó algo. Se consulta con el MCP de Vercel `get_runtime_logs` (query `lectura`, `since: "30m"`). |
+| Despliegue | **Cada push a `main` despliega solo y hoy llega en ~1 minuto.** Comprobar con `npx vercel ls bancoticket --scope christian-alexanders-projects-b132b23e` hasta «Ready». Despliegue manual de respaldo: MCP de Vercel `create_deployment` con `gitSource {type:"github", org:"christiansorianob-lgtm", repo:"BancoTicket", ref:"main"}`, `target:"production"` (el modo automático a veces lo bloquea si el usuario no lo pidió explícitamente). **No** usar `vercel --prod` local (subiría `.env.local` y `tiquetes-ejemplo/`). |
+| Base de datos | Supabase (desde Vercel Storage), **plan gratis, compute Nano (~0,5 GB RAM)**, us-east-1. 15 MB de 500 MB; Storage ~50 MB de 1 GB. **Sin backups automáticos** → respaldo manual (§8). |
+| IA | Anthropic API (`ANTHROPIC_API_KEY` solo en Vercel, Secret). Saldo prepagado en la consola. |
+| Registros del servidor | Vercel runtime logs (Hobby guarda **1 hora**). Cada lectura de tiquete escribe `console.info("lectura", {...})` (sin conductor ni cédulas). MCP de Vercel `get_runtime_logs`. |
 
 ## 4. Pila
 
-- **Next.js 16.4** (App Router, TypeScript, Turbopack). ⚠️ `middleware` se llama **`proxy`** (`src/proxy.ts`); leer `node_modules/next/dist/docs/` antes de usar APIs nuevas. `cacheComponents` desactivado a propósito. Tras crear una página nueva correr `npx next typegen` (tipos `PageProps<"/ruta">`).
-- **Tailwind 4** (`@tailwindcss/turbopack`); clases propias `tarjeta`, `boton-primario`, `boton-secundario`, `boton-peligro`, `boton-whatsapp`, `campo`, `etiqueta`, `titulo` como `@utility` en `src/app/globals.css`.
-- **Supabase** (Postgres + Auth + Storage) con `@supabase/ssr`; RLS en todas las tablas.
-- **Anthropic SDK** — **la IA se usa SOLO para leer tiquetes y, desde 2026-10-29, facturas de venta** (decisión del usuario; cada lectura cuenta en `consumo_ia` con su `modulo`):
-  - Lectura: `claude-haiku-5-5`, `messages.parse` + `zodOutputFormat`, effort `medium` (`src/lib/lectura/lector-ia.ts`).
-  - Aprender formato de extractora (solo admin, a pedido): `claude-opus-5-5`, `beta.messages.parse`, `betas: ["server-side-fallback-2026-07-01"]`, `fallbacks: "default"` (`src/lib/lectura/aprender.ts`).
-- **sharp** (servidor: revisión de nitidez de la foto antes de la IA) y **exceljs 4.4.0** (Excel de Reportes y Backups).
+- **Next.js 16.4** (App Router, TypeScript, Turbopack). ⚠️ `middleware` se llama **`proxy`** (`src/proxy.ts`; deja pasar sin sesión `/ingresar/*` y archivos .png/.webp/.ico/.jpg/.svg). Leer `node_modules/next/dist/docs/` antes de usar APIs nuevas. `cacheComponents` desactivado. Tras crear una página: `npx next typegen`.
+- **Tailwind 4**; clases propias `tarjeta`, `boton-primario`, `boton-secundario`, `boton-peligro`, `boton-whatsapp`, `campo`, `etiqueta`, `titulo` en `src/app/globals.css`.
+- **Supabase** (Postgres + Auth + Storage) con `@supabase/ssr`; RLS en todas las tablas. La app **no usa Realtime ni consultas automáticas**: solo consume recursos cuando alguien hace algo.
+- **Anthropic SDK** — **la IA se usa SOLO para leer tiquetes y facturas de venta** (decisión del usuario; cada lectura cuenta en `consumo_ia` con su `modulo`):
+  - Tiquetes: `claude-haiku-5-5`, `messages.parse` + `zodOutputFormat`, effort `medium` (`src/lib/lectura/lector-ia.ts`).
+  - Facturas: `FACTURAS_MODELO` (por defecto `claude-haiku-5-5`), PDF como documento o imagen enderezada a 2000 px (`src/lib/facturas/lector.ts`).
+  - Aprender formato de extractora (solo admin): `claude-opus-5-5` (`src/lib/lectura/aprender.ts`).
+- **sharp**, **exceljs 4.4.0** (Excel) y **fflate** (zip del respaldo).
 
 ## 5. Estructura de código (lo importante)
 
 ```
-src/proxy.ts                          sesión Supabase + redirección a /ingresar (/ingresar/* es público)
-src/lib/supabase/{servidor,admin,cliente}.ts   con sesión (RLS) / service_role / navegador
-src/lib/sesion.ts                     Perfil, Rol, NOMBRE_ROL, esGestor, exigirAdmin/Desarrollador/Comprador, correoInterno
-src/lib/fechas.ts                     America/Bogota, es-CO, interpretarFechaTiquete (formatos reales)
-src/lib/numeros.ts                    kilosDesdeTexto, montoDesdeTexto({negativo}), netoKg (neto impreso o bruto−tara), formatos
-src/lib/saldo.ts                      textoSaldo/lineaSaldo (palabras del estado de cuenta), describirAnticipo
-src/lib/claves.ts                     CLAVE_POR_DEFECTO = "12345678", revisarClaveNueva
-src/lib/mensajes.ts                   textoAvisoResta (aviso bruto − tara ≠ neto al corregir)
-src/lib/avisos.ts                     avisar() (campana), administradores(), desarrolladores(), contactoAdministracion()
-src/lib/whatsapp.ts + components/contacto.tsx   enlaces wa.me / whatsapp://; AvisoContacto = SOLO un botón (no abre solo)
-src/lib/camara/analisis.ts            cámara en vivo (luz, quieto, enfoque, texto impreso) + nitidez de la foto final
-src/lib/camara/nitidez.ts             varianza del laplaciano compartida navegador/servidor
-src/lib/camara/revisar-foto.ts        servidor: nitidez con sharp antes de la IA
-src/lib/imagen.ts                     reducirImagen (2000 px, WebP/JPEG ≤ 500 KB)
-src/lib/lectura/
-  tipos.ts                            esquema Zod LecturaCruda (campos_dudosos: numero, fecha, bruto, tara, neto, placa, proveedor, conductor, bascula)
-  lector-ia.ts                        instrucción de lectura (ver §7) + registro de consumo
-  controles.ts                        reglas de aceptación (críticos, dudosos, 6 meses) — MESES_MAXIMOS
-  firma.ts                            HMAC de la lectura (el comprador no puede alterar datos)
-  aprender.ts / aprender-guardar.ts   aprender extractora+formato (quita «Verificar que bruto − tara = neto» de las notas)
-  consumo.ts                          tokens y costo por llamada en consumo_ia
-src/lib/informes/consulta.ts          consulta de Reportes (filtros) compartida por la tabla y el Excel
-src/lib/informes/tiquetes-excel.ts    Excel ejecutivo de Reportes
-src/lib/informes/backup-excel.ts      backup: una hoja por tabla + Resumen
-src/lib/informes/movimientos.ts       reporte «Tiquetes y anticipos»: orden y saldo acumulado (puro, probado en npm run prueba)
-src/lib/informes/cuenta.ts · cuenta-excel.ts   su consulta y su Excel (ruta /api/exportar/cuenta)
-src/components/marco.tsx              encabezado, menús (admin arriba, comprador abajo), EnlaceMenu, BotonRefrescar
-src/components/{saldo,extracto,campos-tiquete,aviso-resta,form-accion,ui}.tsx
-src/app/api/leer-tiquete/route.ts     foto → nitidez (sharp) → IA → controles → duplicados → lectura firmada
-src/app/api/aprender-formato/route.ts admin: aprender extractora/formato
-src/app/api/exportar/tiquetes/route.ts  Excel de Reportes (admin/desarrollador)
-src/app/api/backup/route.ts           backup Excel (solo desarrollador)
-src/app/api/cron/limpiar-fotos        borra fotos > 6 meses (vercel.json, diario, CRON_SECRET)
-src/app/(app)/subir/                  «Subir tiquete»: elegir cámara o galería → foto → lectura → confirmar
+src/proxy.ts                          sesión + redirección a /ingresar
+src/lib/supabase/{servidor,admin}.ts  con sesión (RLS) / service_role
+src/lib/sesion.ts                     Rol (admin|desarrollador|comprador|consultor), esGestor, puedeConsultar, inicioDe,
+                                      exigirAdmin/Desarrollador/Comprador/Consulta
+src/lib/fechas.ts                     America/Bogota, es-CO, interpretarFechaTiquete, antiguedad (meses y días)
+src/lib/numeros.ts · monto.ts         kilos/montos colombianos; formatearMonto, textoMonto, montoEnLetras
+src/lib/saldo.ts · mensajes.ts · avisos.ts · whatsapp.ts · config.ts · fotos.ts (urlsFotos(rutas, segundos))
+src/lib/camara/*                      cámara guiada y nitidez (navegador y servidor)
+src/lib/lectura/                      tipos, lector-ia (instrucción §7), controles, firma, aprender, consumo, parecidos
+src/lib/informes/                     consulta + tiquetes-excel (Reportes), movimientos + cuenta + cuenta-excel
+                                      («Tiquetes y anticipos»), backup-excel (Excel de Backups)
+src/lib/facturas/                     tipos, lector, validar, formulario, consulta, excel
+src/lib/respaldo/                     comun (tablas, armarZip) y servidor (índice y páginas)
+src/components/                       marco (menús), form-accion (Sí/No con confirmarCon/textoSi), valor-tiquete
+                                      (peso × precio = valor), enviar-tiquete (EnviarFoto por WhatsApp), ui, saldo, extracto…
+src/app/api/leer-tiquete              foto → nitidez → IA → controles → duplicados → lectura firmada
+src/app/api/facturas/leer             factura → tipo real por bytes → IA → duplicado CUFE → bucket facturas
+src/app/api/exportar/{tiquetes,cuenta,facturas}   Excel (cuenta y tiquetes también para consultores)
+src/app/api/respaldo/{indice,tabla}   respaldo completo (solo desarrollador)
+src/app/api/backup · api/cron/limpiar-fotos (diario 3:00 a. m. Colombia; mantiene activo el proyecto de Supabase)
+src/app/(app)/subir/                  subir tiquete (cámara o galería) + ventana «Tiquete registrado correctamente»
 src/app/(app)/{mis-tiquetes,anticipos,extracto,avisos}   comprador
-src/app/(app)/anticipo/[codigo]/      confirmación por enlace viejo + ResponderAnticipo (reutilizado en «Anticipos»)
-src/app/(app)/admin/                  page (saldos + consumo IA), pendientes, tiquetes (precios), reportes, anticipos,
-                                      compradores, extractoras, formatos, historial, claves (dev), backups (dev)
-src/app/(app)/admin/acciones.ts       server actions del admin
-src/app/clave/ · src/app/ingresar/olvide/   cambiar contraseña · olvidé mi contraseña
-scripts/                              aplicar-sql, crear-admin, perfil-admin, prueba-lectura (npm run prueba),
-                                      vaciar-pruebas, vaciar-tiquetes, vaciar-datos
-docs/                                 NOTAS.md (bitácora), ARQUITECTURA.md, DESPLIEGUE.md, especificacion.pdf, este archivo
-tiquetes-ejemplo/                     fotos reales con datos personales + archivos de prueba (en .gitignore, NO se sube)
+src/app/(app)/admin/                  panel, pendientes, tiquetes, reportes (selector de tipo), anticipos (registrar,
+                                      soporte, corregir/eliminar en disputa), compradores, extractoras, formatos,
+                                      historial, claves (dev), backups (dev)
+src/app/(app)/facturas/               lista, subir, detalle (abonos, anulaciones, auditoría)
+src/app/(app)/consulta/               sección del Consultor (solo lectura)
+scripts/                              aplicar-sql, prueba-lectura (npm run prueba), restaurar-respaldo, vaciar-*
+docs/                                 NOTAS.md, RESPALDO.md, ARQUITECTURA.md, DESPLIEGUE.md, especificacion.pdf, este archivo
+tiquetes-ejemplo/                     fotos reales con datos personales (en .gitignore, NO se sube)
 ```
 
 ## 6. Base de datos
@@ -106,82 +94,77 @@ tiquetes-ejemplo/                     fotos reales con datos personales + archiv
 ```
 node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0026_nombre.sql
 ```
-(una transacción; usa `POSTGRES_URL_NON_POOLING` de `.env.local`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega (por eso 0006 y 0007 van separadas).
+(una transacción; usa `POSTGRES_URL_NON_POOLING`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
 | Migración | Qué hizo |
 |---|---|
-| 0006–0007 | rol `desarrollador`; `es_admin()` acepta admin y desarrollador; índice único: un solo admin activo y un solo desarrollador activo |
-| 0008 | `perfiles.cambiar_clave`, tabla `solicitudes_clave`, `es_desarrollador()` |
-| 0009 | `peso_neto_t` y `valor` de `tiquetes` se calculan con **`coalesce(neto_impreso_kg, bruto − tara)`**; vistas recreadas |
-| 0010 | quitó «Verificar que bruto − tara = neto» de las plantillas aprendidas |
-| 0011 | anticipos con `monto <> 0` (negativos permitidos); en `extracto` el negativo va como débito («Saldo a favor del comprador») |
-| 0012–0013 | se creó y luego se **borró** una tabla `proveedores` (el usuario no quiere listas de referencia) |
+| 0006–0007 | rol `desarrollador`; `es_admin()` acepta admin y desarrollador; un solo admin y un solo desarrollador activos |
+| 0008 | `perfiles.cambiar_clave`, `solicitudes_clave`, `es_desarrollador()` |
+| 0009 | `peso_neto_t` y `valor` de `tiquetes` con `coalesce(neto_impreso_kg, bruto − tara)` |
+| 0011 | anticipos con `monto <> 0` (negativos) |
 | 0014 | `perfiles.correo` admite null |
-| 0015 | función `eliminar_tiquete(p_id, p_motivo)` (admin, motivo obligatorio, devuelve la ruta de la foto) |
-| 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo(p_id, p_ruta)` (admin, solo pendientes) + disparador que impide cambiar o quitar el soporte |
-| 0017–0018 | rol `consultor` (varios) y `es_consultor()`: solo lectura de perfiles, anticipos, tiquetes y fotos; políticas restrictivas que le impiden escribir |
-| 0020 | **módulo de facturas** independiente: `fact_facturas`, `fact_pagos`, `fact_auditoria`, vistas `fact_facturas_estado` y `fact_totales`, funciones `fact_*`, bucket privado `facturas` |
-| 0025 | facturas: `retefuente`, `reteiva`, `reteica` por separado (el total de retenciones es la suma); alerta por cada impuesto |
-| 0024 | `configuracion.dias_aviso_respaldo = 15` (aviso de respaldo; la app escribe `ultimo_respaldo`) |
-| 0023 | `eliminar_anticipo`: solo anticipos en disputa, con motivo (queda en el historial) |
-| 0022 | `corregir_anticipo`: un anticipo en disputa se corrige con motivo y vuelve a pendiente |
+| 0015 | `eliminar_tiquete(p_id, p_motivo)` |
+| 0016 | `anticipos.soporte_ruta` + `poner_soporte_anticipo` (solo pendientes; el soporte no se cambia) |
+| 0017–0018 | rol `consultor` y `es_consultor()`: solo lectura; políticas restrictivas que le impiden escribir |
+| 0019 | el Consultor no ve a `configuracion.compradores_ocultos_consultor` (hoy `["prueba"]`) |
+| 0020 | **módulo de facturas**: `fact_facturas`, `fact_pagos`, `fact_auditoria`, vistas `fact_facturas_estado`/`fact_totales`, funciones `fact_*`, bucket privado `facturas` |
 | 0021 | `consumo_ia` + `modulo` ('tiquetes'/'facturas'), `tipo_archivo`, `resultado`, `referencia_id` |
-| 0019 | el Consultor no ve a los compradores de `configuracion.compradores_ocultos_consultor` (hoy `["prueba"]`) |
+| 0022 | `corregir_anticipo`: un anticipo **en disputa** se corrige con motivo y vuelve a pendiente |
+| 0023 | `eliminar_anticipo`: solo anticipos en disputa, con motivo (queda en el historial) |
+| 0024 | `configuracion.dias_aviso_respaldo = 15` (la app escribe `ultimo_respaldo`) |
+| 0025 | facturas: `retefuente`, `reteiva`, `reteica` por separado; alerta por cada impuesto |
 
-Tablas: `perfiles` (rol `admin|desarrollador|comprador`, correo opcional, `cambiar_clave`), `extractoras` (nit, nombres_impresos), `formatos_extractora` (plantilla jsonb, foto de ejemplo en `formatos/`), `anticipos` (monto ≠ 0, estado `pendiente|confirmado|en_disputa`; columnas de enlace ya no se usan), `tiquetes_pendientes` y `tiquetes` (enteros en kilos, `neto_impreso_kg`, proveedor, `requiere_revision` + `motivo_revision` «Verificar: …»), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia` (tipos `lectura`, `aprendizaje`, `ajuste`), `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`). Vistas `saldos` y `extracto`. Bucket privado `tiquetes`: `<comprador_id>/...` y `formatos/...`.
-
-Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra el pendiente e inserta en `tiquetes`), `rechazar_tiquete`, `asignar_precio_bloque`, `editar_tiquete`, `editar_pendiente`, `eliminar_tiquete`, `responder_anticipo_id`, `buscar_duplicado`, `posibles_duplicados`, `es_admin`, `es_desarrollador`.
+Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `pendiente|confirmado|en_disputa`, `soporte_ruta`), `tiquetes_pendientes` y `tiquetes` (kilos enteros, `neto_impreso_kg`, `requiere_revision` + `motivo_revision` «Verificar: …», `datos_leidos.nota_ia`), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia`, `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`), `fact_facturas`, `fact_pagos`, `fact_auditoria`. Vistas `saldos`, `extracto`, `fact_facturas_estado`, `fact_totales`. Buckets privados `tiquetes` (`<comprador>/…`, `<comprador>/anticipos/…`, `formatos/…`) y `facturas`.
 
 ## 7. Lectura de tiquetes — reglas pactadas (lo más delicado)
 
-**Filosofía:** la IA lee; lo que lee 100 % seguro se acepta; lo crítico debe ser 100 % seguro o no pasa; lo demás dudoso pasa marcado «Revisar» y la administradora decide. **No se guardan valores de referencia** para comparar (ni listas de proveedores ni lecturas anteriores).
+1. **Valores vitales: N° de tiquete, peso neto IMPRESO y fecha** (decisión 2026-10-23). La IA exige certeza total de cada dígito; **ante cualquier duda los marca y pasan a «Revisar»** con la duda que explica la IA (`nota_ia`, ej. «4.º dígito 5 o 6»). **Solo se rechaza lo ilegible** (sin N°, sin neto, fecha no válida).
+2. **Los demás campos** (placa, proveedor, bruto, tara, conductor, báscula): dudosos o no leídos → pasan **marcados «Revisar»**. En Pendientes: recuadro rojo «Dato vital dudoso», **números parecidos** de la misma extractora si el N° es dudoso, y **antigüedad** de la fecha de entrada (ámbar desde 5 meses, rojo desde 6).
+3. **Se cobra el neto impreso**, no la resta. La resta bruto − tara es **solo informativa** y nunca hace dudoso un campo.
+4. **Tiquete de más de 6 meses → no se puede subir**, salvo que la fecha sea dudosa (pasa a revisión).
+5. Ilegible → no va a revisión. Solo un tiquete legible de una extractora no registrada puede «Enviar a revisión» (→ «Formatos no reconocidos»).
+6. **Duplicado (extractora + número)** → aviso con quién y cuándo. Si choca con un **pendiente cuyo N° quedó dudoso**, el comprador debe informar a la administración por su cuenta (sin botones). Aviso adicional (no bloquea) si ya hay un tiquete con **la misma placa y hora**: suele ser el mismo tiquete con el número mal leído.
+7. **Regla del usuario: cualquier cambio que aumente tokens de IA se consulta antes.**
+8. **Antes de la IA (sin IA):** cámara guiada y revisión de nitidez; se envía la foto original, sin girar.
+9. **Leer no registra:** el tiquete se registra solo al tocar «Coincide, enviar» (un paso, todo o nada). Si se guardó, sale la ventana **«Tiquete registrado correctamente»**; si falla, el error indica revisar «Mis tiquetes → Pendientes» antes de repetir.
 
-1. **Valores vitales: N° de tiquete, peso neto IMPRESO y fecha** (decisión 2026-10-23). La IA debe tener certeza total de cada dígito; **ante cualquier duda los marca y pasan a «Revisar»** con la duda que explica la IA (`nota_ia`); la administradora decide con la foto. **Solo se rechaza lo ilegible** (sin N°, sin neto, fecha no válida): «No se puede registrar… Se necesita un tiquete más legible…».
-2. **Los demás campos** (placa, proveedor, peso bruto, tara, conductor, báscula): si la IA duda o no se leyó (placa/proveedor) → pasan **marcados «Revisar»**, resaltados en ámbar al comprador y en «Pendientes». **Sin límite** de campos marcados. En Pendientes, un dato vital dudoso sale en un recuadro rojo y, si es el N°, con los **números parecidos** de la misma extractora.
-3. **Se cobra el neto impreso**, no la resta. **Bruto y tara se leen tal cual**; la resta bruto − tara es **solo informativa**: si no da el neto impreso, bruto y tara llegan marcados; **una resta que no cuadra nunca hace dudoso un campo** (la IA lo hacía y se corrigió en la instrucción). Al corregir datos, el admin ve un aviso en vivo si la resta no cuadra (no impide guardar).
-4. **Tiquete de más de 6 meses → no se puede subir** (síntoma de fraude). Si la fecha es **dudosa**, no se rechaza por periodo: pasa a revisión con el aviso. El aviso muestra la fecha leída y ofrece «Tomar otra foto».
-5. Ilegible → **no va a revisión**. Solo un tiquete **legible de una extractora no registrada** puede «Enviar a revisión» (→ «Formatos no reconocidos», donde el admin la aprende).
-6. Duplicado (extractora + número) → se avisa quién y cuándo lo registró. Si choca con un **pendiente cuyo N° quedó dudoso**, el comprador ve que está en revisión y que informe a la administración por su cuenta (sin botones); no lo puede subir hasta que se resuelva.
-7. **Instrucción de la IA** (`INSTRUCCIONES` en `lector-ia.ts`): críticos número/neto impreso/fecha; marcar solo si un dígito podría leerse como otro (3/9, 6/8/9, 1/7, 0/8, 3/8, 5/6); en nombres una letra confundible (O/G/C/Q, M/N, U/V) es duda; pequeño, girado o con letra a mano cerca no es duda si se distingue; leer cada peso tal cual y la resta nunca hace dudoso un campo. **Regla del usuario: cualquier cambio que aumente tokens se consulta antes** (las últimas versiones se han mantenido igual o más cortas que la anterior).
-8. **Antes de la IA (sin IA):** cámara guiada (texto impreso, luz, quietud, enfoque; foto automática) y revisión de nitidez de la foto final; galería con las mismas revisiones; el servidor repite la nitidez con sharp. **Se envía la foto original, sin girar.**
-
-**Probado y descartado (no repetir sin que el usuario lo pida):** exigir resolución mínima (bloqueaba fotos válidas); rechazar si la IA dudaba de bruto/tara; límite de «más de 3 campos dudosos»; lista oficial de proveedores y comparación con proveedores aprobados; **recorte + efecto escaneo** (adelgazaba letras, no mejoró la lectura ni el peso); **giro automático** (reglas propias fallaban la dirección; Tesseract acertó 9/11 y el usuario prefirió no agregarlo); segunda lectura con IA (propuesta, no aprobada: duplica costo). Pendiente de decisión: si la foto llega girada, la IA lee peor los dígitos pequeños (recomendado tomar la foto con el celular horizontal).
+**Probado y descartado (no repetir sin que el usuario lo pida):** resolución mínima; rechazar por bruto/tara dudosos; límite de campos dudosos; lista de proveedores; recorte + efecto escaneo; **girar la foto** (por reglas, sensor o IA); segunda lectura con IA; varias fotos; pantalla propia de «base no disponible» (se dejó para después: caso raro).
 
 ## 8. Flujos
 
-**Comprador:** «Subir» → elegir **«Usar la cámara»** o **«Subir desde la galería»** → lectura inmediata → datos solo lectura (campos dudosos resaltados) → «Coincide, enviar» (o «No coincide, tomar otra foto») → vuelve a «Subir tiquete» con «Tiquete N° … enviado». Aviso a la administradora **solo por la campana**. Inicio muestra su estado de cuenta y anticipos por confirmar; «Anticipos» para confirmar o disputar; «Extracto».
+**Comprador:** «Subir» → cámara o galería → lectura → datos (dudosos resaltados) → «Coincide, enviar» → ventana de confirmación. «Mis tiquetes» con tarjetas **Peso neto × Precio por tonelada = Valor** (`ValorTiquete`). «Anticipos» para confirmar o disputar (ve el soporte y si la administración corrigió tras su disputa). «Extracto».
 
-**Administrador:**
-- **Pendientes:** foto + datos (proveedor resaltado en el título; campos «Revisar» en ámbar); aprobar / rechazar con motivo / corregir datos. El comprador recibe el aviso en la campana (sin WhatsApp).
-- **Tiquetes y precios:** filtros, precio en bloque o individual, editar con motivo, anular. Botón «Reportes y Excel».
-- **Reportes** (`/admin/reportes`): filtros por fechas, comprador, extractora, proveedor, N° de tiquete; resumen; tabla (hasta 500 filas, totales sobre todo) con **Acciones**: ✏️ editar (ventana con foto y formulario), 🗑️ **eliminar** (motivo obligatorio + confirmación **Sí/No**; borra la foto, avisa al comprador, el saldo se ajusta solo; el historial se conserva) y 🖼️ foto. **«Exportar a Excel»** con los mismos filtros: Comprador, Extractora, Proveedor, Fecha, N° Tiquete, Peso neto (t), Precio/t, Precio total; título, filtros, totales con fórmulas (sin foto).
-- **Reportes · «Tiquetes y anticipos»** (`/admin/reportes?tipo=cuenta`, selector «Tipo de reporte» arriba): un comprador + fechas de registro; tiquetes aprobados por fecha de subida y anticipos **confirmados** por fecha de confirmación en una tabla con saldo acumulado; sin precio = «Sin precio aún» (no mueve el saldo); Excel con los mismos filtros. Solo lectura (`src/lib/informes/movimientos.ts`, `cuenta.ts`, `cuenta-excel.ts`). **Todo reporte nuevo debe tener Excel.**
-- **Facturas** (`/facturas`, administradora y desarrollador): facturas de venta a las extractoras leídas con IA (PDF o imagen elegida, sin cámara), abonos con retenciones, anulaciones con motivo y auditoría, estado de cobro calculado, Excel. Código en `src/lib/facturas/` y `src/app/(app)/facturas/`. Variable opcional `FACTURAS_MODELO`.
-- **Anticipos:** soporte (foto) opcional al registrar o con el ícono «Subir soporte» en la tarjeta (solo pendientes; una vez puesto no se cambia); «Ver soporte» para admin y comprador.
-- **Anticipos en disputa:** «Corregir y volver a enviar» (monto, fecha, nota + motivo) → vuelve a pendiente y el comprador confirma de nuevo; o «Eliminar este anticipo» (motivo + «¿Está seguro?» Sí/No).
-- **Anticipos:** registrar (positivo o negativo) → campana + **botón** «Enviar por WhatsApp» (**sin enlaces**); «Recordarle por WhatsApp»; el comprador confirma en su app.
-- **Compradores:** crear (contraseña fija 12345678, correo opcional) / editar; cuenta de cada comprador con estado de cuenta y extracto.
-- **Extractoras:** «Enseñar un tiquete» (IA Opus). **Formatos no reconocidos.** **Historial.** **Panel:** saldos («Total saldo a mi favor» / «Total que les debo») y «Consumo de IA este mes».
-- **Desarrollador además:** Contraseñas (aprobar/rechazar solicitudes) y **Backups** — **respaldo completo restaurable** (.zip con datos + archivos, aviso cada 15 días; restaurar con `scripts/restaurar-respaldo.mjs`, ver `docs/RESPALDO.md`) y (botón «Descargar backup ahora»: Excel con una hoja por tabla + Resumen; no incluye fotos ni contraseñas).
+**Administradora:**
+- **Panel (Saldos):** indicadores (pendientes, para verificar, sin precio, anticipos en disputa, formatos no reconocidos, **anticipos sin confirmar**), totales y consumo de IA (facturas aparte).
+- **Pendientes:** foto + datos; aprobar / rechazar / corregir; **«Enviar foto por WhatsApp»** debajo de la foto.
+- **Tiquetes y precios:** filtros, precio en bloque o individual («Cambiar precio» con motivo: saldos y totales se recalculan solos), editar, anular; tarjetas con `ValorTiquete` y «Enviar foto por WhatsApp».
+- **Reportes:** selector «Tiquetes» (filtros, editar/eliminar con Sí/No, foto, WhatsApp, Excel) y «Tiquetes y anticipos» (saldo acumulado por fecha de registro, Excel). **Todo reporte nuevo debe tener Excel.**
+- **Anticipos:** registrar con **monto didáctico** (puntos de miles, verde/rojo, en letras, botón ±), soporte (foto) opcional y **aviso Sí/No**; «Subir soporte» en pendientes; «Recordarle por WhatsApp». **En disputa:** «Corregir y volver a enviar» (vuelve a pendiente) o «Eliminar este anticipo» (motivo + «¿Está seguro?»). Desde la cuenta de un comprador, «Anticipos» muestra solo los suyos.
+- **Compradores:** crear (rol Comprador, Administrador o **Consultor**) / editar; cuenta con estado y extracto.
+- **Extractoras** («Enseñar un tiquete»), **Formatos no reconocidos**, **Historial**.
+- **Facturas** (`/facturas`, administradora y desarrollador; botón en el menú): subir PDF o imagen **elegida (sin cámara)**, máx. 4 MB → IA → formulario con validaciones en vivo (Subtotal + IVA − ReteFuente − ReteIVA − ReteICA = Total a pagar; kilos × precio ≈ subtotal) → CONFIRMADA o PENDIENTE_REVISION. CUFE único. Estado de cobro calculado (PENDIENTE_PAGO / ABONADA_PARCIAL / PAGADA / ANULADA), vencida y días de mora, alertas de sobrepago y de cada retención. Abonos (recibido + retenciones = aplicado) que nunca se borran, se anulan; anular factura solo sin abonos vigentes; revertir anulación con motivo; auditoría. Lista con filtros, totales por extractora/emisor/mes y Excel (una columna por impuesto).
 
-**WhatsApp:** nunca se abre solo; siempre es un botón. Se usa para **anticipos** (y bienvenida de usuario nuevo, contraseña restablecida, «Escribir por WhatsApp» en la cuenta del comprador, «Confirmar por WhatsApp» en Contraseñas). **Tiquetes (desde 2026-10-28):** botón «Enviar foto por WhatsApp» junto a la imagen (Pendientes, Tiquetes y precios, Reportes): comparte solo la foto (WhatsApp pide elegir el chat) o abre el chat del comprador con enlace a la foto de 7 días.
+**Desarrollador además:** Contraseñas y **Backups**: **«Descargar respaldo completo»** (.zip armado en el navegador con todas las tablas, usuarios sin contraseñas y todos los archivos; ~50 MB; aviso en rojo si pasan más de 15 días; restaurar con `scripts/restaurar-respaldo.mjs`, ver `docs/RESPALDO.md`) y el Excel para consultar.
+
+**WhatsApp:** nunca se abre solo; siempre es un botón. Anticipos (registrar, recordar, corregir), bienvenida, contraseña restablecida, cuenta del comprador y **foto del tiquete** (menú Compartir del celular: WhatsApp pide elegir el chat; si el equipo no comparte archivos, abre el chat del comprador con enlace de 7 días). Los avisos automáticos de tiquetes van solo por la campana.
 
 ## 9. Decisiones del usuario (no revertir sin consultar)
 
-- El comprador no elige extractora; la IA la detecta (primero por NIT). Extractoras se aprenden con una foto; varios formatos por extractora.
-- Duplicados = extractora + número. Solo anticipos (sin «Pago»); anticipos negativos permitidos; **sin enlaces** de confirmación.
-- Reglas de lectura de §7 (críticos: número, neto impreso, fecha). Se cobra el neto impreso.
-- La IA solo para leer tiquetes. **Consumo de IA crítico: consultar antes de cualquier cambio que agregue llamadas o tokens.**
-- WhatsApp solo con botón (nunca automático): anticipos y, por pedido de la administradora, el envío de un tiquete con su foto (ver §8). Los avisos automáticos de tiquetes siguen solo por la campana.
-- Un administrador y un desarrollador; contraseña por defecto 12345678 sin obligar a cambiarla; correo opcional.
-- Tras enviar un tiquete, volver a «Subir tiquete». Tiquetes de más de 6 meses no se suben.
+- El comprador no elige extractora; la IA la detecta. Duplicados = extractora + número.
+- Reglas de lectura de §7. Se cobra el neto impreso.
+- **IA solo para leer tiquetes y facturas.** Consumo de IA crítico: consultar antes de agregar llamadas o tokens.
+- WhatsApp solo con botón (§8).
+- **En producción no se borran tablas ni registros** salvo lo que el usuario pida explícitamente (eliminar tiquete aprobado, anticipo en disputa), siempre con motivo y en el historial. Antes de cambiar la base: probar con transacción deshecha y cuadrar saldos.
+- Un administrador y un desarrollador; consultores varios; contraseña por defecto 12345678; correo opcional.
+- Facturas: módulo independiente (prefijo `fact_`), cada impuesto en su campo (IVA, ReteFuente, ReteIVA, ReteICA, sin porcentaje en el nombre).
+- Respaldo completo solo para el desarrollador, aviso cada 15 días.
 
-## 10. Estado de los datos (21-oct, inicio de producción)
+## 10. Estado (2026-11-03)
 
-- Se borraron tiquetes (aprobados, pendientes, no reconocidos), sus fotos, sus avisos y el historial salvo anticipos y usuarios.
-- Quedan: 4 usuarios (`ingrid` admin, `christian` desarrollador, compradores `prueba` y `yudidj`); **2 anticipos de `yudidj` en estado pendiente** (−86.796.710 del 20-oct y 49.950.000 del 21-oct; no cuentan en el saldo hasta confirmarlos — verificar con el usuario que sean reales); 5 extractoras con sus formatos.
-- `configuracion`: fecha_filtro_precio=entrada, vigencia_enlace_anticipo_horas=48 (ya sin uso), comprador_ve_toneladas_sin_precio=true, placa_obligatoria=true, meses_conservacion_fotos=6.
-- **Consumo de IA:** el panel se igualó a la consola (US$ 0,44 en octubre) con una fila `consumo_ia` tipo `ajuste`. **Costo real ≈ US$ 0,008 por lectura** (la consola cobra ~3,5× lo estimado por tokens; causa no confirmada). US$ 10 ≈ 1.200 lecturas.
+- 10 usuarios: administradora, desarrollador, 1 consultor y compradores (Gabriel, Javier, Rocío, Yudid, Prueba). ~180 tiquetes aprobados; anticipos sin pendientes ni disputas hoy; **0 facturas** (la primera será la **FEPA 12**, Palmali → SAF: subtotal 469.542.120; IVA 23.477.106; ReteFuente 7.043.131,80; ReteIVA 3.521.565,90; total 482.454.528,30).
+- Cuadre del 2026-10-30: saldo de la app = cálculo desde cero = extracto = reporte para todos los compradores.
+- Costo real IA ≈ US$ 0,008 por lectura de tiquete; facturas ≈ US$ 0,003.
+- Postgres sin reinicios desde el 15-oct. «Memory commitment» sale «Problematic» en Supabase: es la reserva fija de los servicios en Nano, no la app. Plan Pro solo si aparecen reinicios o lentitud.
 
 ### Extractoras aprendidas
 
@@ -189,32 +172,33 @@ Funciones clave: `registrar_pendiente` (service_role), `aprobar_tiquete` (borra 
 |---|---|---|
 | Babú Palm | 901249632 | número en rojo «N° Tiquete» |
 | Palnorte | 900486803-8 | «ENTRADA DE MATERIA PRIMA No.», coma de miles |
-| Oleoflores | 8901021101 | número = GUÍA TRANSPORTE VEHICULO; el CODIGO INTERNO es del proveedor |
-| Agrovaspalma | 901.666.764-5 | el usuario la llama NodoLa4 (puede renombrarla) |
-| Lukeoil | (sin NIT) | Extractora Lukeoil SAS ZOMAC; papel térmico, suele venir girado; su foto de ejemplo es de baja resolución |
+| Oleoflores | 8901021101 | número = GUÍA TRANSPORTE VEHICULO |
+| Agrovaspalma | 901.666.764-5 | el usuario la llama NodoLa4 |
+| Lukeoil | (sin NIT) | papel térmico, suele venir girado |
 
 ## 11. Variables de entorno
 
-Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `POSTGRES_URL_NON_POOLING` (+ las de la integración), `ANTHROPIC_API_KEY` (Secret), `FIRMA_LECTURA_SECRETO`, `CRON_SECRET`, `NEXT_PUBLIC_APP_URL=https://bancoticket.vercel.app`.
-Local: `.env.local` (en .gitignore) tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con IA solo se prueba en producción (y se diagnostica con los registros de Vercel).
+Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `POSTGRES_URL_NON_POOLING`, `ANTHROPIC_API_KEY` (Secret), `FIRMA_LECTURA_SECRETO`, `CRON_SECRET`, `NEXT_PUBLIC_APP_URL`; opcional `FACTURAS_MODELO`.
+Local: `.env.local` tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con IA solo se prueba en producción.
 
 ## 12. Cómo trabajar
 
-- Verificar antes de subir: `npx tsc --noEmit -p .`, `npx eslint src`, `npm run prueba` (números, fechas, controles, saldos, proveedor, 6 meses…). Si se agrega una página: `npx next typegen`. Cambios grandes: `npx next build`.
-- Subir: commit en español terminado en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, `git push origin main`, desplegar (ver §3) y esperar «Ready».
-- Probar la base con **transacciones que se deshacen** (script temporal con `pg`: `begin` … `rollback`; `set local role authenticated` + `set_config('request.jwt.claims', …)` para actuar como un usuario). Los scripts temporales van en `scripts/_tmp.*` y se borran.
-- En Windows, para ediciones con «°», «ñ» o tildes desde scripts usar archivos Python con `python -X utf8` (el heredoc de bash daña el UTF-8).
-- Limpiar datos de prueba: `node --env-file=.env.local scripts/vaciar-pruebas.mjs --si` (borra tiquetes, anticipos, avisos, solicitudes de contraseña, historial y fotos de compradores; conserva usuarios, extractoras y consumo IA). **Ya estamos en producción: no borrar nada sin pedírselo al usuario.**
-- El usuario prueba en el celular y manda capturas. Explicar en español sencillo, sin discursos; paso a paso cuando sea configuración.
+- Verificar antes de subir: `npx tsc --noEmit -p .`, `npx eslint src`, `npm run prueba`; página nueva: `npx next typegen`; cambios grandes: `npx next build`. Si quedan tipos viejos de una página borrada: `rm -rf .next/dev/types`.
+- Subir: commit en español con `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, `git push origin main` y comprobar «Ready».
+- Probar la base con **transacciones que se deshacen** (scripts temporales `scripts/_tmp-*` que se borran). Ver pantallas sin sesión: página temporal en `src/app/ingresar/vista-tmp` + `preview_start` (borrarla después).
+- PDFs: no hay pdftoppm; para leer texto instalar `pypdf` en la carpeta temporal (`pip install --target <scratchpad>/py pypdf`).
+- En Windows, ediciones con tildes desde scripts: Python con `python -X utf8`.
+- **Ya estamos en producción: no borrar nada sin pedírselo al usuario.**
+- El usuario prueba en el celular (a veces por Remote Control) y manda capturas. Español sencillo, sin discursos; antes de cambios grandes mostrar el plan y esperar «procede».
 - Registrar cada decisión en `docs/NOTAS.md` (fila nueva arriba) y mantener este archivo al día.
 
 ## 13. Pendientes y cosas a vigilar
 
-- **Confirmar con el usuario los 2 anticipos de `yudidj`** (siguen pendientes de confirmar por el comprador).
-- **Foto girada:** la IA lee peor los dígitos pequeños; pedir fotos con el celular horizontal. Si sigue siendo problema, opciones ya evaluadas: segunda lectura enderezando (+US$ ~0,008 por foto girada) o Tesseract (9/11), ambas rechazadas por ahora.
-- **Lukeoil:** enseñar un tiquete nítido donde se vea el NIT (el ejemplo actual es de baja resolución). Renombrar Agrovaspalma → NodoLa4 si el usuario quiere.
-- **Pendientes no se pueden eliminar** (solo rechazar); los aprobados se eliminan desde Reportes.
-- **Fotos huérfanas** (lecturas que no se envían quedan en Storage hasta el cron de 6 meses).
-- **Vercel:** el despliegue automático por GitHub llega con retraso; revisar Settings → Git si se quiere que vuelva a ser inmediato.
-- Seguridad: confirmar en Supabase «Allow new users to sign up» desactivado; borrar la clave de Anthropic que salió en una captura (`christian-api-key`); marcar `CRON_SECRET` como Sensitive en Vercel. Recarga automática de la consola de Anthropic: desactivada (saldo ≈ US$ 9,56 el 21-oct).
-- Fase 2: extractos en PDF/Excel si se piden.
+- **Hacer el primer respaldo completo** (Backups) y guardarlo en un lugar privado; luego cada 15 días.
+- **Subir la FEPA 12** en Facturas y verificar que la IA lea cada impuesto por separado.
+- **Anticipo confirmado con valor errado:** hoy se corrige con un anticipo de ajuste por la diferencia (Opción B). Propuesta pendiente de decisión (Opción A): permitir «corregir y volver a enviar» también en confirmados (deja de contar hasta que el comprador reconfirme).
+- Opcionales propuestos y no aprobados: evitar anticipos/abonos duplicados al reintentar; avisos que fallan en silencio; pantalla propia de «base no disponible»; limpiar avisos leídos viejos; optimizar políticas RLS.
+- **Supabase:** vigilar memoria y reinicios al hacer cada respaldo; no dejar abiertas las páginas de Observability.
+- **Lukeoil:** enseñar un tiquete nítido con NIT. Renombrar Agrovaspalma → NodoLa4 si el usuario quiere.
+- **Fotos huérfanas** (lecturas no enviadas) quedan hasta el cron de 6 meses.
+- Seguridad: confirmar «Allow new users to sign up» desactivado en Supabase; borrar la clave de Anthropic que salió en una captura; marcar `CRON_SECRET` como Sensitive.
