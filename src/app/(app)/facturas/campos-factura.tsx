@@ -60,7 +60,7 @@ export function CamposFactura({ inicial, tarifas }: { inicial: FacturaLeida; tar
           );
         })}
       </div>
-      <p className="text-xs text-suave">Números en formato colombiano: punto de miles y coma decimal (ej. 142.060.536,75). La comprobación se actualiza al corregir. Si todo cuadra queda CONFIRMADA; si no, queda PENDIENTE DE REVISIÓN.</p>
+      <p className="text-xs text-suave">Números en formato colombiano: punto de miles y coma decimal (ej. 142.060.536,75). La comprobación se actualiza al corregir.</p>
     </div>
   );
 }

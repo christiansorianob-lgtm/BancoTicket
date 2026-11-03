@@ -2,12 +2,13 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileUp, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileUp, Loader2 } from "lucide-react";
 import { Mensaje } from "@/components/ui";
-import { MAX_BYTES_FACTURA, type Validacion } from "@/lib/facturas/validar";
+import { completarPrecio, fallasFactura, MAX_BYTES_FACTURA, type Validacion } from "@/lib/facturas/validar";
+import { facturaDesde } from "@/lib/facturas/formulario";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
-import type { TarifasFactura } from "@/lib/facturas/comprobacion";
-import { descartarArchivo, guardarFactura } from "../acciones";
+import { pesos, type TarifasFactura } from "@/lib/facturas/comprobacion";
+import { aprobarFactura, descartarArchivo } from "../acciones";
 import { CamposFactura } from "../campos-factura";
 
 type Lectura =
@@ -26,10 +27,12 @@ export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, iniciar] = useTransition();
+  // Aviso Sí / No antes de aprobar: los datos del formulario y las diferencias encontradas.
+  const [confirmar, setConfirmar] = useState<{ form: FormData; datos: FacturaLeida; fallas: string[] } | null>(null);
 
   function reiniciar() {
     if (archivo) URL.revokeObjectURL(archivo.url);
-    setArchivo(null); setLectura(null); setError(null);
+    setArchivo(null); setLectura(null); setError(null); setConfirmar(null);
   }
 
   async function leer(f: File | undefined) {
@@ -64,7 +67,7 @@ export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
         <p className="text-center text-xs text-suave">PDF, JPG, PNG o WebP de máximo 4 MB, desde la galería o los archivos.</p>
       </div>
 
-      {error && <Mensaje tono="error">{error}</Mensaje>}
+      {error && !lectura && <Mensaje tono="error">{error}</Mensaje>}
       {leyendo && <p className="flex items-center justify-center gap-2 font-semibold text-primario"><Loader2 className="size-5 animate-spin" /> Leyendo la factura…</p>}
 
       {lectura?.duplicado && (
@@ -75,14 +78,14 @@ export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
 
       {lectura && !lectura.duplicado && (
         <form className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+          // Si cambian un dato mientras se pregunta, se cancela: el aviso ya no corresponde.
+          onChange={() => confirmar && setConfirmar(null)}
           onSubmit={(e) => {
             e.preventDefault();
-            const datos = new FormData(e.currentTarget);
-            iniciar(async () => {
-              const r = await guardarFactura(datos);
-              if (!r.ok) return setError(r.error ?? "No se pudo guardar");
-              router.push(`/facturas/${r.id}`);
-            });
+            const form = new FormData(e.currentTarget);
+            const datos = completarPrecio(facturaDesde((k) => form.get(k) as string | null));
+            setError(null);
+            setConfirmar({ form, datos, fallas: fallasFactura(datos, tarifas) });
           }}>
           <div className="tarjeta">
             {archivo && (archivo.tipo === "application/pdf"
@@ -95,13 +98,40 @@ export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
             <input type="hidden" name="archivo_path" value={lectura.archivo_path} />
             <input type="hidden" name="tipo_archivo" value={lectura.tipo_archivo} />
             <input type="hidden" name="consumo_id" value={lectura.consumoId ?? ""} />
-            <Mensaje tono="alerta">Compare los datos con la factura y corrija lo que haga falta antes de guardar.</Mensaje>
+            <Mensaje tono="alerta">Compare los datos con la factura y corrija lo que haga falta. La factura solo se guarda al aprobarla.</Mensaje>
             <CamposFactura inicial={lectura.datos} tarifas={tarifas} />
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button className="boton-primario" disabled={guardando}>{guardando ? "Guardando…" : "Confirmar y guardar"}</button>
-              <button type="button" className="boton-secundario" disabled={guardando}
-                onClick={() => iniciar(async () => { await descartarArchivo(lectura.archivo_path); reiniciar(); })}>Cancelar</button>
-            </div>
+            {confirmar ? (
+              <div className={`space-y-3 rounded-xl border-2 p-3 ${confirmar.fallas.length ? "border-error bg-error-suave" : "border-alerta bg-alerta-suave"}`} role="alertdialog" aria-label="Confirmar aprobación">
+                {confirmar.fallas.length ? (
+                  <div className="space-y-1 text-sm text-error">
+                    <p className="flex items-start gap-2 font-semibold"><AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden /> La comprobación encontró diferencias:</p>
+                    <ul className="list-disc pl-9">{confirmar.fallas.map((f) => <li key={f}>{f}</li>)}</ul>
+                    <p className="font-semibold">Si la aprueba así, las diferencias quedan anotadas en la factura. ¿Aprobar de todos modos?</p>
+                  </div>
+                ) : (
+                  <p className="flex items-start gap-2 text-sm font-semibold text-profundo">
+                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-ok" aria-hidden />
+                    ¿Aprobar la factura {confirmar.datos.numero_factura} de {confirmar.datos.emisor_razon_social ?? "—"} por {confirmar.datos.total_a_pagar == null ? "—" : pesos(confirmar.datos.total_a_pagar)} (total a pagar)? Todos los cálculos coinciden.
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 sm:max-w-sm">
+                  <button type="button" className="boton-primario" disabled={guardando}
+                    onClick={() => iniciar(async () => {
+                      const r = await aprobarFactura(confirmar.form);
+                      if (!r.ok) { setConfirmar(null); return setError(r.error ?? "No se pudo aprobar"); }
+                      router.push(`/facturas/${r.id}`);
+                    })}>{guardando ? "Aprobando…" : "Sí, aprobar"}</button>
+                  <button type="button" className="boton-secundario" disabled={guardando} onClick={() => setConfirmar(null)}>No</button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button className="boton-primario" disabled={guardando}>Aprobar factura</button>
+                <button type="button" className="boton-secundario" disabled={guardando}
+                  onClick={() => iniciar(async () => { await descartarArchivo(lectura.archivo_path); reiniciar(); })}>Cancelar</button>
+              </div>
+            )}
+            {error && <Mensaje tono="error">{error}</Mensaje>}
           </div>
         </form>
       )}

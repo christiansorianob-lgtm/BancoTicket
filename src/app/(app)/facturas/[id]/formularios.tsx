@@ -10,7 +10,7 @@ import { CamposFactura } from "../campos-factura";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
 import type { TarifasFactura } from "@/lib/facturas/comprobacion";
 
-/** Anular (o revertir) con motivo obligatorio y confirmación Sí / No. */
+/** Anular o eliminar con motivo obligatorio y confirmación Sí / No. */
 export function ConMotivo({ accion, boton, pregunta, placeholder }: {
   accion: (form: FormData) => Promise<Resultado>; boton: string; pregunta: string; placeholder: string;
 }) {

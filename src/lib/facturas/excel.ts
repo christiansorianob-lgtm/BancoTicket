@@ -61,7 +61,7 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
     r.values = [
       f.numero_factura, f.extractora_razon_social ?? "—", f.emisor_razon_social ?? "—", dia(f.fecha_emision), dia(f.fecha_vencimiento), f.kilos,
       ...(anulada ? [0, 0, 0, 0, 0, 0, 0, 0] : [f.subtotal, f.iva, f.retefuente, f.reteiva, f.reteica, f.total_a_pagar, f.total_aplicado, f.saldo_pendiente]),
-      NOMBRE_ESTADO[f.estado_cobro] + (f.estado_lectura === "PENDIENTE_REVISION" ? " (en revisión)" : ""), f.vencida ? f.dias_mora : null,
+      f.estado_cobro === "ANULADA" ? "Anulada" : `Aprobada · ${NOMBRE_ESTADO[f.estado_cobro]}`, f.vencida ? f.dias_mora : null,
       [f.vencida && "Vencida", f.alerta_sobrepago && "Sobrepago", f.alerta_retenciones && "Retenciones"].filter(Boolean).join(", ") || null,
     ];
     r.getCell(4).numFmt = "dd/mm/yyyy";

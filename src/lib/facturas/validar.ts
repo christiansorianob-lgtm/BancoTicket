@@ -1,6 +1,6 @@
 /**
  * Validaciones de una factura antes de guardarla (sin dependencias: navegador, servidor y pruebas).
- * Si alguna falla, la factura se guarda como PENDIENTE_REVISION y se muestra resaltada.
+ * Lo que falte o no cuadre se muestra al aprobar y queda anotado en la factura (motivo_revision).
  */
 import type { FacturaLeida } from "./tipos";
 import { comprobarFactura, pesos, type TarifasFactura } from "./comprobacion";

@@ -6,7 +6,7 @@ import { fecha, fechaHora } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import type { EstadoCobro, FacturaLeida } from "@/lib/facturas/tipos";
-import { actualizarFactura, anularAbono, anularFactura, registrarAbono, revertirAnulacion } from "../acciones";
+import { actualizarFactura, anularAbono, anularFactura, eliminarFactura, registrarAbono } from "../acciones";
 import { ChipsFactura } from "../estado";
 import { ComprobacionFactura } from "../comprobacion";
 import { leerConfiguracion } from "@/lib/config";
@@ -35,7 +35,6 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
     kilos: f.kilos == null ? null : n(f.kilos), precio_kilo: f.precio_kilo == null ? null : n(f.precio_kilo), subtotal: n(f.subtotal), iva: n(f.iva),
     retefuente: n(f.retefuente), reteiva: n(f.reteiva), reteica: n(f.reteica), total_a_pagar: n(f.total_a_pagar),
   };
-  const enRevision = f.estado_lectura === "PENDIENTE_REVISION";
   const { tarifas_factura: tarifas } = await leerConfiguracion();
 
   return (
@@ -45,8 +44,8 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
         <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
       </div>
       <ChipsFactura f={{ ...f, estado_cobro: f.estado_cobro as EstadoCobro, dias_mora: n(f.dias_mora) }} />
-      {f.anulada && <Mensaje tono="error">Factura ANULADA el {fechaHora(f.anulada_at)}. Motivo: {f.anulada_motivo}</Mensaje>}
-      {enRevision && <Mensaje tono="error">Pendiente de revisión: {f.motivo_revision ?? "verifique los datos"}. Corrija abajo y guarde.</Mensaje>}
+      {f.anulada && <Mensaje tono="error">Factura ANULADA el {fechaHora(f.anulada_at)}: no suma en los totales. Motivo: {f.anulada_motivo}</Mensaje>}
+      {!f.anulada && f.motivo_revision && <Mensaje tono="alerta">Aprobada con diferencias en la comprobación: {f.motivo_revision}.</Mensaje>}
       {f.alerta_sobrepago && <Mensaje tono="alerta">Sobrepago: lo aplicado ({formatoPesos(f.total_aplicado)}) supera el subtotal + IVA ({formatoPesos(f.total_cobrar)}).</Mensaje>}
       {f.alerta_retenciones && (
         <Mensaje tono="alerta">
@@ -79,12 +78,12 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
           <Dato etiqueta="ReteFuente">{formatoPesos(f.retefuente)}<span className="block text-xs text-suave">practicada {formatoPesos(f.retefuente_practicada)}</span></Dato>
           <Dato etiqueta="ReteIVA">{formatoPesos(f.reteiva)}<span className="block text-xs text-suave">practicada {formatoPesos(f.reteiva_practicada)}</span></Dato>
           <Dato etiqueta="ReteICA">{formatoPesos(f.reteica)}<span className="block text-xs text-suave">practicada {formatoPesos(f.reteica_practicada)}</span></Dato>
-          <Dato etiqueta="Estado de la lectura">{enRevision ? "Pendiente de revisión" : "Confirmada"}</Dato>
+          <Dato etiqueta="Estado">{f.anulada ? "Anulada" : "Aprobada"}</Dato>
         </dl>
         <p className="break-all text-xs text-suave">CUFE: {f.cufe ?? "—"}</p>
         <ComprobacionFactura datos={datos} tarifas={tarifas} />
         {!f.anulada && (
-          <details open={enRevision}>
+          <details>
             <summary className="cursor-pointer font-semibold text-primario">Corregir datos</summary>
             <div className="mt-3"><CorregirFactura accion={actualizarFactura.bind(null, id)} inicial={datos} tarifas={tarifas} /></div>
           </details>
@@ -127,15 +126,21 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
       </section>
 
       <section className="tarjeta space-y-3">
-        <h2 className="font-bold text-profundo">{f.anulada ? "Revertir anulación" : "Anular factura"}</h2>
+        <h2 className="font-bold text-profundo">{f.anulada ? "Eliminar factura" : "Anular factura"}</h2>
         {f.anulada ? (
-          <ConMotivo accion={revertirAnulacion.bind(null, id)} boton="Revertir anulación" placeholder="Ej.: se anuló por error"
-            pregunta="La factura volverá a estar activa y su estado de cobro se recalculará." />
+          <>
+            <p className="text-sm text-suave">Se borra la factura con su archivo para no dejar registros sin uso. Si hace falta, se sube de nuevo. Queda constancia en la auditoría.</p>
+            <ConMotivo accion={eliminarFactura.bind(null, id)} boton="Eliminar factura" placeholder="Ej.: se subirá de nuevo corregida"
+              pregunta={`Va a eliminar la factura ${f.numero_factura} y su archivo. No se puede deshacer.`} />
+          </>
         ) : vigentes.length > 0 ? (
-          <p className="text-sm text-suave">Para anular la factura, primero anule sus {vigentes.length} abono(s) vigente(s).</p>
+          <p className="text-sm text-suave">
+            Esta factura tiene {vigentes.length} abono(s) vigente(s) ({f.estado_cobro === "PAGADA" ? "Pagada" : "Abonada parcial"}): no se puede anular ni eliminar.
+            Si un abono fue un error, anúlelo primero.
+          </p>
         ) : (
-          <ConMotivo accion={anularFactura.bind(null, id)} boton="Anular factura" placeholder="Ej.: factura mal emitida"
-            pregunta={`Va a anular la factura ${f.numero_factura}. No podrá recibir abonos (se puede revertir con motivo).`} />
+          <ConMotivo accion={anularFactura.bind(null, id)} boton="Anular factura" placeholder="Ej.: el contador indicó anularla"
+            pregunta={`Va a anular la factura ${f.numero_factura}: dejará de sumar en los totales. Después podrá eliminarla.`} />
         )}
       </section>
 

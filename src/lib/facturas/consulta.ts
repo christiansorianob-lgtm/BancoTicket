@@ -15,13 +15,13 @@ export type FilaFactura = {
   fecha_emision: string | null; fecha_vencimiento: string | null; kilos: number | null; total_cobrar: number; total_a_pagar: number;
   subtotal: number; iva: number; retefuente: number; reteiva: number; reteica: number;
   total_aplicado: number; saldo_pendiente: number; estado_cobro: EstadoCobro; vencida: boolean; dias_mora: number;
-  alerta_sobrepago: boolean; alerta_retenciones: boolean; estado_lectura: string;
+  alerta_sobrepago: boolean; alerta_retenciones: boolean; motivo_revision: string | null;
 };
 
 /** Facturas con su estado de cobro calculado (vista fact_facturas_estado), más recientes primero. */
 export async function consultarFacturas(supabase: Awaited<ReturnType<typeof supabaseServidor>>, f: FiltrosFacturas, maximo = 2000) {
   let q = supabase.from("fact_facturas_estado")
-    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_cobrar, total_a_pagar, total_aplicado, saldo_pendiente, estado_cobro, vencida, dias_mora, alerta_sobrepago, alerta_retenciones, estado_lectura")
+    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_cobrar, total_a_pagar, total_aplicado, saldo_pendiente, estado_cobro, vencida, dias_mora, alerta_sobrepago, alerta_retenciones, motivo_revision")
     .order("fecha_emision", { ascending: false, nullsFirst: true })
     .limit(maximo);
   if (f.estado) q = q.eq("estado_cobro", f.estado);

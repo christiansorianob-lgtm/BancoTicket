@@ -64,7 +64,7 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <ul className="grid gap-3 md:grid-cols-2">
           {filas.map((x) => (
             <li key={x.id}>
-              <Link href={`/facturas/${x.id}`} className={`tarjeta block space-y-2 transition hover:shadow-md ${x.estado_lectura === "PENDIENTE_REVISION" ? "ring-2 ring-error" : ""}`}>
+              <Link href={`/facturas/${x.id}`} className={`tarjeta block space-y-2 transition hover:shadow-md ${x.estado_cobro === "ANULADA" ? "opacity-60" : ""}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-bold text-profundo">{x.numero_factura} · {x.extractora_razon_social ?? "—"}</p>

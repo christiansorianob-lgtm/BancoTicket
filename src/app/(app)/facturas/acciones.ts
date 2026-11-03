@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { exigirAdmin } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -13,40 +14,43 @@ import type { Resultado } from "@/app/(app)/admin/acciones";
 const fallo = (error: string): Resultado => ({ ok: false, error });
 const errorDe = (m: string) => m.replace(/^.*FACTURA_DUPLICADA: /, "Duplicada: ");
 
-/** Datos del formulario + estado: CONFIRMADA si validaciones y cálculos cuadran; si no, PENDIENTE_REVISION. */
+/**
+ * Datos del formulario + diferencias de la comprobación (o datos faltantes). La administradora decide:
+ * la factura se aprueba igual y las diferencias quedan anotadas en la factura.
+ */
 async function prepararFactura(form: FormData) {
   const datos = completarPrecio(facturaDesde((k) => form.get(k) as string | null));
   const fallas = fallasFactura(datos, (await leerConfiguracion()).tarifas_factura);
-  const estado = fallas.length ? "PENDIENTE_REVISION" : "CONFIRMADA";
-  return { datos, estado, motivo: fallas.length ? fallas.join(" · ") : null };
+  return { datos, motivo: fallas.length ? fallas.join(" · ") : null };
 }
 
-export async function guardarFactura(form: FormData): Promise<Resultado & { id?: string }> {
+/** Aprobar: solo aquí se guarda la factura (estado APROBADA). */
+export async function aprobarFactura(form: FormData): Promise<Resultado & { id?: string }> {
   await exigirAdmin();
-  const { datos, estado, motivo } = await prepararFactura(form);
+  const { datos, motivo } = await prepararFactura(form);
   if (!datos.numero_factura) return fallo("Escriba el número de la factura");
   const archivo_path = String(form.get("archivo_path") ?? "") || null;
   const tipo_archivo = form.get("tipo_archivo") === "imagen" ? "imagen" : "pdf";
   const supabase = await supabaseServidor();
-  const { data: id, error } = await supabase.rpc("fact_guardar_factura", { p: { ...datos, motivo_revision: motivo, archivo_path, tipo_archivo }, p_estado: estado });
+  const { data: id, error } = await supabase.rpc("fact_guardar_factura", { p: { ...datos, motivo_revision: motivo, archivo_path, tipo_archivo } });
   if (error) return fallo(errorDe(error.message));
   await anotarConsumo(Number(form.get("consumo_id")) || null, { referencia_id: id as string });
   revalidatePath("/facturas");
-  return { ok: true, id: id as string, mensaje: estado === "CONFIRMADA" ? "Factura guardada y confirmada." : "Factura guardada en PENDIENTE DE REVISIÓN: corrija lo marcado." };
+  return { ok: true, id: id as string, mensaje: "Factura aprobada." };
 }
 
 export async function actualizarFactura(id: string, form: FormData): Promise<Resultado> {
   await exigirAdmin();
-  const { datos, estado, motivo } = await prepararFactura(form);
+  const { datos, motivo } = await prepararFactura(form);
   if (!datos.numero_factura) return fallo("Escriba el número de la factura");
   const supabase = await supabaseServidor();
-  const { error } = await supabase.rpc("fact_actualizar_factura", { p_id: id, p: { ...datos, motivo_revision: motivo }, p_estado: estado });
+  const { error } = await supabase.rpc("fact_actualizar_factura", { p_id: id, p: { ...datos, motivo_revision: motivo } });
   if (error) return fallo(errorDe(error.message));
   revalidatePath("/facturas", "layout");
-  return estado === "CONFIRMADA" ? { ok: true, mensaje: "Factura corregida y confirmada." } : { ok: true, aviso: `Guardada, sigue en revisión: ${motivo}` };
+  return motivo ? { ok: true, aviso: `Corrección guardada. Aún hay diferencias: ${motivo}` } : { ok: true, mensaje: "Corrección guardada: todo coincide." };
 }
 
-/** Lectura cancelada antes de guardar: se borra el archivo subido (nunca llegó a ser un registro). */
+/** Lectura cancelada antes de aprobar: se borra el archivo subido (nunca llegó a ser un registro). */
 export async function descartarArchivo(ruta: string): Promise<void> {
   await exigirAdmin();
   if (!/^\d{4}\/[0-9a-f-]{36}\.(pdf|jpg|png|webp)$/.test(ruta)) return;
@@ -90,5 +94,20 @@ async function conMotivo(funcion: string, id: string, form: FormData, mensaje: s
 }
 
 export async function anularAbono(id: string, form: FormData) { return conMotivo("fact_anular_abono", id, form, "Abono anulado."); }
-export async function anularFactura(id: string, form: FormData) { return conMotivo("fact_anular_factura", id, form, "Factura anulada."); }
-export async function revertirAnulacion(id: string, form: FormData) { return conMotivo("fact_revertir_anulacion", id, form, "Anulación revertida."); }
+export async function anularFactura(id: string, form: FormData) { return conMotivo("fact_anular_factura", id, form, "Factura anulada: ya no suma."); }
+
+/**
+ * Eliminar una factura ANULADA (sin abonos vigentes): la base borra el registro y sus abonos anulados
+ * y deja la copia en la auditoría; aquí se borra su archivo. Luego se puede subir de nuevo.
+ */
+export async function eliminarFactura(id: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const motivo = String(form.get("motivo") ?? "").trim();
+  if (!motivo) return fallo("Escriba el motivo");
+  const supabase = await supabaseServidor();
+  const { data: ruta, error } = await supabase.rpc("fact_eliminar_factura", { p_id: id, p_motivo: motivo });
+  if (error) return fallo(error.message);
+  if (ruta) await supabaseAdmin().storage.from("facturas").remove([ruta as string]);
+  revalidatePath("/facturas", "layout");
+  redirect("/facturas");
+}
