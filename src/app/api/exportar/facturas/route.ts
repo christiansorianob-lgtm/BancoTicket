@@ -2,9 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { esGestor, perfilActual } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { hoyColombia } from "@/lib/fechas";
-import { consultarFacturas, filtrosFacturasDesde } from "@/lib/facturas/consulta";
+import { consultarFacturas, filtrosEnTexto, filtrosFacturasDesde } from "@/lib/facturas/consulta";
 import { informeFacturasExcel } from "@/lib/facturas/excel";
-import { NOMBRE_ESTADO, type EstadoCobro } from "@/lib/facturas/tipos";
 
 export const maxDuration = 60;
 
@@ -15,11 +14,7 @@ export async function GET(request: NextRequest) {
   const f = filtrosFacturasDesde((k) => request.nextUrl.searchParams.get(k));
   const { filas, error } = await consultarFacturas(await supabaseServidor(), f, 20000);
   if (error) return NextResponse.json({ error }, { status: 500 });
-  const filtros = [
-    `Estado: ${f.estado ? NOMBRE_ESTADO[f.estado as EstadoCobro] ?? f.estado : "todos"}`,
-    `Extractora: ${f.extractora || "todas"}`, `Emisor: ${f.emisor || "todos"}`, `Mes: ${f.mes || "todos"}`,
-    f.vencida ? "Solo vencidas" : null,
-  ].filter(Boolean).join("  ·  ");
+  const filtros = filtrosEnTexto(f);
   const archivo = await informeFacturasExcel(filas, filtros, perfil.nombre);
   return new NextResponse(new Uint8Array(archivo), {
     headers: {

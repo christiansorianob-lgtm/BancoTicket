@@ -1,7 +1,7 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
 > **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0025**.
+> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0027**.
 > La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
@@ -90,9 +90,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0025.** Nunca editar una aplicada; crear la siguiente (`0026_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0027.** Nunca editar una aplicada; crear la siguiente (`0028_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0026_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0028_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
@@ -113,6 +113,8 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0026_nomb
 | 0023 | `eliminar_anticipo`: solo anticipos en disputa, con motivo (queda en el historial) |
 | 0024 | `configuracion.dias_aviso_respaldo = 15` (la app escribe `ultimo_respaldo`) |
 | 0025 | facturas: `retefuente`, `reteiva`, `reteica` por separado; alerta por cada impuesto |
+| 0026 | `configuracion.tarifas_factura` (IVA 5, ReteFuente 1,5, ReteIVA 15 del IVA, ReteICA 0) para la comprobación de cálculos |
+| 0027 | facturas: solo APROBADA/ANULADA; `fact_eliminar_factura` (solo anuladas sin abonos vigentes, copia en `fact_auditoria.datos`); sin revertir anulación |
 
 Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `pendiente|confirmado|en_disputa`, `soporte_ruta`), `tiquetes_pendientes` y `tiquetes` (kilos enteros, `neto_impreso_kg`, `requiere_revision` + `motivo_revision` «Verificar: …», `datos_leidos.nota_ia`), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia`, `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`), `fact_facturas`, `fact_pagos`, `fact_auditoria`. Vistas `saldos`, `extracto`, `fact_facturas_estado`, `fact_totales`. Buckets privados `tiquetes` (`<comprador>/…`, `<comprador>/anticipos/…`, `formatos/…`) y `facturas`.
 
@@ -196,7 +198,4 @@ Local: `.env.local` tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con 
 
 Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
 
-**Plan de Facturas (2026-11-03; solo Facturas, no toca tiquetes ni IA; esperando «procede»):**
-1. **Comprobación de cálculos** (código, sin IA), al subir y en el detalle: kilos × precio = subtotal; subtotal × % IVA; subtotal × % ReteFuente; IVA × % ReteIVA; ReteICA; subtotal + IVA − retenciones = total a pagar. Verde si coincide, rojo con la diferencia. Porcentajes esperados en `configuracion` (IVA 5 %, ReteFuente 1,5 %, ReteIVA 15 % del IVA, ReteICA 0; iguales para todos los emisores salvo cambio de ley).
-2. **Estados Aprobada / Anulada.** Se guarda solo al tocar «Aprobar factura» (Sí/No; avisa si algo no cuadra). Desaparece «Pendiente de revisión». Anular con motivo; la anulada no suma. **Sin revertir anulación:** una anulada se puede **eliminar** (registro, abonos anulados y archivo; queda copia en `fact_auditoria`) y se sube de nuevo (el CUFE queda libre). **No se anula ni elimina si tiene abonos vigentes** (Abonada parcial o Pagada). Abonos y estado de cobro siguen igual. Migración 0026 (hoy hay 0 facturas).
-3. **Panel por emisor + buscador** en la pestaña Facturas (sin botones nuevos en el menú): tarjeta por emisor (facturas, kilos, facturado, pagado, saldo, barra de participación; tocarla filtra); filtros N°/CUFE, emisor, extractora, desde/hasta, Aprobada/Anulada, estado de cobro, vencidas; Excel con los mismos filtros.
+Plan de Facturas del 2026-11-03 (comprobación de cálculos, Aprobada/Anulada y eliminar, panel por emisor y buscador): **hecho y desplegado** (migraciones 0026 y 0027; ver NOTAS). Falta probarlo con la FEPA 12 real.
