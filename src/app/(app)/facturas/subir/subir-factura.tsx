@@ -6,6 +6,7 @@ import { FileUp, Loader2 } from "lucide-react";
 import { Mensaje } from "@/components/ui";
 import { MAX_BYTES_FACTURA, type Validacion } from "@/lib/facturas/validar";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
+import type { TarifasFactura } from "@/lib/facturas/comprobacion";
 import { descartarArchivo, guardarFactura } from "../acciones";
 import { CamposFactura } from "../campos-factura";
 
@@ -17,7 +18,7 @@ type Lectura =
  * Subir una factura (decisión del usuario): se ELIGE el archivo de la galería o de los archivos del
  * celular o computador. Sin cámara: el selector no lleva «capture» ni se usa getUserMedia.
  */
-export function SubirFactura() {
+export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
   const router = useRouter();
   const entrada = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<{ url: string; tipo: string; verPdf: boolean } | null>(null);
@@ -95,7 +96,7 @@ export function SubirFactura() {
             <input type="hidden" name="tipo_archivo" value={lectura.tipo_archivo} />
             <input type="hidden" name="consumo_id" value={lectura.consumoId ?? ""} />
             <Mensaje tono="alerta">Compare los datos con la factura y corrija lo que haga falta antes de guardar.</Mensaje>
-            <CamposFactura inicial={lectura.datos} />
+            <CamposFactura inicial={lectura.datos} tarifas={tarifas} />
             <div className="grid gap-2 sm:grid-cols-2">
               <button className="boton-primario" disabled={guardando}>{guardando ? "Guardando…" : "Confirmar y guardar"}</button>
               <button type="button" className="boton-secundario" disabled={guardando}

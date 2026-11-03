@@ -2,7 +2,8 @@
  * Validaciones de una factura antes de guardarla (sin dependencias: navegador, servidor y pruebas).
  * Si alguna falla, la factura se guarda como PENDIENTE_REVISION y se muestra resaltada.
  */
-import { totalRetenciones, type FacturaLeida } from "./tipos";
+import type { FacturaLeida } from "./tipos";
+import { comprobarFactura, pesos, type TarifasFactura } from "./comprobacion";
 
 export type Validacion = { nombre: string; ok: boolean; mensaje: string };
 
@@ -13,7 +14,6 @@ export function completarPrecio<T extends Pick<FacturaLeida, "kilos" | "precio_k
 }
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-const pesos = (n: number) => n.toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
 export function validarFactura(d: FacturaLeida): Validacion[] {
   const v: Validacion[] = [];
@@ -26,21 +26,15 @@ export function validarFactura(d: FacturaLeida): Validacion[] {
   const fechas = ([["emisión", d.fecha_emision], ["vencimiento", d.fecha_vencimiento], ["periodo desde", d.periodo_desde], ["periodo hasta", d.periodo_hasta]] as const)
     .filter(([, f]) => f && (!FECHA.test(f) || Number.isNaN(new Date(`${f}T12:00:00-05:00`).getTime())));
   v.push({ nombre: "Fechas", ok: fechas.length === 0, mensaje: fechas.length ? `Fecha no válida: ${fechas.map(([n]) => n).join(", ")}` : "Fechas válidas" });
-
-  if (d.subtotal != null && d.iva != null && d.total_a_pagar != null) {
-    const calculado = d.subtotal + d.iva - totalRetenciones(d);
-    const ok = Math.abs(calculado - d.total_a_pagar) <= 1;
-    v.push({ nombre: "Subtotal + IVA − ReteFuente − ReteIVA − ReteICA = total a pagar", ok,
-      mensaje: ok ? "Cuadra" : `Da ${pesos(calculado)} y la factura dice ${pesos(d.total_a_pagar)}` });
-  }
-  if (d.kilos != null && d.precio_kilo != null && d.subtotal != null) {
-    const calculado = d.kilos * d.precio_kilo;
-    // Tolerancia: el precio por kilo puede venir redondeado (0,1 % del subtotal o 100 pesos).
-    const ok = Math.abs(calculado - d.subtotal) <= Math.max(100, Math.abs(d.subtotal) * 0.001);
-    v.push({ nombre: "Kilos × precio por kilo ≈ subtotal", ok,
-      mensaje: ok ? "Cuadra" : `Da ${pesos(calculado)} y el subtotal es ${pesos(d.subtotal)}` });
-  }
   return v;
+}
+
+/** Validaciones + cada cálculo de la comprobación que no coincide (decide si la factura queda en revisión). */
+export function fallasFactura(d: FacturaLeida, t: TarifasFactura): string[] {
+  return [
+    ...validarFactura(d).filter((v) => !v.ok).map((v) => `${v.nombre}: ${v.mensaje}`),
+    ...comprobarFactura(d, t).filter((c) => !c.ok).map((c) => `${c.nombre}: ${c.diferencia == null ? "falta un dato" : `diferencia ${pesos(Math.abs(c.diferencia))}`}`),
+  ];
 }
 
 /** Tipo real del archivo por su contenido (primeros bytes), no por la extensión. */

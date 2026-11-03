@@ -8,6 +8,8 @@ import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import type { EstadoCobro, FacturaLeida } from "@/lib/facturas/tipos";
 import { actualizarFactura, anularAbono, anularFactura, registrarAbono, revertirAnulacion } from "../acciones";
 import { ChipsFactura } from "../estado";
+import { ComprobacionFactura } from "../comprobacion";
+import { leerConfiguracion } from "@/lib/config";
 import { ConMotivo, CorregirFactura, FormAbono } from "./formularios";
 
 /** Detalle de una factura: datos, cobro, abonos (con retenciones) y anulaciones con motivo. */
@@ -34,6 +36,7 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
     retefuente: n(f.retefuente), reteiva: n(f.reteiva), reteica: n(f.reteica), total_a_pagar: n(f.total_a_pagar),
   };
   const enRevision = f.estado_lectura === "PENDIENTE_REVISION";
+  const { tarifas_factura: tarifas } = await leerConfiguracion();
 
   return (
     <>
@@ -79,10 +82,11 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
           <Dato etiqueta="Estado de la lectura">{enRevision ? "Pendiente de revisión" : "Confirmada"}</Dato>
         </dl>
         <p className="break-all text-xs text-suave">CUFE: {f.cufe ?? "—"}</p>
+        <ComprobacionFactura datos={datos} tarifas={tarifas} />
         {!f.anulada && (
           <details open={enRevision}>
             <summary className="cursor-pointer font-semibold text-primario">Corregir datos</summary>
-            <div className="mt-3"><CorregirFactura accion={actualizarFactura.bind(null, id)} inicial={datos} /></div>
+            <div className="mt-3"><CorregirFactura accion={actualizarFactura.bind(null, id)} inicial={datos} tarifas={tarifas} /></div>
           </details>
         )}
       </section>

@@ -6,7 +6,8 @@ import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
 import { sonParecidos } from "../src/lib/lectura/parecidos";
 import { armarCuenta } from "../src/lib/informes/movimientos";
-import { completarPrecio, tipoReal, validarFactura } from "../src/lib/facturas/validar";
+import { completarPrecio, fallasFactura, tipoReal, validarFactura } from "../src/lib/facturas/validar";
+import { comprobarFactura, TARIFAS_PREDETERMINADAS } from "../src/lib/facturas/comprobacion";
 import { facturaDesde, numeroEnCampo } from "../src/lib/facturas/formulario";
 import { formatearMonto, montoEnLetras, textoMonto } from "../src/lib/monto";
 
@@ -25,17 +26,21 @@ igual("admin: saldo negativo", textoSaldo(-2000000, "admin").titulo, "Le debo");
 igual("comprador: saldo positivo", textoSaldo(5000000, "comprador").titulo, "Debo");
 igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me deben");
 
-// Facturas de venta: validaciones con las 3 facturas reales y tipo real del archivo.
-const fac = (numero: string, kilos: number, precio: number | null, subtotal: number, iva: number, ret: number, total: number, reteiva = 0) => ({
+// Facturas de venta: validaciones y comprobación de cálculos con las 4 facturas reales, y tipo real del archivo.
+const fac = (numero: string, kilos: number, precio: number | null, subtotal: number, iva: number, retefuente: number, total: number, reteiva = 0) => ({
   numero_factura: numero, cufe: "x", emisor_razon_social: "E", emisor_nit: "1", extractora_razon_social: "X", extractora_nit: "2",
   fecha_emision: "2026-10-19", fecha_vencimiento: "2026-10-20", periodo_desde: "2026-10-06", periodo_hasta: "2026-10-19",
-  kilos, precio_kilo: precio, subtotal, iva, retefuente: ret, reteiva, reteica: 0, total_a_pagar: total });
-const todasOk = (d: Parameters<typeof validarFactura>[0]) => validarFactura(completarPrecio(d)).every((v) => v.ok);
-igual("factura FEIA 669 cuadra", todasOk(fac("FEIA 669", 186670, 730, 136269100, 6813455, 1022018.25, 142060536.75)), true);
-igual("factura GLFE 8 cuadra (precio calculado)", todasOk(fac("GLFE 8", 11690, null, 8241450, 412072.5, 185432.63, 8468089.87)), true);
-igual("factura GLFE 7 cuadra", todasOk(fac("GLFE 7", 22300, 664, 14807200, 740360, 222108, 15325452)), true);
+  kilos, precio_kilo: precio, subtotal, iva, retefuente, reteiva, reteica: 0, total_a_pagar: total });
+const todasOk = (d: Parameters<typeof validarFactura>[0]) => fallasFactura(completarPrecio(d), TARIFAS_PREDETERMINADAS).length === 0;
+const calculoOk = (d: Parameters<typeof validarFactura>[0], nombre: string) => comprobarFactura(completarPrecio(d), TARIFAS_PREDETERMINADAS).find((c) => c.nombre === nombre)?.ok;
+igual("factura FEIA 669 cuadra (solo ReteIVA)", todasOk(fac("FEIA 669", 186670, 730, 136269100, 6813455, 0, 142060536.75, 1022018.25)), true);
+igual("factura GLFE 8 cuadra (precio calculado; ReteFuente y ReteIVA)", todasOk(fac("GLFE 8", 11690, null, 8241450, 412072.5, 123621.75, 8468089.87, 61810.88)), true);
+igual("factura GLFE 7 cuadra (solo ReteFuente)", todasOk(fac("GLFE 7", 22300, 664, 14807200, 740360, 222108, 15325452)), true);
 igual("precio por kilo calculado", completarPrecio(fac("GLFE 8", 11690, null, 8241450, 0, 0, 0)).precio_kilo, 705);
-igual("total que no cuadra: falla", validarFactura(fac("FEIA 669", 186670, 730, 136269100, 6813455, 1022018.25, 136269100)).find((v) => v.nombre.startsWith("Subtotal"))?.ok, false);
+igual("total que no cuadra: falla", calculoOk(fac("FEIA 669", 186670, 730, 136269100, 6813455, 0, 136269100, 1022018.25), "Total a pagar"), false);
+igual("IVA que no es el 5 %: falla", calculoOk(fac("GLFE 7", 22300, 664, 14807200, 740000, 222108, 15325092), "IVA"), false);
+igual("ReteFuente que no es el 1,5 %: falla", calculoOk(fac("GLFE 7", 22300, 664, 14807200, 740360, 222000, 15325560), "ReteFuente"), false);
+igual("kilos × precio que no da el subtotal: falla", calculoOk(fac("GLFE 7", 22300, 700, 14807200, 740360, 222108, 15325452), "Subtotal"), false);
 igual("falta el CUFE: falla", validarFactura({ ...fac("A", 1, 1, 1, 0, 0, 1), cufe: null }).find((v) => v.nombre === "Campos completos")?.ok, false);
 igual("formulario: número colombiano", facturaDesde((k) => ({ total_a_pagar: "142.060.536,75", kilos: "186.670" } as Record<string, string>)[k]).total_a_pagar, 142060536.75);
 igual("formulario: retenciones vacías = 0", [facturaDesde(() => "").retefuente, facturaDesde(() => "").reteiva, facturaDesde(() => "").reteica], [0, 0, 0]);

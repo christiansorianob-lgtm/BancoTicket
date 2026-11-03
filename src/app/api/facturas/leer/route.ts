@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { esGestor, perfilActual } from "@/lib/sesion";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { leerFactura } from "@/lib/facturas/lector";
-import { completarPrecio, MAX_BYTES_FACTURA, tipoReal, validarFactura } from "@/lib/facturas/validar";
+import { completarPrecio, fallasFactura, MAX_BYTES_FACTURA, tipoReal, validarFactura } from "@/lib/facturas/validar";
+import { leerConfiguracion } from "@/lib/config";
 import { anotarConsumo } from "@/lib/lectura/consumo";
 
 export const maxDuration = 60;
@@ -50,6 +51,6 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: "No se pudo guardar el archivo" }, { status: 500 });
 
   const validaciones = validarFactura(datos);
-  if (validaciones.some((v) => !v.ok)) await anotarConsumo(lectura.consumoId, { resultado: "revision" });
+  if (fallasFactura(datos, (await leerConfiguracion()).tarifas_factura).length) await anotarConsumo(lectura.consumoId, { resultado: "revision" });
   return NextResponse.json({ datos, validaciones, archivo_path: ruta, tipo_archivo: tipo === "pdf" ? "pdf" : "imagen", consumoId: lectura.consumoId });
 }

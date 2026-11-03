@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { TARIFAS_PREDETERMINADAS, tarifasDesde, type TarifasFactura } from "@/lib/facturas/comprobacion";
 
 export type Configuracion = {
   fecha_filtro_precio: "entrada";
@@ -11,6 +12,8 @@ export type Configuracion = {
   dias_aviso_respaldo: number;
   /** Fecha ISO del último respaldo completo (la escribe la app). */
   ultimo_respaldo: string | null;
+  /** Porcentajes esperados en las facturas de venta (migración 0026): IVA, ReteFuente, ReteIVA, ReteICA. */
+  tarifas_factura: TarifasFactura;
 };
 
 const PREDETERMINADA: Configuracion = {
@@ -21,6 +24,7 @@ const PREDETERMINADA: Configuracion = {
   meses_conservacion_fotos: 6,
   dias_aviso_respaldo: 15,
   ultimo_respaldo: null,
+  tarifas_factura: TARIFAS_PREDETERMINADAS,
 };
 
 /** Valores pendientes de decisión: viven en la tabla `configuracion`. */
@@ -28,5 +32,6 @@ export async function leerConfiguracion(): Promise<Configuracion> {
   const { data } = await supabaseAdmin().from("configuracion").select("clave, valor");
   const c = { ...PREDETERMINADA } as Record<string, unknown>;
   for (const fila of data ?? []) c[fila.clave] = fila.valor;
+  c.tarifas_factura = tarifasDesde(c.tarifas_factura);
   return c as Configuracion;
 }

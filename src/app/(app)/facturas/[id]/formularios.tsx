@@ -8,6 +8,7 @@ import { textoMonto } from "@/lib/monto";
 import { hoyColombia } from "@/lib/fechas";
 import { CamposFactura } from "../campos-factura";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
+import type { TarifasFactura } from "@/lib/facturas/comprobacion";
 
 /** Anular (o revertir) con motivo obligatorio y confirmación Sí / No. */
 export function ConMotivo({ accion, boton, pregunta, placeholder }: {
@@ -24,10 +25,10 @@ export function ConMotivo({ accion, boton, pregunta, placeholder }: {
 }
 
 /** Corregir los datos de la factura (las validaciones se ven en vivo). */
-export function CorregirFactura({ accion, inicial }: { accion: (form: FormData) => Promise<Resultado>; inicial: FacturaLeida }) {
+export function CorregirFactura({ accion, inicial, tarifas }: { accion: (form: FormData) => Promise<Resultado>; inicial: FacturaLeida; tarifas: TarifasFactura }) {
   return (
     <FormAccion accion={accion} boton="Guardar corrección">
-      <CamposFactura inicial={inicial} />
+      <CamposFactura inicial={inicial} tarifas={tarifas} />
     </FormAccion>
   );
 }

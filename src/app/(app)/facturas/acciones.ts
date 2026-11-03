@@ -4,7 +4,8 @@ import { exigirAdmin } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { montoDesdeTexto } from "@/lib/numeros";
-import { completarPrecio, validarFactura } from "@/lib/facturas/validar";
+import { completarPrecio, fallasFactura } from "@/lib/facturas/validar";
+import { leerConfiguracion } from "@/lib/config";
 import { facturaDesde } from "@/lib/facturas/formulario";
 import { anotarConsumo } from "@/lib/lectura/consumo";
 import type { Resultado } from "@/app/(app)/admin/acciones";
@@ -12,17 +13,17 @@ import type { Resultado } from "@/app/(app)/admin/acciones";
 const fallo = (error: string): Resultado => ({ ok: false, error });
 const errorDe = (m: string) => m.replace(/^.*FACTURA_DUPLICADA: /, "Duplicada: ");
 
-/** Datos del formulario + estado: CONFIRMADA si todas las validaciones pasan; si no, PENDIENTE_REVISION. */
-function prepararFactura(form: FormData) {
+/** Datos del formulario + estado: CONFIRMADA si validaciones y cálculos cuadran; si no, PENDIENTE_REVISION. */
+async function prepararFactura(form: FormData) {
   const datos = completarPrecio(facturaDesde((k) => form.get(k) as string | null));
-  const fallas = validarFactura(datos).filter((v) => !v.ok);
+  const fallas = fallasFactura(datos, (await leerConfiguracion()).tarifas_factura);
   const estado = fallas.length ? "PENDIENTE_REVISION" : "CONFIRMADA";
-  return { datos, estado, motivo: fallas.length ? fallas.map((f) => `${f.nombre}: ${f.mensaje}`).join(" · ") : null };
+  return { datos, estado, motivo: fallas.length ? fallas.join(" · ") : null };
 }
 
 export async function guardarFactura(form: FormData): Promise<Resultado & { id?: string }> {
   await exigirAdmin();
-  const { datos, estado, motivo } = prepararFactura(form);
+  const { datos, estado, motivo } = await prepararFactura(form);
   if (!datos.numero_factura) return fallo("Escriba el número de la factura");
   const archivo_path = String(form.get("archivo_path") ?? "") || null;
   const tipo_archivo = form.get("tipo_archivo") === "imagen" ? "imagen" : "pdf";
@@ -36,7 +37,7 @@ export async function guardarFactura(form: FormData): Promise<Resultado & { id?:
 
 export async function actualizarFactura(id: string, form: FormData): Promise<Resultado> {
   await exigirAdmin();
-  const { datos, estado, motivo } = prepararFactura(form);
+  const { datos, estado, motivo } = await prepararFactura(form);
   if (!datos.numero_factura) return fallo("Escriba el número de la factura");
   const supabase = await supabaseServidor();
   const { error } = await supabase.rpc("fact_actualizar_factura", { p_id: id, p: { ...datos, motivo_revision: motivo }, p_estado: estado });

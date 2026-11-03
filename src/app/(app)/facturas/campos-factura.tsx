@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { completarPrecio, validarFactura, type Validacion } from "@/lib/facturas/validar";
+import { completarPrecio, validarFactura } from "@/lib/facturas/validar";
 import { facturaDesde, numeroEnCampo } from "@/lib/facturas/formulario";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
+import type { TarifasFactura } from "@/lib/facturas/comprobacion";
+import { ComprobacionFactura } from "./comprobacion";
 
 const ETIQUETAS: [keyof FacturaLeida, string, "texto" | "fecha" | "numero"][] = [
   ["numero_factura", "N° de factura", "texto"], ["cufe", "CUFE", "texto"],
@@ -21,22 +23,23 @@ const ETIQUETAS: [keyof FacturaLeida, string, "texto" | "fecha" | "numero"][] = 
  * Campos editables de la factura con las validaciones en vivo (las mismas que aplica el servidor al
  * guardar). Un campo vacío es «no se leyó»: queda resaltado.
  */
-export function CamposFactura({ inicial }: { inicial: FacturaLeida }) {
+export function CamposFactura({ inicial, tarifas }: { inicial: FacturaLeida; tarifas: TarifasFactura }) {
   const caja = useRef<HTMLDivElement>(null);
-  const [validaciones, setValidaciones] = useState<Validacion[]>(() => validarFactura(completarPrecio(inicial)));
+  const [datos, setDatos] = useState<FacturaLeida>(() => completarPrecio(inicial));
 
   useEffect(() => {
     const form = caja.current?.closest("form");
     if (!form) return;
-    const revisar = () => setValidaciones(validarFactura(completarPrecio(facturaDesde((k) => new FormData(form).get(k) as string | null))));
+    const revisar = () => setDatos(completarPrecio(facturaDesde((k) => new FormData(form).get(k) as string | null)));
     form.addEventListener("input", revisar);
     return () => form.removeEventListener("input", revisar);
   }, []);
 
   return (
     <div ref={caja} className="space-y-3">
+      <ComprobacionFactura datos={datos} tarifas={tarifas} />
       <ul className="space-y-1 rounded-xl border border-borde p-3 text-sm">
-        {validaciones.map((v) => (
+        {validarFactura(datos).map((v) => (
           <li key={v.nombre} className={`flex items-start gap-1.5 ${v.ok ? "text-ok" : "font-semibold text-error"}`}>
             {v.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" /> : <XCircle className="mt-0.5 size-4 shrink-0" />} {v.nombre}: {v.mensaje}
           </li>
@@ -57,7 +60,7 @@ export function CamposFactura({ inicial }: { inicial: FacturaLeida }) {
           );
         })}
       </div>
-      <p className="text-xs text-suave">Números en formato colombiano: punto de miles y coma decimal (ej. 142.060.536,75). Si todo cuadra queda CONFIRMADA; si no, queda PENDIENTE DE REVISIÓN.</p>
+      <p className="text-xs text-suave">Números en formato colombiano: punto de miles y coma decimal (ej. 142.060.536,75). La comprobación se actualiza al corregir. Si todo cuadra queda CONFIRMADA; si no, queda PENDIENTE DE REVISIÓN.</p>
     </div>
   );
 }
