@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import sharp from "sharp";
+import { z } from "zod";
 import { FacturaLeida } from "./tipos";
 import { registrarConsumo } from "@/lib/lectura/consumo";
 
@@ -17,6 +18,17 @@ Devuelve solo los campos pedidos, como están en el documento:
 - total_a_pagar es el valor neto final ("Total a Pagar"), NO el "Vr. Total" de la línea del ítem.
 - Retenciones, cada una por separado tal como aparecen en el bloque de totales: retefuente (Retefuente), reteiva (ReteIVA), reteica (ReteICA); 0 la que no aparezca.
 - La imagen puede venir girada, con sombra o baja resolución. Si un campo no está o no se lee con claridad, devuelve null: no inventes valores.`;
+
+/**
+ * Esquema que se pide a la IA: la API admite máximo 16 campos que pueden ser null, así que los
+ * impuestos van siempre con número (0 si no aparece). Lo demás puede volver null.
+ */
+const FacturaIA = FacturaLeida.extend({
+  iva: z.number().describe("Valor del IVA del bloque de totales; 0 si no aparece"),
+  retefuente: z.number().describe("Valor de la línea Retefuente del bloque de totales; 0 si no aparece"),
+  reteiva: z.number().describe("Valor de la línea ReteIVA; 0 si no aparece"),
+  reteica: z.number().describe("Valor de la línea ReteICA; 0 si no aparece"),
+});
 
 export type ArchivoFactura = { bytes: Buffer; tipo: "pdf" | "jpeg" | "png" | "webp" };
 
@@ -40,7 +52,7 @@ export async function leerFactura(a: ArchivoFactura, usuarioId: string): Promise
     const r = await cliente.messages.parse({
       model: modelo(),
       max_tokens: 2000,
-      output_config: { effort: "medium", format: zodOutputFormat(FacturaLeida) },
+      output_config: { effort: "medium", format: zodOutputFormat(FacturaIA) },
       system: INSTRUCCIONES,
       messages: [{ role: "user", content: [contenido, { type: "text", text: "Extrae los campos de esta factura." }] }],
     });
