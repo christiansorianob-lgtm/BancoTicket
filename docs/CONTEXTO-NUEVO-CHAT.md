@@ -196,7 +196,7 @@ Local: `.env.local` tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con 
 
 Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
 
-**Ideas para armar un plan (Facturas, 2026-11-03; aún sin plan aprobado):**
-1. **Comprobación de cálculos:** la app recalcula la factura (subtotal, IVA, cada retención, total a pagar, kilos × precio) y muestra en la misma factura, de forma didáctica y profesional, cada cuenta que hizo y si coincide o no con lo facturado. Hacerlo con código, sin IA (no sube el consumo).
-2. **Dos estados: Aprobada y Anulada.** La administradora lee la factura y la aprueba para que quede guardada; si el contador indica anularla, se anula en cualquier momento y deja de sumar.
-3. **Panel por emisor + buscador:** cuánto suman las facturas de cada emisor (visual) y filtros de búsqueda como los de tiquetes. Todo dentro de la pestaña **Facturas** (sin agregar más botones al menú).
+**Plan de Facturas (2026-11-03; solo Facturas, no toca tiquetes ni IA; esperando «procede»):**
+1. **Comprobación de cálculos** (código, sin IA), al subir y en el detalle: kilos × precio = subtotal; subtotal × % IVA; subtotal × % ReteFuente; IVA × % ReteIVA; ReteICA; subtotal + IVA − retenciones = total a pagar. Verde si coincide, rojo con la diferencia. Porcentajes esperados en `configuracion` (IVA 5 %, ReteFuente 1,5 %, ReteIVA 15 % del IVA, ReteICA 0; iguales para todos los emisores salvo cambio de ley).
+2. **Estados Aprobada / Anulada.** Se guarda solo al tocar «Aprobar factura» (Sí/No; avisa si algo no cuadra). Desaparece «Pendiente de revisión». Anular con motivo; la anulada no suma. **Sin revertir anulación:** una anulada se puede **eliminar** (registro, abonos anulados y archivo; queda copia en `fact_auditoria`) y se sube de nuevo (el CUFE queda libre). **No se anula ni elimina si tiene abonos vigentes** (Abonada parcial o Pagada). Abonos y estado de cobro siguen igual. Migración 0026 (hoy hay 0 facturas).
+3. **Panel por emisor + buscador** en la pestaña Facturas (sin botones nuevos en el menú): tarjeta por emisor (facturas, kilos, facturado, pagado, saldo, barra de participación; tocarla filtra); filtros N°/CUFE, emisor, extractora, desde/hasta, Aprobada/Anulada, estado de cobro, vencidas; Excel con los mismos filtros.
