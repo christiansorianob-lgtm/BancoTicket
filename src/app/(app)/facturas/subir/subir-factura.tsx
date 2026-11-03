@@ -20,7 +20,7 @@ type Lectura =
 export function SubirFactura() {
   const router = useRouter();
   const entrada = useRef<HTMLInputElement>(null);
-  const [archivo, setArchivo] = useState<{ url: string; tipo: string } | null>(null);
+  const [archivo, setArchivo] = useState<{ url: string; tipo: string; verPdf: boolean } | null>(null);
   const [leyendo, setLeyendo] = useState(false);
   const [lectura, setLectura] = useState<Lectura | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,8 @@ export function SubirFactura() {
     if (!f) return;
     reiniciar();
     if (f.size > MAX_BYTES_FACTURA) return setError("El archivo pesa más de 4 MB.");
-    setArchivo({ url: URL.createObjectURL(f), tipo: f.type });
+    // El celular no muestra PDF dentro de la página: allí solo va el botón para abrirlo.
+    setArchivo({ url: URL.createObjectURL(f), tipo: f.type, verPdf: navigator.pdfViewerEnabled === true });
     setLeyendo(true);
     const form = new FormData();
     form.set("archivo", f);
@@ -84,8 +85,10 @@ export function SubirFactura() {
           }}>
           <div className="tarjeta">
             {archivo && (archivo.tipo === "application/pdf"
-              ? <object data={archivo.url} type="application/pdf" className="h-[32rem] w-full rounded-xl"><a href={archivo.url} target="_blank" rel="noopener noreferrer" className="boton-secundario w-full">Abrir el PDF</a></object>
-              : <img src={archivo.url} alt="Factura" className="w-full rounded-xl border border-borde" />)}
+              ? archivo.verPdf
+                ? <object data={archivo.url} type="application/pdf" className="h-[32rem] w-full rounded-xl"><a href={archivo.url} target="_blank" rel="noopener noreferrer" className="boton-secundario w-full">Abrir el PDF</a></object>
+                : <a href={archivo.url} target="_blank" rel="noopener noreferrer" className="boton-secundario w-full">Abrir el PDF</a>
+              :<img src={archivo.url} alt="Factura" className="w-full rounded-xl border border-borde" />)}
           </div>
           <div className="tarjeta space-y-3">
             <input type="hidden" name="archivo_path" value={lectura.archivo_path} />
