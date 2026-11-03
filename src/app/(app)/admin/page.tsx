@@ -9,7 +9,7 @@ import { textoSaldo } from "@/lib/saldo";
 export default async function PanelAdmin() {
   const supabase = await supabaseServidor();
   const inicioMes = `${hoyColombia().slice(0, 8)}01T00:00:00-05:00`;
-  const [{ data: saldos }, { count: pendientes }, { count: galeria }, { count: disputas }, { count: sinPrecio }, { count: formatos }, { data: consumo }] = await Promise.all([
+  const [{ data: saldos }, { count: pendientes }, { count: galeria }, { count: disputas }, { count: sinPrecio }, { count: formatos }, { data: consumo }, { count: porConfirmar }] = await Promise.all([
     supabase.from("saldos").select("*").order("nombre"),
     supabase.from("tiquetes_pendientes").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase.from("tiquetes_pendientes").select("id", { count: "exact", head: true }).eq("estado", "pendiente").eq("requiere_revision", true),
@@ -17,6 +17,8 @@ export default async function PanelAdmin() {
     supabase.from("tiquetes").select("id", { count: "exact", head: true }).eq("estado", "vigente").is("precio_tonelada", null),
     supabase.from("formatos_no_reconocidos").select("id", { count: "exact", head: true }).eq("estado", "nuevo"),
     supabase.from("consumo_ia").select("tipo, costo_usd, modulo").gte("creado_en", inicioMes),
+    // Anticipos que el comprador aún no confirma (no cuentan en el saldo hasta que los confirme).
+    supabase.from("anticipos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
   ]);
   const usos = consumo ?? [];
   const costoMes = usos.reduce((s, u) => s + Number(u.costo_usd), 0);
@@ -35,12 +37,13 @@ export default async function PanelAdmin() {
     { texto: "Aprobados sin precio", valor: sinPrecio ?? 0, href: "/admin/tiquetes?sin_precio=1", tono: "text-primario" },
     { texto: "Anticipos en disputa", valor: disputas ?? 0, href: "/admin/anticipos", tono: "text-error" },
     { texto: "Formatos no reconocidos", valor: formatos ?? 0, href: "/admin/formatos", tono: "text-error" },
+    { texto: "Anticipos sin confirmar", valor: porConfirmar ?? 0, href: "/admin/anticipos?estado=pendiente", tono: "text-alerta" },
   ];
 
   return (
     <>
       <h1 className="titulo">Saldos de compradores</h1>
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {indicadores.map((i) => (
           <Link key={i.texto} href={i.href} className="tarjeta">
             <p className={`text-3xl font-black ${i.tono}`}>{i.valor}</p>
