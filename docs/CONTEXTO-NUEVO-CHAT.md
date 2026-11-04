@@ -199,3 +199,10 @@ Local: `.env.local` tiene todo **menos `ANTHROPIC_API_KEY`** → la lectura con 
 Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
 
 Plan de Facturas del 2026-11-03 (comprobación de cálculos, Aprobada/Anulada y eliminar, panel por emisor y buscador): **hecho y desplegado** (migraciones 0026 y 0027; ver NOTAS). Falta probarlo con la FEPA 12 real.
+
+**Plan: abonos por CLIENTE (2026-11-03; solo Facturas, no toca tablas de tiquetes; esperando «procede»):**
+1. `fact_clientes` identificado por **NIT** (se comparan solo los dígitos). Al aprobar una factura se une a su cliente; si el nombre leído difiere del registrado bajo ese NIT, aviso «Este NIT ya está registrado como …» con la opción de usar el nombre registrado (un solo cliente por NIT).
+2. **Deuda del cliente = Σ total a pagar (neto) de facturas aprobadas − Σ abonos vigentes**; se calcula, no se guarda; negativo = «Saldo a favor del cliente». Una sola deuda por cliente aunque facturen varias empresas del mismo dueño.
+3. **Abono al cliente** (no a la factura): cliente («NOMBRE – NIT …»), monto (formato didáctico), forma de pago (Transferencia, Consignación, Cheque, Efectivo, Otro), N° de referencia opcional con texto de ayuda, quién realiza el abono (un campo), fecha (hoy por defecto), observación, soporte opcional (foto/PDF, 4 MB). Aviso Sí/No con la deuda antes y después. Anular con motivo y, ya anulado, eliminar con su soporte.
+4. Pestaña Facturas: tarjeta por cliente («Le debe $ X», facturas, facturado, abonado, último abono, facturas con vencimiento pasado mientras debe) y cuenta del cliente (facturas y abonos por fecha con saldo acumulado) con Excel. Se quedan el panel por emisor y el buscador.
+5. Salen: abonos por factura (`fact_pagos` → `fact_abonos`, hoy sin datos), estados de cobro, vencida y mora por factura, alertas de retenciones y botones «Registrar abono» de cada factura. La factura queda Aprobada o Anulada y se puede anular en cualquier momento. Migración 0028 probada con transacción deshecha.
