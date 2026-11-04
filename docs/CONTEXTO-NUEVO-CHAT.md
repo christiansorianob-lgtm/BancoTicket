@@ -1,7 +1,7 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
 > **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0027**.
+> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0028**.
 > La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
@@ -90,9 +90,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0027.** Nunca editar una aplicada; crear la siguiente (`0028_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0028.** Nunca editar una aplicada; crear la siguiente (`0029_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0028_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0029_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
@@ -115,6 +115,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0028_nomb
 | 0025 | facturas: `retefuente`, `reteiva`, `reteica` por separado; alerta por cada impuesto |
 | 0026 | `configuracion.tarifas_factura` (IVA 5, ReteFuente 1,5, ReteIVA 15 del IVA, ReteICA 0) para la comprobación de cálculos |
 | 0027 | facturas: solo APROBADA/ANULADA; `fact_eliminar_factura` (solo anuladas sin abonos vigentes, copia en `fact_auditoria.datos`); sin revertir anulación |
+| 0028 | facturas: abonos al CLIENTE: `fact_clientes` (por NIT), `fact_abonos` (reemplaza `fact_pagos`), vista `fact_clientes_saldo` (deuda), sin cobro por factura |
 
 Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `pendiente|confirmado|en_disputa`, `soporte_ruta`), `tiquetes_pendientes` y `tiquetes` (kilos enteros, `neto_impreso_kg`, `requiere_revision` + `motivo_revision` «Verificar: …», `datos_leidos.nota_ia`), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia`, `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`), `fact_facturas`, `fact_pagos`, `fact_auditoria`. Vistas `saldos`, `extracto`, `fact_facturas_estado`, `fact_totales`. Buckets privados `tiquetes` (`<comprador>/…`, `<comprador>/anticipos/…`, `formatos/…`) y `facturas`.
 
@@ -200,9 +201,4 @@ Aquí se anota solo lo que vaya saliendo desde el 2026-11-03.
 
 Plan de Facturas del 2026-11-03 (comprobación de cálculos, Aprobada/Anulada y eliminar, panel por emisor y buscador): **hecho y desplegado** (migraciones 0026 y 0027; ver NOTAS). Falta probarlo con la FEPA 12 real.
 
-**Plan: abonos por CLIENTE (2026-11-03; solo Facturas, no toca tablas de tiquetes; esperando «procede»):**
-1. `fact_clientes` identificado por **NIT** (se comparan solo los dígitos). Al aprobar una factura se une a su cliente; si el nombre leído difiere del registrado bajo ese NIT, aviso «Este NIT ya está registrado como …» con la opción de usar el nombre registrado (un solo cliente por NIT).
-2. **Deuda del cliente = Σ total a pagar (neto) de facturas aprobadas − Σ abonos vigentes**; se calcula, no se guarda; negativo = «Saldo a favor del cliente». Una sola deuda por cliente aunque facturen varias empresas del mismo dueño.
-3. **Abono al cliente** (no a la factura): cliente («NOMBRE – NIT …»), monto (formato didáctico), forma de pago (Transferencia, Consignación, Cheque, Efectivo, Otro), N° de referencia opcional con texto de ayuda, quién realiza el abono (un campo), fecha (hoy por defecto), observación, soporte opcional (foto/PDF, 4 MB). Aviso Sí/No con la deuda antes y después. Anular con motivo y, ya anulado, eliminar con su soporte.
-4. Pestaña Facturas: tarjeta por cliente («Le debe $ X», facturas, facturado, abonado, último abono, facturas con vencimiento pasado mientras debe) y cuenta del cliente (facturas y abonos por fecha con saldo acumulado) con Excel. Se quedan el panel por emisor y el buscador.
-5. Salen: abonos por factura (`fact_pagos` → `fact_abonos`, hoy sin datos), estados de cobro, vencida y mora por factura, alertas de retenciones y botones «Registrar abono» de cada factura. La factura queda Aprobada o Anulada y se puede anular en cualquier momento. Migración 0028 probada con transacción deshecha.
+Plan de abonos por CLIENTE (2026-11-03): **hecho y desplegado** (migración 0028; ver NOTAS). Falta probar un abono real con soporte.

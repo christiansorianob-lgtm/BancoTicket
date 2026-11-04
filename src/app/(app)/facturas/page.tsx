@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Building2, Eye, FileSpreadsheet, FileText, HandCoins, Search, Upload } from "lucide-react";
+import { Building2, Eye, FileSpreadsheet, FileText, HandCoins, Search, Upload, Users } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Vacio } from "@/components/ui";
-import { consultarFacturas, filtrosFacturasDesde, OPCIONES_ESTADO, totalesPor, type FiltrosFacturas } from "@/lib/facturas/consulta";
+import { consultarClientes, consultarFacturas, filtrosFacturasDesde, OPCIONES_ESTADO, totalesPor, type FiltrosFacturas } from "@/lib/facturas/consulta";
+import { formatoNit } from "@/lib/facturas/tipos";
 import { ChipsFactura } from "./estado";
 
 /** Enlace a la misma página con los filtros cambiados (vacío = se quita el filtro). */
@@ -13,25 +14,25 @@ function conFiltros(f: FiltrosFacturas, cambios: Partial<FiltrosFacturas>) {
   return q.size ? `/facturas?${q}` : "/facturas";
 }
 
-const porcentaje = (parte: number, total: number) => (total > 0 ? Math.round((parte / total) * 100) : 0);
+const porcentaje = (parte: number, total: number) => (total > 0 ? Math.min(100, Math.round((parte / total) * 100)) : 0);
 
 /**
- * Facturas de venta (módulo aparte de los tiquetes): buscador, resumen, panel por emisor, lista con
- * estado (Aprobada / Anulada) y cobro, y totales. Las anuladas no suman. Todo en la misma pestaña.
+ * Facturas de venta (módulo aparte de los tiquetes). Arriba, lo que debe cada CLIENTE (facturas
+ * aprobadas − abonos, decisión del usuario); luego buscador, panel por emisor, lista y totales por mes.
  */
 export default async function Facturas({ searchParams }: PageProps<"/facturas">) {
   const sp = await searchParams;
   const f = filtrosFacturasDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
   const supabase = await supabaseServidor();
-  const [{ filas, error }, { data: opciones }] = await Promise.all([
+  const [{ filas, error }, clientes, { data: opciones }] = await Promise.all([
     consultarFacturas(supabase, f),
-    supabase.from("fact_totales").select("dimension, clave").order("clave"),
+    consultarClientes(supabase),
+    supabase.from("fact_totales").select("dimension, clave").eq("dimension", "emisor").order("clave"),
   ]);
-  const de = (d: string) => (opciones ?? []).filter((t) => t.dimension === d).map((t) => t.clave as string);
-  const aprobadas = filas.filter((x) => x.estado_cobro !== "ANULADA");
-  const suma = (k: "total_cobrar" | "total_aplicado" | "saldo_pendiente") => aprobadas.reduce((s, x) => s + x[k], 0);
+  const deudaTotal = clientes.reduce((s, c) => s + Math.max(0, c.deuda), 0);
+  const aprobadas = filas.filter((x) => !x.anulada);
+  const totalFiltrado = aprobadas.reduce((s, x) => s + x.total_a_pagar, 0);
   const emisores = totalesPor(filas, "emisor");
-  const totalFacturado = suma("total_cobrar");
   const hayFiltros = Object.values(f).some(Boolean);
   const exportar = `/api/exportar/facturas?${new URLSearchParams(Object.entries(f).filter(([, v]) => v))}`;
 
@@ -41,9 +42,53 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <h1 className="titulo">Facturas</h1>
         <div className="flex flex-wrap gap-2">
           <Link href="/facturas/subir" className="boton-primario"><Upload className="size-5" aria-hidden /> Subir factura</Link>
+          <Link href="/facturas/abonos/nuevo" className="boton-primario"><HandCoins className="size-5" aria-hidden /> Registrar abono</Link>
           <a href={exportar} className="boton-secundario" download><FileSpreadsheet className="size-5" aria-hidden /> Exportar a Excel</a>
         </div>
       </div>
+
+      <section className="space-y-2">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="flex items-center gap-2 font-bold text-profundo"><Users className="size-5" aria-hidden /> Lo que me deben los clientes</h2>
+            <p className="text-sm text-suave">Facturas aprobadas menos abonos. Toque un cliente para ver su cuenta.</p>
+          </div>
+          <p className="text-right"><span className="block text-xs text-suave">Total por cobrar</span><span className="text-xl font-black tabular-nums text-alerta">{formatoPesos(deudaTotal)}</span></p>
+        </div>
+        {clientes.length === 0 ? <Vacio>Aún no hay clientes: se registran al aprobar su primera factura.</Vacio> : (
+          <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {clientes.map((c) => {
+              const debe = c.deuda > 1, aFavor = c.deuda < -1;
+              return (
+                <li key={c.id} className="tarjeta space-y-3">
+                  <div>
+                    <p className="font-bold text-profundo">{c.nombre}</p>
+                    <p className="text-xs text-suave">NIT {formatoNit(c.nit)}</p>
+                  </div>
+                  <div className={`rounded-xl p-3 ${debe ? "bg-alerta-suave" : "bg-ok-suave"}`}>
+                    <p className="text-xs font-semibold text-suave">{debe ? "Le debe" : aFavor ? "Saldo a favor del cliente" : "Cuenta al día"}</p>
+                    <p className={`text-2xl font-black tabular-nums ${debe ? "text-alerta" : "text-ok"}`}>{formatoPesos(Math.abs(c.deuda))}</p>
+                    {c.facturas_vencidas > 0 && <p className="text-xs font-semibold text-error">{c.facturas_vencidas} factura(s) vencida(s) sin cubrir</p>}
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs text-suave"><span>Abonado de lo facturado</span><span className="font-semibold">{porcentaje(c.abonado, c.facturado)} %</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-borde/60"><div className="h-full rounded-full bg-ok" style={{ width: `${porcentaje(c.abonado, c.facturado)}%` }} /></div>
+                  </div>
+                  <dl className="space-y-1 text-sm tabular-nums">
+                    <div className="flex justify-between gap-2"><dt className="text-suave">Facturado ({c.facturas})</dt><dd className="font-semibold">{formatoPesos(c.facturado)}</dd></div>
+                    <div className="flex justify-between gap-2"><dt className="text-suave">Abonado ({c.abonos})</dt><dd className="font-semibold text-ok">{formatoPesos(c.abonado)}</dd></div>
+                    <div className="flex justify-between gap-2"><dt className="text-suave">Último abono</dt><dd>{c.ultimo_abono ? fecha(c.ultimo_abono) : "—"}</dd></div>
+                  </dl>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href={`/facturas/clientes/${c.id}`} className="boton-secundario min-h-10 text-sm"><Eye className="size-4" aria-hidden /> Ver cuenta</Link>
+                    <Link href={`/facturas/abonos/nuevo?cliente=${c.id}`} className="boton-primario min-h-10 text-sm"><HandCoins className="size-4" aria-hidden /> Abonar</Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <form className="tarjeta grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
         <label className="sm:col-span-2"><span className="etiqueta">Buscar N° de factura o CUFE</span>
@@ -52,16 +97,15 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <label><span className="etiqueta">Estado</span>
           <select name="estado" defaultValue={f.estado} className="campo"><option value="">Todas</option>{OPCIONES_ESTADO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
         </label>
-        <label><span className="etiqueta">Emisor</span>
-          <select name="emisor" defaultValue={f.emisor} className="campo"><option value="">Todos</option>{de("emisor").map((c) => <option key={c} value={c}>{c}</option>)}</select>
+        <label><span className="etiqueta">Cliente</span>
+          <select name="cliente" defaultValue={f.cliente} className="campo"><option value="">Todos</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
         </label>
-        <label><span className="etiqueta">Extractora</span>
-          <select name="extractora" defaultValue={f.extractora} className="campo"><option value="">Todas</option>{de("extractora").map((c) => <option key={c} value={c}>{c}</option>)}</select>
+        <label><span className="etiqueta">Emisor</span>
+          <select name="emisor" defaultValue={f.emisor} className="campo"><option value="">Todos</option>{(opciones ?? []).map((o) => <option key={o.clave} value={o.clave}>{o.clave}</option>)}</select>
         </label>
         <label><span className="etiqueta">Emitida desde</span><input type="date" name="desde" defaultValue={f.desde} className="campo" /></label>
         <label><span className="etiqueta">Emitida hasta</span><input type="date" name="hasta" defaultValue={f.hasta} className="campo" /></label>
-        <label className="flex items-center gap-2 self-end pb-3"><input type="checkbox" name="vencida" value="1" defaultChecked={!!f.vencida} className="size-5" /> Solo vencidas</label>
-        <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
+        <div className="flex items-end gap-2">
           <button className="boton-primario"><Search className="size-5" aria-hidden /> Buscar</button>
           {hayFiltros && <Link href="/facturas" className="boton-secundario">Limpiar</Link>}
         </div>
@@ -69,24 +113,16 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
 
       {error && <Vacio>No se pudo cargar: {error}</Vacio>}
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="tarjeta"><p className="text-sm text-suave">Facturas aprobadas</p><p className="text-lg font-black text-profundo sm:text-2xl">{aprobadas.length}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Facturado (subtotal + IVA)</p><p className="text-lg font-black text-profundo sm:text-2xl">{formatoPesos(totalFacturado)}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Pagado (aplicado)</p><p className="text-lg font-black text-ok sm:text-2xl">{formatoPesos(suma("total_aplicado"))}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Saldo pendiente</p><p className="text-lg font-black text-alerta sm:text-2xl">{formatoPesos(suma("saldo_pendiente"))}</p></div>
-      </section>
-
       {emisores.length > 0 && (
         <section className="space-y-2">
           <div>
             <h2 className="flex items-center gap-2 font-bold text-profundo"><Building2 className="size-5" aria-hidden /> Por emisor</h2>
-            <p className="text-sm text-suave">Toque un emisor para ver solo sus facturas.</p>
+            <p className="text-sm text-suave">Total a pagar de las facturas aprobadas. Toque un emisor para ver solo sus facturas.</p>
           </div>
           <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {emisores.map((e) => {
               const elegido = f.emisor === e.clave;
-              const participa = porcentaje(e.facturado, totalFacturado);
-              const pagado = porcentaje(e.pagado, e.facturado);
+              const participa = porcentaje(e.total, totalFiltrado);
               return (
                 <li key={e.clave}>
                   <Link href={conFiltros(f, { emisor: elegido ? "" : e.clave })} className={`tarjeta block space-y-2 transition hover:shadow-md ${elegido ? "ring-2 ring-primario" : ""}`}>
@@ -94,20 +130,11 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
                       <p className="font-bold text-profundo">{e.clave}</p>
                       <span className="shrink-0 text-xs text-suave">{e.facturas} factura{e.facturas === 1 ? "" : "s"}</span>
                     </div>
-                    <p className="text-xl font-black tabular-nums text-profundo">{formatoPesos(e.facturado)}</p>
+                    <p className="text-xl font-black tabular-nums text-profundo">{formatoPesos(e.total)}</p>
                     <div>
-                      <div className="flex justify-between text-xs text-suave"><span>Participación en lo facturado</span><span className="font-semibold">{participa} %</span></div>
+                      <div className="flex justify-between text-xs text-suave"><span>Participación · {e.kilos.toLocaleString("es-CO")} kg</span><span className="font-semibold">{participa} %</span></div>
                       <div className="h-2 overflow-hidden rounded-full bg-borde/60"><div className="h-full rounded-full bg-primario" style={{ width: `${participa}%` }} /></div>
                     </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-suave"><span>Pagado</span><span className="font-semibold">{pagado} %</span></div>
-                      <div className="h-2 overflow-hidden rounded-full bg-borde/60"><div className="h-full rounded-full bg-ok" style={{ width: `${pagado}%` }} /></div>
-                    </div>
-                    <dl className="grid grid-cols-3 gap-2 text-sm tabular-nums">
-                      <div><dt className="text-xs text-suave">Kilos</dt><dd className="font-semibold">{e.kilos.toLocaleString("es-CO")}</dd></div>
-                      <div><dt className="text-xs text-suave">Pagado</dt><dd className="font-semibold text-ok">{formatoPesos(e.pagado)}</dd></div>
-                      <div><dt className="text-xs text-suave">Saldo</dt><dd className={`font-black ${e.saldo > 1 ? "text-alerta" : "text-ok"}`}>{formatoPesos(e.saldo)}</dd></div>
-                    </dl>
                   </Link>
                 </li>
               );
@@ -120,26 +147,24 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <section className="space-y-2">
           <h2 className="flex items-center gap-2 font-bold text-profundo"><FileText className="size-5" aria-hidden /> Facturas ({filas.length})</h2>
           <ul className="grid gap-3 md:grid-cols-2">
-            {/* Fondo azul claro: se distinguen de las tarjetas de totales y de emisores. */}
+            {/* Fondo azul claro: se distinguen de las tarjetas de clientes y emisores. */}
             {filas.map((x) => (
-              <li key={x.id} className={`space-y-3 rounded-2xl border-2 border-primario/25 bg-primario-suave p-4 shadow-sm sm:p-5 ${x.estado_cobro === "ANULADA" ? "opacity-60" : ""}`}>
+              <li key={x.id} className={`space-y-3 rounded-2xl border-2 border-primario/25 bg-primario-suave p-4 shadow-sm sm:p-5 ${x.anulada ? "opacity-60" : ""}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-bold text-profundo">{x.numero_factura} · {x.extractora_razon_social ?? "—"}</p>
+                    <p className="font-bold text-profundo">{x.numero_factura} · {x.cliente_nombre ?? x.extractora_razon_social ?? "—"}</p>
                     <p className="text-sm text-suave">{x.emisor_razon_social ?? "—"} · emitida {fecha(x.fecha_emision)} · vence {fecha(x.fecha_vencimiento)}</p>
                   </div>
                   <ChipsFactura f={x} />
                 </div>
                 <dl className="space-y-1 rounded-xl bg-white/80 p-3 text-sm tabular-nums">
-                  <div className="flex justify-between gap-2"><dt className="text-suave">Facturado</dt><dd className="font-semibold">{formatoPesos(x.total_cobrar)}</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-suave">Pagado</dt><dd className="font-semibold text-ok">{formatoPesos(x.total_aplicado)}</dd></div>
-                  <div className="flex justify-between gap-2 border-t border-borde pt-1"><dt className="font-semibold text-profundo">Saldo</dt><dd className={`font-black ${x.saldo_pendiente > 1 ? "text-alerta" : "text-ok"}`}>{formatoPesos(x.saldo_pendiente)}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-suave">Subtotal + IVA</dt><dd className="font-semibold">{formatoPesos(x.subtotal + x.iva)}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-suave">Retenciones</dt><dd className="font-semibold">− {formatoPesos(x.retefuente + x.reteiva + x.reteica)}</dd></div>
+                  <div className="flex justify-between gap-2 border-t border-borde pt-1"><dt className="font-semibold text-profundo">Total a pagar</dt><dd className="font-black text-profundo">{formatoPesos(x.total_a_pagar)}</dd></div>
                 </dl>
-                <div className={`grid gap-2 ${x.estado_cobro === "ANULADA" || x.saldo_pendiente <= 1 ? "" : "grid-cols-2"}`}>
+                <div className="grid grid-cols-2 gap-2">
                   <Link href={`/facturas/${x.id}`} className="boton-secundario min-h-10 text-sm"><Eye className="size-4" aria-hidden /> Ver detalle</Link>
-                  {x.estado_cobro !== "ANULADA" && x.saldo_pendiente > 1 && (
-                    <Link href={`/facturas/${x.id}?abonar=1#abonos`} className="boton-primario min-h-10 text-sm"><HandCoins className="size-4" aria-hidden /> Registrar abono</Link>
-                  )}
+                  {x.cliente_id && <Link href={`/facturas/clientes/${x.cliente_id}`} className="boton-secundario min-h-10 text-sm"><Users className="size-4" aria-hidden /> Cuenta del cliente</Link>}
                 </div>
               </li>
             ))}
@@ -148,24 +173,20 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
       )}
 
       {aprobadas.length > 0 && (
-        <section className="grid gap-3 lg:grid-cols-2">
-          {(["extractora", "mes"] as const).map((d) => (
-            <div key={d} className="tarjeta overflow-x-auto p-0">
-              <p className="p-3 font-bold text-profundo">Totales por {d}</p>
-              <table className="w-full text-sm tabular-nums">
-                <thead className="bg-profundo text-left text-white"><tr><th className="p-2">{d === "mes" ? "Mes" : "Extractora"}</th><th className="p-2 text-right">Facturado</th><th className="p-2 text-right">Saldo</th></tr></thead>
-                <tbody>
-                  {totalesPor(filas, d).map((t) => (
-                    <tr key={t.clave} className="border-t border-borde/60">
-                      <td className="p-2">{t.clave}<span className="block text-xs text-suave">{t.facturas} factura(s) · {t.kilos.toLocaleString("es-CO")} kg</span></td>
-                      <td className="p-2 text-right">{formatoPesos(t.facturado)}</td>
-                      <td className="p-2 text-right font-semibold">{formatoPesos(t.saldo)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+        <section className="tarjeta overflow-x-auto p-0">
+          <p className="p-3 font-bold text-profundo">Totales por mes de emisión</p>
+          <table className="w-full text-sm tabular-nums">
+            <thead className="bg-profundo text-left text-white"><tr><th className="p-2">Mes</th><th className="p-2 text-right">Facturas</th><th className="p-2 text-right">Total a pagar</th></tr></thead>
+            <tbody>
+              {totalesPor(filas, "mes").map((t) => (
+                <tr key={t.clave} className="border-t border-borde/60">
+                  <td className="p-2">{t.clave}<span className="block text-xs text-suave">{t.kilos.toLocaleString("es-CO")} kg</span></td>
+                  <td className="p-2 text-right">{t.facturas}</td>
+                  <td className="p-2 text-right font-semibold">{formatoPesos(t.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
     </>

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const f = filtrosFacturasDesde((k) => request.nextUrl.searchParams.get(k));
   const { filas, error } = await consultarFacturas(await supabaseServidor(), f, 20000);
   if (error) return NextResponse.json({ error }, { status: 500 });
-  const filtros = filtrosEnTexto(f);
+  const filtros = filtrosEnTexto(f, filas.find((x) => x.cliente_id === f.cliente)?.cliente_nombre ?? undefined);
   const archivo = await informeFacturasExcel(filas, filtros, perfil.nombre);
   return new NextResponse(new Uint8Array(archivo), {
     headers: {

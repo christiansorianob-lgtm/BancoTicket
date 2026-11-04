@@ -18,7 +18,7 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 export function validarFactura(d: FacturaLeida): Validacion[] {
   const v: Validacion[] = [];
   const faltan = ([
-    ["N° de factura", d.numero_factura], ["CUFE", d.cufe], ["emisor", d.emisor_razon_social], ["extractora", d.extractora_razon_social],
+    ["N° de factura", d.numero_factura], ["CUFE", d.cufe], ["emisor", d.emisor_razon_social], ["cliente", d.extractora_razon_social], ["NIT del cliente", d.extractora_nit],
     ["fecha de emisión", d.fecha_emision], ["kilos", d.kilos], ["subtotal", d.subtotal], ["IVA", d.iva], ["total a pagar", d.total_a_pagar],
   ] as const).filter(([, x]) => x == null || x === "").map(([n]) => n);
   v.push({ nombre: "Campos completos", ok: faltan.length === 0, mensaje: faltan.length ? `Falta: ${faltan.join(", ")}` : "Todos los datos principales están" });

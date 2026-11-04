@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { exigirAdmin } from "@/lib/sesion";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { montoDesdeTexto } from "@/lib/numeros";
 import { completarPrecio, fallasFactura } from "@/lib/facturas/validar";
 import { leerConfiguracion } from "@/lib/config";
 import { facturaDesde } from "@/lib/facturas/formulario";
@@ -59,29 +58,6 @@ export async function descartarArchivo(ruta: string): Promise<void> {
   if (!usado) await db.storage.from("facturas").remove([ruta]);
 }
 
-export async function registrarAbono(facturaId: string, form: FormData): Promise<Resultado> {
-  await exigirAdmin();
-  const n = (k: string) => montoDesdeTexto(String(form.get(k) ?? "")) ?? 0;
-  const fecha = String(form.get("fecha_pago") ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fallo("Fecha de pago no válida");
-  const valor = montoDesdeTexto(String(form.get("valor_recibido") ?? ""));
-  if (valor === null) return fallo("Escriba el valor recibido (neto en banco)");
-  const certificado = form.get("certificado_recibido") === "on";
-  const p = {
-    fecha_pago: fecha, valor_recibido: valor, forma_pago: String(form.get("forma_pago") ?? "").trim() || null,
-    referencia: String(form.get("referencia") ?? "").trim() || null,
-    retefuente: n("retefuente"), reteiva: n("reteiva"), reteica: n("reteica"), otros_descuentos: n("otros_descuentos"),
-    certificado_recibido: certificado, fecha_certificado: certificado ? String(form.get("fecha_certificado") ?? "") || null : null,
-    observaciones: String(form.get("observaciones") ?? "").trim() || null,
-  };
-  if (p.valor_recibido + p.retefuente + p.reteiva + p.reteica + p.otros_descuentos <= 0) return fallo("El abono debe tener algún valor");
-  const supabase = await supabaseServidor();
-  const { error } = await supabase.rpc("fact_registrar_abono", { p_factura: facturaId, p });
-  if (error) return fallo(error.message);
-  revalidatePath("/facturas", "layout");
-  return { ok: true, mensaje: "Abono registrado." };
-}
-
 async function conMotivo(funcion: string, id: string, form: FormData, mensaje: string): Promise<Resultado> {
   await exigirAdmin();
   const motivo = String(form.get("motivo") ?? "").trim();
@@ -93,7 +69,20 @@ async function conMotivo(funcion: string, id: string, form: FormData, mensaje: s
   return { ok: true, mensaje };
 }
 
-export async function anularAbono(id: string, form: FormData) { return conMotivo("fact_anular_abono", id, form, "Abono anulado."); }
+export async function anularAbono(id: string, form: FormData) { return conMotivo("fact_anular_abono", id, form, "Abono anulado: ya no resta de la deuda."); }
+
+/** Eliminar un abono ANULADO: la base lo borra (copia en la auditoría) y aquí se borra su soporte. */
+export async function eliminarAbono(id: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const motivo = String(form.get("motivo") ?? "").trim();
+  if (!motivo) return fallo("Escriba el motivo");
+  const supabase = await supabaseServidor();
+  const { data: ruta, error } = await supabase.rpc("fact_eliminar_abono", { p_id: id, p_motivo: motivo });
+  if (error) return fallo(error.message);
+  if (ruta) await supabaseAdmin().storage.from("facturas").remove([ruta as string]);
+  revalidatePath("/facturas", "layout");
+  return { ok: true, mensaje: "Abono eliminado." };
+}
 export async function anularFactura(id: string, form: FormData) { return conMotivo("fact_anular_factura", id, form, "Factura anulada: ya no suma."); }
 
 /**

@@ -26,8 +26,25 @@ export type FacturaLeida = z.infer<typeof FacturaLeida>;
 /** Total de retenciones esperadas: ReteFuente + ReteIVA + ReteICA (cada una va en su propio campo). */
 export const totalRetenciones = (d: Pick<FacturaLeida, "retefuente" | "reteiva" | "reteica">) => (d.retefuente ?? 0) + (d.reteiva ?? 0) + (d.reteica ?? 0);
 
-export const ESTADOS_COBRO = ["PENDIENTE_PAGO", "ABONADA_PARCIAL", "PAGADA", "ANULADA"] as const;
-export type EstadoCobro = (typeof ESTADOS_COBRO)[number];
-export const NOMBRE_ESTADO: Record<EstadoCobro, string> = {
-  PENDIENTE_PAGO: "Pendiente de pago", ABONADA_PARCIAL: "Abonada parcial", PAGADA: "Pagada", ANULADA: "Anulada",
+/** Formas de pago de un abono (decisión del usuario). */
+export const FORMAS_PAGO = ["TRANSFERENCIA", "CONSIGNACION", "CHEQUE", "EFECTIVO", "OTRO"] as const;
+export type FormaPago = (typeof FORMAS_PAGO)[number];
+export const NOMBRE_FORMA_PAGO: Record<FormaPago, string> = {
+  TRANSFERENCIA: "Transferencia", CONSIGNACION: "Consignación", CHEQUE: "Cheque", EFECTIVO: "Efectivo", OTRO: "Otro",
+};
+
+/** Solo los dígitos del NIT, como lo guarda la base (fact_nit): «901.253.217-5» → «9012532175». */
+export const nitDigitos = (nit: string | null | undefined) => (nit ?? "").replace(/\D/g, "");
+
+/** NIT para mostrar, con puntos y dígito de verificación: «9012532175» → «901.253.217-5». */
+export function formatoNit(nit: string | null | undefined): string {
+  const d = nitDigitos(nit);
+  if (d.length < 2) return d || "—";
+  return `${Number(d.slice(0, -1)).toLocaleString("es-CO")}-${d.slice(-1)}`;
+}
+
+/** Cliente con su cuenta (vista fact_clientes_saldo). Deuda negativa = saldo a favor del cliente. */
+export type ClienteSaldo = {
+  id: string; nit: string; nombre: string; facturas: number; facturado: number; abonos: number; abonado: number;
+  deuda: number; ultima_factura: string | null; ultimo_abono: string | null; facturas_vencidas: number;
 };

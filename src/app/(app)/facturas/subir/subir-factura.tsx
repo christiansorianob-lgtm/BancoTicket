@@ -9,7 +9,7 @@ import { facturaDesde } from "@/lib/facturas/formulario";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
 import { pesos, type TarifasFactura } from "@/lib/facturas/comprobacion";
 import { aprobarFactura, descartarArchivo } from "../acciones";
-import { CamposFactura } from "../campos-factura";
+import { CamposFactura, type ClienteRegistrado } from "../campos-factura";
 
 type Lectura =
   | { duplicado: { id: string; numero_factura: string }; datos: FacturaLeida }
@@ -19,7 +19,7 @@ type Lectura =
  * Subir una factura (decisión del usuario): se ELIGE el archivo de la galería o de los archivos del
  * celular o computador. Sin cámara: el selector no lleva «capture» ni se usa getUserMedia.
  */
-export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
+export function SubirFactura({ tarifas, clientes }: { tarifas: TarifasFactura; clientes: ClienteRegistrado[] }) {
   const router = useRouter();
   const entrada = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<{ url: string; tipo: string; verPdf: boolean } | null>(null);
@@ -99,7 +99,7 @@ export function SubirFactura({ tarifas }: { tarifas: TarifasFactura }) {
             <input type="hidden" name="tipo_archivo" value={lectura.tipo_archivo} />
             <input type="hidden" name="consumo_id" value={lectura.consumoId ?? ""} />
             <Mensaje tono="alerta">Compare los datos con la factura y corrija lo que haga falta. La factura solo se guarda al aprobarla.</Mensaje>
-            <CamposFactura inicial={lectura.datos} tarifas={tarifas} />
+            <CamposFactura inicial={lectura.datos} tarifas={tarifas} clientes={clientes} />
             {confirmar ? (
               <div className={`space-y-3 rounded-xl border-2 p-3 ${confirmar.fallas.length ? "border-error bg-error-suave" : "border-alerta bg-alerta-suave"}`} role="alertdialog" aria-label="Confirmar aprobación">
                 {confirmar.fallas.length ? (
