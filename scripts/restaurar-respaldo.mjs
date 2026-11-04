@@ -73,8 +73,10 @@ try {
       const { rows } = await c.query("select column_name from information_schema.columns where table_schema = 'public' and table_name = $1 and is_generated <> 'ALWAYS'", [t]);
       const cols = rows.map((r) => `"${r.column_name}"`).join(", ");
       for (let i = 0; i < filas.length; i += 500) {
+        // Las migraciones ya crean filas de configuración con su valor inicial: se reemplazan por las del respaldo.
+        const conflicto = t === "configuracion" ? "on conflict (clave) do update set valor = excluded.valor" : "";
         await c.query(`insert into public.${t} (${cols}) ${IDENTIDAD.has(t) ? "overriding system value" : ""}
-                       select ${cols} from json_populate_recordset(null::public.${t}, $1)`, [JSON.stringify(filas.slice(i, i + 500))]);
+                       select ${cols} from json_populate_recordset(null::public.${t}, $1) ${conflicto}`, [JSON.stringify(filas.slice(i, i + 500))]);
       }
       if (IDENTIDAD.has(t)) await c.query(`select setval(pg_get_serial_sequence('public.${t}', 'id'), (select max(id) from public.${t}))`);
     }

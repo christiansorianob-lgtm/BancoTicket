@@ -6,7 +6,10 @@ import { Mensaje } from "@/components/ui";
 import { armarZip, TABLAS_RESPALDO, type IndiceRespaldo, type Resumen } from "@/lib/respaldo/comun";
 import { registrarRespaldo } from "./acciones";
 
-const leerJson = async <T,>(url: string): Promise<T> => {
+/** Migraciones que debe tener la base donde se restaure (actualizar al crear una nueva). */
+const MIGRACIONES = "0001–0028";
+
+const leerJson =async <T,>(url: string): Promise<T> => {
   const r = await fetch(url, { cache: "no-store" });
   const j = await r.json();
   if (!r.ok) throw new Error(j.error ?? `Error ${r.status}`);
@@ -62,7 +65,7 @@ export function BotonRespaldo() {
       const porBucket: Record<string, number> = {};
       for (const a of archivos) porBucket[a.bucket] = (porBucket[a.bucket] ?? 0) + 1;
       const resumen: Resumen = {
-        app: "BancoTicket", generado: indice.generado, migraciones: "0001–0024", orden: TABLAS_RESPALDO, conteos,
+        app: "BancoTicket", generado: indice.generado, migraciones: MIGRACIONES, orden: TABLAS_RESPALDO, conteos,
         usuarios: indice.usuarios.length, archivos: { total: archivos.length, bytes: archivos.reduce((s, a) => s + a.datos.length, 0), por_bucket: porBucket },
       };
       const zip = armarZip(resumen, tablas, indice.usuarios, archivos);

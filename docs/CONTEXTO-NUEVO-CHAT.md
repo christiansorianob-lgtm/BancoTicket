@@ -94,7 +94,7 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 ```
 node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0029_nombre.sql
 ```
-(una transacción; usa `POSTGRES_URL_NON_POOLING`). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
+(una transacción; usa `POSTGRES_URL_NON_POOLING`). Al crear una migración, actualizar también `MIGRACIONES` en `src/app/(app)/admin/backups/respaldo.tsx` (va en el resumen del respaldo). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
 | Migración | Qué hizo |
 |---|---|
