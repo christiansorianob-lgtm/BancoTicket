@@ -8,6 +8,7 @@ import { EstadoChip, Vacio } from "@/components/ui";
 import { ValorTiquete } from "@/components/valor-tiquete";
 import { EnviarFoto } from "@/components/enviar-tiquete";
 import { FormAccion } from "@/components/form-accion";
+import { CampoPrecio } from "@/components/campo-precio";
 import { asignarPrecioBloque } from "../acciones";
 import { EditarTiquete } from "./editar-tiquete";
 
@@ -84,7 +85,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
             <input type="hidden" name="extractora" value={f.extractora} />
             <input type="hidden" name="comprador" value={f.comprador} />
             <div className="grid gap-3 sm:grid-cols-3">
-              <label><span className="etiqueta">Precio por tonelada (COP)</span><input name="precio" inputMode="decimal" className="campo" required placeholder="Ej.: 850.000" /></label>
+              <CampoPrecio name="precio" />
               <label><span className="etiqueta">Motivo (opcional)</span><input name="motivo" className="campo" /></label>
               <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="solo_sin_precio" defaultChecked className="size-5" /> Solo a los que no tienen precio</label>
             </div>

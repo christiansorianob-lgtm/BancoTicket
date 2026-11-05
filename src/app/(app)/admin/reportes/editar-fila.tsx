@@ -4,6 +4,7 @@ import { Pencil, X } from "lucide-react";
 import { editarTiquete } from "../acciones";
 import { FormAccion } from "@/components/form-accion";
 import { CamposTiquete } from "@/components/campos-tiquete";
+import { CampoPrecio } from "@/components/campo-precio";
 import type { FilaReporte } from "@/lib/informes/consulta";
 
 /**
@@ -43,9 +44,7 @@ export function EditarFila({ t, foto, extractoras, compradores }: {
                   {compradores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
               </label>
-              <label><span className="etiqueta">Precio por tonelada (vacío = sin precio)</span>
-                <input name="precio_tonelada" inputMode="decimal" className="campo" defaultValue={t.precio_tonelada ?? ""} />
-              </label>
+              <CampoPrecio name="precio_tonelada" inicial={t.precio_tonelada} vacio />
               <label><span className="etiqueta">Estado</span>
                 <select name="estado" className="campo" defaultValue={t.estado}>
                   <option value="vigente">Vigente</option>

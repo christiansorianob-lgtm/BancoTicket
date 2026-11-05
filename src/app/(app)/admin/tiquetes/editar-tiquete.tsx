@@ -3,6 +3,7 @@ import { useState } from "react";
 import { editarTiquete } from "../acciones";
 import { FormAccion } from "@/components/form-accion";
 import { CamposTiquete } from "@/components/campos-tiquete";
+import { CampoPrecio } from "@/components/campo-precio";
 
 type T = Parameters<typeof CamposTiquete>[0]["t"] & { id: string; precio_tonelada: number | null; comprador_id: string; estado: string };
 
@@ -17,9 +18,7 @@ export function EditarTiquete({ tiquete, extractoras, compradores }: { tiquete: 
       {modo === "precio" && (
         <FormAccion accion={editarTiquete.bind(null, tiquete.id)} boton="Guardar precio" className="mt-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label><span className="etiqueta">Precio por tonelada (vacío = sin precio)</span>
-              <input name="precio_tonelada" inputMode="decimal" className="campo" defaultValue={tiquete.precio_tonelada ?? ""} />
-            </label>
+            <CampoPrecio name="precio_tonelada" inicial={tiquete.precio_tonelada} vacio />
             <label><span className="etiqueta">Motivo</span><input name="motivo" className="campo" /></label>
           </div>
         </FormAccion>

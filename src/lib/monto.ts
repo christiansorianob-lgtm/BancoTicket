@@ -18,6 +18,16 @@ export function formatearMonto(texto: string): string {
   return (negativo ? "-" : "") + conPuntos + (decimales !== null ? `,${decimales}` : "");
 }
 
+/** Posición del cursor tras dar formato: después del mismo número de dígitos y comas. */
+export function posicionTras(formateado: string, cifras: number): number {
+  if (cifras === 0) return formateado.startsWith("-") ? 1 : 0;
+  let vistos = 0;
+  for (let i = 0; i < formateado.length; i++) {
+    if (/[\d,]/.test(formateado[i]) && ++vistos === cifras) return i + 1;
+  }
+  return formateado.length;
+}
+
 /** Monto con signo para leer: "$ 5.000.000", "−$ 2.000.000,50". */
 export function textoMonto(n: number): string {
   const abs = Math.abs(n).toLocaleString("es-CO", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });

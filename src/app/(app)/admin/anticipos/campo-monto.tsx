@@ -1,17 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { montoDesdeTexto } from "@/lib/numeros";
-import { formatearMonto, montoEnLetras, textoMonto } from "@/lib/monto";
-
-/** Posición del cursor tras dar formato: después del mismo número de dígitos y comas. */
-function posicionTras(formateado: string, cifras: number): number {
-  if (cifras === 0) return formateado.startsWith("-") ? 1 : 0;
-  let vistos = 0;
-  for (let i = 0; i < formateado.length; i++) {
-    if (/[\d,]/.test(formateado[i]) && ++vistos === cifras) return i + 1;
-  }
-  return formateado.length;
-}
+import { formatearMonto, montoEnLetras, posicionTras, textoMonto } from "@/lib/monto";
 
 /**
  * Campo «Monto» del anticipo (decisión del usuario: didáctico y seguro). Pone puntos de miles y
