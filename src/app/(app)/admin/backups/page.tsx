@@ -1,8 +1,10 @@
-import { DatabaseBackup } from "lucide-react";
+import { DatabaseBackup, ImageOff } from "lucide-react";
+import { fotosAntiguas } from "@/lib/fotos-antiguas";
+import { AvisoFotosAntiguas } from "@/components/aviso-fotos-antiguas";
 import { exigirDesarrollador } from "@/lib/sesion";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { leerConfiguracion } from "@/lib/config";
-import { fechaHora } from "@/lib/fechas";
+import { fecha, fechaHora } from "@/lib/fechas";
 import { Mensaje } from "@/components/ui";
 import { TABLAS_RESPALDO } from "@/lib/respaldo/comun";
 import { BotonRespaldo } from "./respaldo";
@@ -16,9 +18,10 @@ function diasDesde(iso: string): number {
 export default async function Backups() {
   await exigirDesarrollador();
   const db = supabaseAdmin();
-  const [conteos, config] = await Promise.all([
+  const [conteos, config, fotos] = await Promise.all([
     Promise.all(TABLAS_RESPALDO.map(async (t) => ({ tabla: t, filas: (await db.from(t).select("*", { count: "exact", head: true })).count ?? 0 }))),
     leerConfiguracion(),
+    fotosAntiguas(),
   ]);
   const ultimo = config.ultimo_respaldo;
   const dias = ultimo ? diasDesde(ultimo) : null;
@@ -43,6 +46,21 @@ export default async function Backups() {
         </p>
         <BotonRespaldo />
         <Mensaje tono="alerta">Contiene datos personales (nombres, cédulas y fotos). Guárdelo en una carpeta privada o un disco externo, nunca en un sitio compartido.</Mensaje>
+      </section>
+
+      <section className="tarjeta space-y-3">
+        <h2 className="flex items-center gap-2 font-bold text-profundo"><ImageOff className="size-5" aria-hidden /> Fotos de tiquetes antiguas</h2>
+        <p className="text-sm text-suave">
+          Las fotos ya no se borran solas. Cuando alguna cumpla {fotos.meses} meses, aquí sale el aviso y la limpieza se hace a mano, con
+          respaldo previo y su aprobación. Solo se borrarían los archivos de las fotos: ningún registro de ninguna tabla se toca.
+        </p>
+        {fotos.total > 0 ? (
+          <AvisoFotosAntiguas fotos={fotos} />
+        ) : (
+          <Mensaje tono="ok">
+            Ninguna foto tiene más de {fotos.meses} meses.{fotos.proxima && ` La primera los cumple el ${fecha(fotos.proxima.slice(0, 10))}.`}
+          </Mensaje>
+        )}
       </section>
 
       <section className="tarjeta space-y-4">

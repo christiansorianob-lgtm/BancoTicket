@@ -29,7 +29,7 @@ Para probar la cámara desde el celular en la misma red, la página debe abrirse
 1. Subir el repositorio a GitHub (privado) y conectarlo en Vercel (**Add New → Project**).
 2. Cargar las mismas variables de `.env.local` en **Settings → Environment Variables**, con `NEXT_PUBLIC_APP_URL` = la URL de producción.
 3. Cada push a `main` despliega a producción; cada rama crea una vista previa.
-4. `vercel.json` programa el borrado diario de fotos con más de 6 meses (`/api/cron/limpiar-fotos`).
+4. Sin tareas programadas (desde 2026-11-04 no hay `vercel.json`): las fotos con más de 6 meses NO se borran solas; el desarrollador ve el aviso en Panel y Backups y la limpieza se hace a mano.
 
 ## 6. Anthropic y Brevo
 - Anthropic: crear la clave en console.anthropic.com y fijar un **límite de gasto mensual**.

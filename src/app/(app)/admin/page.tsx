@@ -5,6 +5,9 @@ import { hoyColombia } from "@/lib/fechas";
 import { Vacio } from "@/components/ui";
 import type { FilaSaldo } from "@/components/saldo";
 import { textoSaldo } from "@/lib/saldo";
+import { perfilActual } from "@/lib/sesion";
+import { fotosAntiguas } from "@/lib/fotos-antiguas";
+import { AvisoFotosAntiguas } from "@/components/aviso-fotos-antiguas";
 
 export default async function PanelAdmin() {
   const supabase = await supabaseServidor();
@@ -20,6 +23,8 @@ export default async function PanelAdmin() {
     // Anticipos que el comprador aún no confirma (no cuentan en el saldo hasta que los confirme).
     supabase.from("anticipos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
   ]);
+  // Aviso de fotos antiguas: solo para el desarrollador (solo cuenta, no borra nada).
+  const fotos = (await perfilActual())?.rol === "desarrollador" ? await fotosAntiguas() : null;
   const usos = consumo ?? [];
   const costoMes = usos.reduce((s, u) => s + Number(u.costo_usd), 0);
   const lecturasMes = usos.filter((u) => u.tipo === "lectura" && u.modulo !== "facturas").length;
@@ -42,6 +47,7 @@ export default async function PanelAdmin() {
 
   return (
     <>
+      {fotos && fotos.total > 0 && <AvisoFotosAntiguas fotos={fotos} conEnlace />}
       <h1 className="titulo">Saldos de compradores</h1>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {indicadores.map((i) => (

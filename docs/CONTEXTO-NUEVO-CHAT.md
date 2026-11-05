@@ -75,7 +75,7 @@ src/app/api/leer-tiquete              foto → nitidez → IA → controles → 
 src/app/api/facturas/leer             factura → tipo real por bytes → IA → duplicado CUFE → bucket facturas
 src/app/api/exportar/{tiquetes,cuenta,facturas}   Excel (cuenta y tiquetes también para consultores)
 src/app/api/respaldo/{indice,tabla}   respaldo completo (solo desarrollador)
-src/app/api/backup · api/cron/limpiar-fotos (diario 3:00 a. m. Colombia; mantiene activo el proyecto de Supabase)
+src/app/api/backup                    Excel de Backups. (Sin tareas programadas: las fotos ya no se borran solas, ver NOTAS 2026-11-04)
 src/app/(app)/subir/                  subir tiquete (cámara o galería) + ventana «Tiquete registrado correctamente»
 src/app/(app)/{mis-tiquetes,anticipos,extracto,avisos}   comprador
 src/app/(app)/admin/                  panel, pendientes, tiquetes, reportes (selector de tipo), anticipos (registrar,
