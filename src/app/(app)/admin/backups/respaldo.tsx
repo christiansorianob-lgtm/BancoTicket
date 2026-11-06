@@ -7,7 +7,7 @@ import { armarZip, TABLAS_RESPALDO, type IndiceRespaldo, type Resumen } from "@/
 import { registrarRespaldo } from "./acciones";
 
 /** Migraciones que debe tener la base donde se restaure (actualizar al crear una nueva). */
-const MIGRACIONES = "0001–0028";
+const MIGRACIONES = "0001–0029";
 
 const leerJson =async <T,>(url: string): Promise<T> => {
   const r = await fetch(url, { cache: "no-store" });

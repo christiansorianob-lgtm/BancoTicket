@@ -8,7 +8,7 @@ import { strToU8, zipSync, type Zippable } from "fflate";
 export const TABLAS_RESPALDO = [
   "perfiles", "extractoras", "formatos_extractora", "configuracion", "anticipos", "tiquetes_pendientes",
   "tiquetes", "formatos_no_reconocidos", "notificaciones", "solicitudes_clave", "consumo_ia", "historial",
-  "fact_clientes", "fact_facturas", "fact_abonos", "fact_auditoria",
+  "fact_clientes", "fact_facturas", "fact_abonos", "fact_auditoria", "recargas_ia",
 ] as const;
 export type TablaRespaldo = (typeof TABLAS_RESPALDO)[number];
 
