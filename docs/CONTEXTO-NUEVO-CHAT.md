@@ -1,7 +1,7 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
 > **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0029**.
+> **Fecha de corte:** 2026-11-03. **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta y respaldo completo). Migraciones aplicadas: **0001 a 0030**.
 > La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
@@ -90,9 +90,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0029.** Nunca editar una aplicada; crear la siguiente (`0030_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0030.** Nunca editar una aplicada; crear la siguiente (`0031_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0030_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0031_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING`). Al crear una migración, actualizar también `MIGRACIONES` en `src/app/(app)/admin/backups/respaldo.tsx` (va en el resumen del respaldo). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
@@ -117,6 +117,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0030_nomb
 | 0027 | facturas: solo APROBADA/ANULADA; `fact_eliminar_factura` (solo anuladas sin abonos vigentes, copia en `fact_auditoria.datos`); sin revertir anulación |
 | 0028 | facturas: abonos al CLIENTE: `fact_clientes` (por NIT), `fact_abonos` (reemplaza `fact_pagos`), vista `fact_clientes_saldo` (deuda), sin cobro por factura |
 | 0029 | `recargas_ia` (créditos cargados en Claude Console, solo agregar) y vista `consumo_ia_totales`; tarjeta de IA solo para el desarrollador |
+| 0030 | vistas `tiquetes_reporte`, `anticipos_reporte` y funciones de totales (solo lectura) para el reporte de Anticipos y la paginación |
 
 Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `pendiente|confirmado|en_disputa`, `soporte_ruta`), `tiquetes_pendientes` y `tiquetes` (kilos enteros, `neto_impreso_kg`, `requiere_revision` + `motivo_revision` «Verificar: …», `datos_leidos.nota_ia`), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia`, `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`), `fact_facturas`, `fact_pagos`, `fact_auditoria`. Vistas `saldos`, `extracto`, `fact_facturas_estado`, `fact_totales`. Buckets privados `tiquetes` (`<comprador>/…`, `<comprador>/anticipos/…`, `formatos/…`) y `facturas`.
 

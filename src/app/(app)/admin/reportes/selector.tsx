@@ -3,6 +3,7 @@ import Link from "next/link";
 const TIPOS = [
   { valor: "tiquetes", texto: "Tiquetes", consulta: "" },
   { valor: "cuenta", texto: "Tiquetes y anticipos", consulta: "?tipo=cuenta" },
+  { valor: "anticipos", texto: "Anticipos", consulta: "?tipo=anticipos" },
 ] as const;
 
 /** Elegir el tipo de reporte dentro de la misma pestaña «Reportes». */
