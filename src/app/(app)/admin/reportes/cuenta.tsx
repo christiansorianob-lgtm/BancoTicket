@@ -7,6 +7,8 @@ import { lineaSaldo, textoSaldo } from "@/lib/saldo";
 import { Vacio } from "@/components/ui";
 import { consultarCuenta, filtrosCuentaDesde } from "@/lib/informes/cuenta";
 import { SelectorReporte } from "./selector";
+import { Paginacion } from "@/components/paginacion";
+import { leerParametros, paginaDesde } from "@/lib/paginacion";
 
 const colorSaldo = (s: number) => (s > 0 ? "text-ok" : s < 0 ? "text-alerta" : "text-profundo");
 
@@ -15,7 +17,9 @@ const colorSaldo = (s: number) => (s > 0 ? "text-ok" : s < 0 ? "text-alerta" : "
  * (fecha de confirmación) de un comprador en una sola tabla, con el saldo acumulado. Solo lectura.
  */
 export async function ReporteCuenta({ sp, base }: { sp: Record<string, string | string[] | undefined>; base: string }) {
-  const f = filtrosCuentaDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
+  const leer = leerParametros(sp);
+  const f = filtrosCuentaDesde(leer);
+  const pagina = paginaDesde(leer);
   const supabase = await supabaseServidor();
   const [{ data: compradores }, resultado] = await Promise.all([
     supabase.from("perfiles").select("id, nombre").eq("rol", "comprador").order("nombre"),
@@ -24,6 +28,14 @@ export async function ReporteCuenta({ sp, base }: { sp: Record<string, string | 
   const cuenta = resultado?.cuenta;
   const exportar = `/api/exportar/cuenta?${new URLSearchParams(Object.entries(f).filter(([, v]) => v))}`;
   const final = cuenta ? textoSaldo(cuenta.saldoFinal, "admin") : null;
+  // La cuenta se calcula completa (igual que siempre, para que el saldo acumulado sea el correcto) y
+  // solo se muestran de a 10 movimientos. Cada página arranca con el saldo que trae de la anterior.
+  const movimientos = cuenta?.movimientos ?? [];
+  const totalMov = movimientos.length;
+  const ultimaPagina = Math.max(1, Math.ceil(totalMov / pagina.por));
+  const inicio = (Math.min(pagina.pagina, ultimaPagina) - 1) * pagina.por;
+  const enPagina = movimientos.slice(inicio, inicio + pagina.por);
+  const saldoQueTrae = inicio === 0 ? cuenta?.saldoInicial ?? 0 : movimientos[inicio - 1].saldo;
 
   return (
     <>
@@ -80,14 +92,14 @@ export async function ReporteCuenta({ sp, base }: { sp: Record<string, string | 
                   </tr>
                 </thead>
                 <tbody>
-                  {f.desde && (
+                  {(f.desde || inicio > 0) && (
                     <tr className="border-t border-borde/60 bg-primario-suave font-semibold text-profundo">
-                      <td className="p-3" colSpan={8}>Saldo que traía antes del período</td>
-                      <td className={`p-3 text-right whitespace-nowrap ${colorSaldo(cuenta.saldoInicial)}`}>{lineaSaldo(cuenta.saldoInicial, "admin")}</td>
+                      <td className="p-3" colSpan={8}>{inicio > 0 ? "Saldo que viene de la página anterior" : "Saldo que traía antes del período"}</td>
+                      <td className={`p-3 text-right whitespace-nowrap ${colorSaldo(saldoQueTrae)}`}>{lineaSaldo(saldoQueTrae, "admin")}</td>
                       <td className="p-3" />
                     </tr>
                   )}
-                  {cuenta.movimientos.map((m, i) => (
+                  {enPagina.map((m, i) => (
                     <tr key={`${m.tipo}-${m.id}`} className={`border-t border-borde/60 ${i % 2 ? "bg-primario-suave/40" : ""}`}>
                       <td className="p-3 whitespace-nowrap">{fechaHora(m.fecha)}</td>
                       <td className="p-3"><span className={`font-semibold ${m.tipo === "anticipo" ? "text-ok" : "text-profundo"}`}>{m.tipo === "anticipo" ? "Anticipo" : "Tiquete"}</span></td>
@@ -104,7 +116,7 @@ export async function ReporteCuenta({ sp, base }: { sp: Record<string, string | 
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-profundo bg-primario-suave font-bold text-profundo">
-                    <td className="p-3" colSpan={6}>TOTAL ({cuenta.movimientos.length.toLocaleString("es-CO")} movimiento{cuenta.movimientos.length === 1 ? "" : "s"})</td>
+                    <td className="p-3" colSpan={6}>TOTAL DEL PERÍODO ({totalMov.toLocaleString("es-CO")} movimiento{totalMov === 1 ? "" : "s"})</td>
                     <td className="p-3 text-right whitespace-nowrap">{formatoPesos(cuenta.totalTiquetes)}</td>
                     <td className="p-3 text-right whitespace-nowrap">{formatoPesos(cuenta.totalAnticipos)}</td>
                     <td className="p-3 text-right whitespace-nowrap">{lineaSaldo(cuenta.saldoFinal, "admin")}</td>
@@ -112,6 +124,7 @@ export async function ReporteCuenta({ sp, base }: { sp: Record<string, string | 
                   </tr>
                 </tfoot>
               </table>
+              <div className="p-3"><Paginacion total={totalMov} pagina={pagina} base={base} parametros={Object.fromEntries(Object.entries({ tipo: "cuenta", ...f }).filter(([, v]) => v))} /></div>
             </div>
           )}
         </>

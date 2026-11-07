@@ -11,6 +11,8 @@ import { FormAccion } from "@/components/form-accion";
 import { CampoPrecio } from "@/components/campo-precio";
 import { asignarPrecioBloque } from "../acciones";
 import { EditarTiquete } from "./editar-tiquete";
+import { Paginacion } from "@/components/paginacion";
+import { leerParametros, paginaDesde } from "@/lib/paginacion";
 
 const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
@@ -20,22 +22,40 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
     desde: texto(sp.desde), hasta: texto(sp.hasta), extractora: texto(sp.extractora),
     comprador: texto(sp.comprador), sinPrecio: texto(sp.sin_precio) === "1", estado: texto(sp.estado) || "vigente",
   };
+  const pagina = paginaDesde(leerParametros(sp));
   const supabase = await supabaseServidor();
 
-  let q = supabase
-    .from("tiquetes")
-    .select("*, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre, celular)")
-    .eq("estado", f.estado === "anulado" ? "anulado" : "vigente")
-    .order("fecha_entrada", { ascending: false })
-    .limit(300);
-  if (f.desde) q = q.gte("fecha_entrada", `${f.desde}T00:00:00-05:00`);
-  if (f.hasta) q = q.lte("fecha_entrada", `${f.hasta}T23:59:59.999-05:00`);
-  if (f.extractora) q = q.eq("extractora_id", f.extractora);
-  if (f.comprador) q = q.eq("comprador_id", f.comprador);
-  if (f.sinPrecio) q = q.is("precio_tonelada", null);
+  const estado = f.estado === "anulado" ? "anulado" : "vigente";
+  const desdeISO = f.desde ? `${f.desde}T00:00:00-05:00` : null;
+  const hastaISO = f.hasta ? `${f.hasta}T23:59:59.999-05:00` : null;
 
-  const [{ data }, { data: extractoras }, { data: compradores }] = await Promise.all([
-    q,
+  // Solo la página que se ve (de a 10, con sus fotos).
+  let consultaPagina = supabase.from("tiquetes").select("*, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre, celular)", { count: "exact" }).eq("estado", estado);
+  if (desdeISO) consultaPagina = consultaPagina.gte("fecha_entrada", desdeISO);
+  if (hastaISO) consultaPagina = consultaPagina.lte("fecha_entrada", hastaISO);
+  if (f.extractora) consultaPagina = consultaPagina.eq("extractora_id", f.extractora);
+  if (f.comprador) consultaPagina = consultaPagina.eq("comprador_id", f.comprador);
+  if (f.sinPrecio) consultaPagina = consultaPagina.is("precio_tonelada", null);
+
+  /** Totales de todo el filtro con una consulta liviana (solo peso y valor, sin fotos ni nombres). */
+  async function totales() {
+    let toneladas = 0, valor = 0;
+    for (let d = 0; ; d += 1000) {
+      let q = supabase.from("tiquetes").select("peso_neto_t, valor").eq("estado", estado);
+      if (desdeISO) q = q.gte("fecha_entrada", desdeISO);
+      if (hastaISO) q = q.lte("fecha_entrada", hastaISO);
+      if (f.extractora) q = q.eq("extractora_id", f.extractora);
+      if (f.comprador) q = q.eq("comprador_id", f.comprador);
+      if (f.sinPrecio) q = q.is("precio_tonelada", null);
+      const { data } = await q.order("id").range(d, d + 999);
+      for (const t of data ?? []) { toneladas += Number(t.peso_neto_t); valor += Number(t.valor ?? 0); }
+      if (!data || data.length < 1000) return { toneladas, valor };
+    }
+  }
+
+  const [{ data, count }, suma, { data: extractoras }, { data: compradores }] = await Promise.all([
+    consultaPagina.order("fecha_entrada", { ascending: false }).order("id").range(pagina.desde, pagina.hasta),
+    totales(),
     supabase.from("extractoras").select("id, nombre").order("nombre"),
     supabase.from("perfiles").select("id, nombre").eq("rol", "comprador").order("nombre"),
   ]);
@@ -45,8 +65,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
     // Enlace de 7 días para el WhatsApp al comprador (cuando el equipo no puede compartir la foto).
     urlsFotos(filas.map((t) => t.imagen_ruta), 60 * 60 * 24 * 7),
   ]);
-  const totalT = filas.reduce((s, t) => s + Number(t.peso_neto_t), 0);
-  const totalV = filas.reduce((s, t) => s + Number(t.valor ?? 0), 0);
+  const total = count ?? 0;
 
   return (
     <>
@@ -79,7 +98,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
         <details className="tarjeta" open={f.sinPrecio}>
           <summary className="cursor-pointer font-bold text-profundo">Asignar precio en bloque a los tiquetes de este filtro</summary>
           <FormAccion accion={asignarPrecioBloque} boton="Aplicar precio" className="mt-3"
-            confirmar="¿Asignar este precio a todos los tiquetes del filtro?">
+            confirmar={`¿Asignar este precio a los tiquetes del filtro (${total} en total, no solo los de esta página)?`}>
             <input type="hidden" name="desde" value={f.desde} />
             <input type="hidden" name="hasta" value={f.hasta} />
             <input type="hidden" name="extractora" value={f.extractora} />
@@ -94,8 +113,8 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
         </details>
       )}
 
-      <p className="text-sm text-suave">{filas.length} tiquete(s) · {formatoToneladas(totalT)} · {formatoPesos(totalV)}{filas.length === 300 ? " (se muestran los 300 más recientes)" : ""}</p>
-      {filas.length === 0 && <Vacio>No hay tiquetes con estos filtros.</Vacio>}
+      <p className="text-sm text-suave">{total.toLocaleString("es-CO")} tiquete(s) en el filtro · {formatoToneladas(suma.toneladas)} · {formatoPesos(suma.valor)}</p>
+      {total === 0 && <Vacio>No hay tiquetes con estos filtros.</Vacio>}
 
       <ul className="space-y-3">
         {filas.map((t) => (
@@ -117,6 +136,8 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
           </li>
         ))}
       </ul>
+      <Paginacion total={total} pagina={pagina} base="/admin/tiquetes"
+        parametros={Object.fromEntries(Object.entries({ desde: f.desde, hasta: f.hasta, extractora: f.extractora, comprador: f.comprador, estado: f.estado === "anulado" ? "anulado" : "", sin_precio: f.sinPrecio ? "1" : "" }).filter(([, v]) => v))} />
     </>
   );
 }

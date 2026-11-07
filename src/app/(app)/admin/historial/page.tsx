@@ -1,6 +1,8 @@
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fechaHora } from "@/lib/fechas";
 import { Chip, Vacio } from "@/components/ui";
+import { Paginacion } from "@/components/paginacion";
+import { leerParametros, paginaDesde } from "@/lib/paginacion";
 
 const TABLAS: Record<string, string> = {
   tiquetes: "Tiquetes", tiquetes_pendientes: "Pendientes", anticipos: "Anticipos", perfiles: "Usuarios", extractoras: "Extractoras", solicitudes_clave: "Contraseñas",
@@ -18,11 +20,14 @@ function diferencias(antes: Record<string, unknown> | null, despues: Record<stri
 const mostrar = (v: unknown) => (v === null || v === undefined ? "—" : typeof v === "object" ? JSON.stringify(v) : String(v));
 
 export default async function Historial({ searchParams }: PageProps<"/admin/historial">) {
-  const { tabla } = await searchParams;
+  const sp = await searchParams;
+  const tabla = sp.tabla;
+  const pagina = paginaDesde(leerParametros(sp));
   const supabase = await supabaseServidor();
-  let q = supabase.from("historial").select("*").order("creado_en", { ascending: false }).limit(200);
+  // De a 10 por página: se puede ir hacia atrás hasta el primer cambio registrado.
+  let q = supabase.from("historial").select("*", { count: "exact" }).order("creado_en", { ascending: false }).order("id", { ascending: false }).range(pagina.desde, pagina.hasta);
   if (typeof tabla === "string" && TABLAS[tabla]) q = q.eq("tabla", tabla);
-  const [{ data }, { data: usuarios }] = await Promise.all([q, supabase.from("perfiles").select("id, nombre")]);
+  const [{ data, count }, { data: usuarios }] = await Promise.all([q, supabase.from("perfiles").select("id, nombre")]);
   const nombres = new Map((usuarios ?? []).map((u) => [u.id, u.nombre]));
   const filas = data ?? [];
 
@@ -58,6 +63,7 @@ export default async function Historial({ searchParams }: PageProps<"/admin/hist
           );
         })}
       </ul>
+      <Paginacion total={count ?? 0} pagina={pagina} base="/admin/historial" parametros={typeof tabla === "string" && TABLAS[tabla] ? { tabla } : {}} />
     </>
   );
 }

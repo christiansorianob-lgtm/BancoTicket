@@ -5,14 +5,13 @@ import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
 import { formatoPesos, formatoToneladas } from "@/lib/numeros";
 import { Vacio } from "@/components/ui";
-import { consultarInforme, filtrosDesde } from "@/lib/informes/consulta";
+import { filtrosDesde, paginaInforme, totalesInforme } from "@/lib/informes/consulta";
+import { Paginacion } from "@/components/paginacion";
+import { leerParametros, paginaDesde } from "@/lib/paginacion";
 import { EditarFila } from "./editar-fila";
 import { EliminarFila } from "./eliminar-fila";
 import { EnviarFoto } from "@/components/enviar-tiquete";
 import { SelectorReporte } from "./selector";
-
-/** En pantalla se muestran hasta estas filas; el Excel trae todas las del filtro. */
-const MAX_PANTALLA = 500;
 
 /**
  * Reporte de tiquetes aprobados: filtros, tabla y exportación a Excel con los mismos filtros.
@@ -22,24 +21,26 @@ const MAX_PANTALLA = 500;
 export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
   sp: Record<string, string | string[] | undefined>; base: string; soloLectura?: boolean;
 }) {
-  const f = filtrosDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
+  const leer = leerParametros(sp);
+  const f = filtrosDesde(leer);
+  const pagina = paginaDesde(leer);
   const supabase = await supabaseServidor();
 
-  const [{ filas, error }, { data: compradores }, { data: extractoras }, { data: conProveedor }] = await Promise.all([
-    consultarInforme(supabase, f),
+  // Solo la página que se ve (de a 10); los totales son de todo el filtro (los suma la base).
+  const [{ filas, total: cantidad, error }, totales, { data: compradores }, { data: extractoras }, { data: conProveedor }] = await Promise.all([
+    paginaInforme(supabase, f, pagina.desde, pagina.hasta),
+    totalesInforme(supabase, f),
     supabase.from("perfiles").select("id, nombre").eq("rol", "comprador").order("nombre"),
     supabase.from("extractoras").select("id, nombre").order("nombre"),
     supabase.from("tiquetes").select("proveedor").eq("estado", "vigente").not("proveedor", "is", null).limit(10000),
   ]);
-  // Enlaces firmados (30 min) a las fotos de las filas que se ven en pantalla.
-  const fotos = await urlsFotos(filas.slice(0, MAX_PANTALLA).map((t) => t.imagen_ruta));
+  // Enlaces firmados (30 min) a las fotos de las filas de esta página.
+  const fotos = await urlsFotos(filas.map((t) => t.imagen_ruta));
   // Enlace de 7 días para enviar la foto por WhatsApp (solo administración).
-  const fotosEnlace = soloLectura ? {} : await urlsFotos(filas.slice(0, MAX_PANTALLA).map((t) => t.imagen_ruta), 60 * 60 * 24 * 7);
+  const fotosEnlace = soloLectura ? {} : await urlsFotos(filas.map((t) => t.imagen_ruta), 60 * 60 * 24 * 7);
   const proveedores = [...new Set((conProveedor ?? []).map((p) => p.proveedor as string))].sort((a, b) => a.localeCompare(b, "es"));
 
-  const toneladas = filas.reduce((s, t) => s + t.peso_neto_t, 0);
-  const total = filas.reduce((s, t) => s + (t.valor ?? 0), 0);
-  const sinPrecio = filas.filter((t) => t.precio_tonelada == null).length;
+  const { toneladas, total, sinPrecio } = totales;
   const hayFiltros = Object.values(f).some(Boolean);
   const exportar = `/api/exportar/tiquetes?${new URLSearchParams(Object.entries(f).filter(([, v]) => v))}`;
 
@@ -72,20 +73,21 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
           {hayFiltros && <Link href={base} className="boton-secundario">Limpiar</Link>}
         </div>
         <p className="text-xs text-suave sm:col-span-2 lg:col-span-4">
-          Tiquetes aprobados vigentes. «Exportar a Excel» descarga exactamente lo que ve en la tabla (los filtros aplicados con «Filtrar»).
+          Tiquetes aprobados vigentes. La tabla muestra de a 10; los totales y «Exportar a Excel» incluyen todos los tiquetes del filtro.
         </p>
       </form>
 
       {error && <Vacio>No se pudo cargar el reporte: {error}</Vacio>}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="tarjeta"><p className="text-sm text-suave">Tiquetes</p><p className="text-lg font-black sm:text-2xl text-profundo">{filas.length.toLocaleString("es-CO")}</p></div>
+        <div className="tarjeta"><p className="text-sm text-suave">Tiquetes</p><p className="text-lg font-black sm:text-2xl text-profundo">{totales.tiquetes.toLocaleString("es-CO")}</p></div>
         <div className="tarjeta"><p className="text-sm text-suave">Peso neto</p><p className="text-lg font-black sm:text-2xl text-profundo">{formatoToneladas(toneladas)}</p></div>
         <div className="tarjeta"><p className="text-sm text-suave">Precio total</p><p className="text-lg font-black sm:text-2xl text-ok">{formatoPesos(total)}</p></div>
         <div className="tarjeta"><p className="text-sm text-suave">Sin precio</p><p className={`text-lg font-black sm:text-2xl ${sinPrecio ? "text-alerta" : "text-profundo"}`}>{sinPrecio}</p></div>
       </section>
 
-      {filas.length === 0 ? <Vacio>No hay tiquetes con estos filtros.</Vacio> : (
+      {cantidad === 0 ? <Vacio>No hay tiquetes con estos filtros.</Vacio> : (
+        <div className="space-y-3">
         <div className="tarjeta overflow-x-auto p-0">
           <table className="w-full min-w-[56rem] text-sm">
             <thead className="bg-profundo text-left text-white">
@@ -95,7 +97,7 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
               </tr>
             </thead>
             <tbody>
-              {filas.slice(0, MAX_PANTALLA).map((t, i) => (
+              {filas.map((t, i) => (
                 <tr key={t.id} className={`border-t border-borde/60 ${i % 2 ? "bg-primario-suave/40" : ""}`}>
                   <td className="p-3">{t.comprador}</td>
                   <td className="p-3">{t.extractora}</td>
@@ -125,7 +127,7 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-profundo bg-primario-suave font-bold text-profundo">
-                <td className="p-3" colSpan={5}>TOTAL ({filas.length.toLocaleString("es-CO")} tiquete{filas.length === 1 ? "" : "s"})</td>
+                <td className="p-3" colSpan={5}>TOTAL DEL FILTRO ({totales.tiquetes.toLocaleString("es-CO")} tiquete{totales.tiquetes === 1 ? "" : "s"})</td>
                 <td className="p-3 text-right whitespace-nowrap">{formatoToneladas(toneladas)}</td>
                 <td className="p-3" />
                 <td className="p-3 text-right whitespace-nowrap">{formatoPesos(total)}</td>
@@ -133,9 +135,8 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
               </tr>
             </tfoot>
           </table>
-          {filas.length > MAX_PANTALLA && (
-            <p className="p-3 text-sm text-suave">Se muestran los primeros {MAX_PANTALLA} de {filas.length.toLocaleString("es-CO")}. El total y el Excel incluyen todos.</p>
-          )}
+        </div>
+        <Paginacion total={cantidad} pagina={pagina} base={base} parametros={Object.fromEntries(Object.entries(f).filter(([, v]) => v))} />
         </div>
       )}
     </>

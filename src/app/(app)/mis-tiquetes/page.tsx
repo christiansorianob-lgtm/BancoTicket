@@ -8,6 +8,8 @@ import { netoKg } from "@/lib/numeros";
 import { ValorTiquete } from "@/components/valor-tiquete";
 import { Dato, EstadoChip, Vacio } from "@/components/ui";
 import { BotonEliminarRechazado } from "./eliminar";
+import { Paginacion } from "@/components/paginacion";
+import { leerParametros, paginaDesde } from "@/lib/paginacion";
 
 const FILTROS = [
   { valor: "pendiente", texto: "Pendientes" },
@@ -17,15 +19,19 @@ const FILTROS = [
 
 export default async function MisTiquetes({ searchParams }: PageProps<"/mis-tiquetes">) {
   await exigirComprador();
-  const { estado: e } = await searchParams;
+  const sp = await searchParams;
+  const e = sp.estado;
   const estado = FILTROS.some((f) => f.valor === e) ? (e as string) : "pendiente";
+  const pagina = paginaDesde(leerParametros(sp));
   const supabase = await supabaseServidor();
   const config = await leerConfiguracion();
 
-  const filas =
+  // De a 10 por página (con sus fotos): la lista del comprador crece con cada tiquete.
+  const { data, count } =
     estado === "vigente"
-      ? (await supabase.from("tiquetes").select("*, extractoras(nombre)").eq("estado", "vigente").order("fecha_entrada", { ascending: false }).limit(200)).data ?? []
-      : (await supabase.from("tiquetes_pendientes").select("*, extractoras(nombre)").eq("estado", estado).order("cargado_en", { ascending: false }).limit(200)).data ?? [];
+      ? await supabase.from("tiquetes").select("*, extractoras(nombre)", { count: "exact" }).eq("estado", "vigente").order("fecha_entrada", { ascending: false }).order("id").range(pagina.desde, pagina.hasta)
+      : await supabase.from("tiquetes_pendientes").select("*, extractoras(nombre)", { count: "exact" }).eq("estado", estado).order("cargado_en", { ascending: false }).order("id").range(pagina.desde, pagina.hasta);
+  const filas = data ?? [];
   const fotos = await urlsFotos(filas.map((f) => f.imagen_ruta));
 
   return (
@@ -74,6 +80,7 @@ export default async function MisTiquetes({ searchParams }: PageProps<"/mis-tiqu
           );
         })}
       </ul>
+      <Paginacion total={count ?? 0} pagina={pagina} base="/mis-tiquetes" parametros={{ estado }} />
     </div>
   );
 }
