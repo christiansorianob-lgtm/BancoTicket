@@ -29,7 +29,8 @@ export async function ReporteAnticipos({ sp, base }: { sp: Record<string, string
   const filtros = Object.fromEntries(Object.entries({ tipo: "anticipos", ...f }).filter(([, v]) => v));
   const exportar = `/api/exportar/anticipos?${new URLSearchParams(Object.entries(f).filter(([, v]) => v))}`;
   const hayFiltros = Object.values(f).some(Boolean);
-  const monto = (n: number) => <span className={n < 0 ? "text-error" : ""}>{n < 0 ? "−" : ""}{formatoPesos(Math.abs(n))}</span>;
+  // El signo va pegado al valor («−$ 794.359.123»), sin partirse en dos renglones.
+  const monto = (n: number) => <span className={`whitespace-nowrap ${n < 0 ? "text-error" : ""}`}>{n < 0 ? "−" : ""}{formatoPesos(Math.abs(n))}</span>;
 
   return (
     <>
@@ -62,10 +63,11 @@ export async function ReporteAnticipos({ sp, base }: { sp: Record<string, string
       {error && <Vacio>No se pudo cargar el reporte: {error}</Vacio>}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="tarjeta"><p className="text-sm text-suave">Anticipos</p><p className="text-lg font-black text-profundo sm:text-2xl">{totales.cantidad.toLocaleString("es-CO")}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Confirmados ({totales.confirmado.cantidad}) · suman</p><p className="text-lg font-black text-ok sm:text-2xl">{monto(totales.confirmado.monto)}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">Pendientes ({totales.pendiente.cantidad})</p><p className="text-lg font-black text-alerta sm:text-2xl">{monto(totales.pendiente.monto)}</p></div>
-        <div className="tarjeta"><p className="text-sm text-suave">En disputa ({totales.en_disputa.cantidad})</p><p className="text-lg font-black text-error sm:text-2xl">{monto(totales.en_disputa.monto)}</p></div>
+        {/* En el celular, «Confirmados» (la cifra principal y la más larga) ocupa todo el ancho. */}
+        <div className="tarjeta col-span-2 md:order-2 md:col-span-1"><p className="text-sm text-suave">Confirmados ({totales.confirmado.cantidad}) · suman al saldo</p><p className="text-xl font-black text-ok sm:text-2xl">{monto(totales.confirmado.monto)}</p></div>
+        <div className="tarjeta md:order-1"><p className="text-sm text-suave">Anticipos</p><p className="text-lg font-black text-profundo sm:text-2xl">{totales.cantidad.toLocaleString("es-CO")}</p></div>
+        <div className="tarjeta md:order-3"><p className="text-sm text-suave">Pendientes ({totales.pendiente.cantidad})</p><p className="text-lg font-black text-alerta sm:text-2xl">{monto(totales.pendiente.monto)}</p></div>
+        <div className="tarjeta col-span-2 md:order-4 md:col-span-1"><p className="text-sm text-suave">En disputa ({totales.en_disputa.cantidad})</p><p className="text-lg font-black text-error sm:text-2xl">{monto(totales.en_disputa.monto)}</p></div>
       </section>
 
       {total === 0 ? <Vacio>No hay anticipos con estos filtros.</Vacio> : (
