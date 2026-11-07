@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Image as ImageIcon } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
@@ -128,7 +128,8 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <EstadoChip estado={t.estado} />
               {t.imagen_ruta && fotos[t.imagen_ruta] && <>
-                <a className="text-sm font-semibold text-primario" href={fotos[t.imagen_ruta]} target="_blank" rel="noopener noreferrer">Ver foto</a>
+                {/* Botón azul del mismo tamaño que el de WhatsApp, para encontrarlo fácil. */}
+                <a className="boton-primario min-h-9 px-3 text-sm" href={fotos[t.imagen_ruta]} target="_blank" rel="noopener noreferrer"><ImageIcon className="size-4" aria-hidden /> Ver foto</a>
                 <EnviarFoto celular={t.perfiles?.celular ?? null} numero={t.numero} foto={fotos[t.imagen_ruta]} fotoEnlace={fotosEnlace[t.imagen_ruta]} />
               </>}
             </div>
