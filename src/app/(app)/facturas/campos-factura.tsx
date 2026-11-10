@@ -17,9 +17,12 @@ const ETIQUETAS: [keyof FacturaLeida, string, "texto" | "fecha" | "numero"][] = 
   ["fecha_emision", "Fecha de emisión", "fecha"], ["fecha_vencimiento", "Fecha de vencimiento", "fecha"],
   ["periodo_desde", "Periodo desde", "fecha"], ["periodo_hasta", "Periodo hasta", "fecha"],
   ["kilos", "Kilos", "numero"], ["precio_kilo", "Precio por kilo", "numero"],
-  ["subtotal", "Subtotal", "numero"], ["iva", "IVA", "numero"],
-  ["retefuente", "ReteFuente", "numero"], ["reteiva", "ReteIVA", "numero"],
-  ["reteica", "ReteICA", "numero"], ["total_a_pagar", "Total a pagar", "numero"],
+  ["subtotal", "Subtotal", "numero"], ["total_a_pagar", "Total a pagar", "numero"],
+  // Cada impuesto junto a su porcentaje impreso en la factura (ej. «IVA 19%»).
+  ["iva", "IVA", "numero"], ["iva_pct", "IVA % (impreso en la factura)", "numero"],
+  ["retefuente", "ReteFuente", "numero"], ["retefuente_pct", "ReteFuente % (impreso)", "numero"],
+  ["reteiva", "ReteIVA", "numero"], ["reteiva_pct", "ReteIVA % (impreso)", "numero"],
+  ["reteica", "ReteICA", "numero"], ["reteica_pct", "ReteICA % (impreso)", "numero"],
 ];
 
 /**
@@ -73,8 +76,9 @@ export function CamposFactura({ inicial, tarifas, clientes }: { inicial: Factura
       <div className="grid gap-3 sm:grid-cols-2">
         {ETIQUETAS.map(([k, etiqueta, tipo]) => {
           const valor = inicial[k];
-          // Las retenciones en 0 son normales (no aplican): no se resaltan como «no se leyó».
-          const vacio = valor == null || valor === "";
+          // Las retenciones en 0 son normales (no aplican) y un porcentaje vacío es que la factura no lo
+          // imprime (se prueba con las tarifas permitidas): no se resaltan como «no se leyó».
+          const vacio = (valor == null || valor === "") && !k.endsWith("_pct");
           return (
             <label key={k} className={k === "cufe" ? "sm:col-span-2" : ""}>
               <span className={`etiqueta ${vacio ? "text-alerta" : ""}`}>{etiqueta}{vacio ? " · no se leyó" : ""}</span>

@@ -32,6 +32,7 @@ export type FilaFactura = {
   fecha_emision: string | null; fecha_vencimiento: string | null; kilos: number | null;
   subtotal: number; iva: number; retefuente: number; reteiva: number; reteica: number; total_a_pagar: number;
   anulada: boolean; motivo_revision: string | null;
+  iva_pct: number | null; retefuente_pct: number | null; reteiva_pct: number | null; reteica_pct: number | null;
 };
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -40,7 +41,7 @@ const UUID = /^[0-9a-f-]{36}$/;
 /** Facturas (vista fact_facturas_estado), más recientes primero. */
 export async function consultarFacturas(supabase: Supabase, f: FiltrosFacturas, maximo = 2000) {
   let q = supabase.from("fact_facturas_estado")
-    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, cliente_id, cliente_nombre, cliente_nit, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_a_pagar, anulada, motivo_revision")
+    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, cliente_id, cliente_nombre, cliente_nit, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_a_pagar, anulada, motivo_revision, iva_pct, retefuente_pct, reteiva_pct, reteica_pct")
     .order("fecha_emision", { ascending: false, nullsFirst: true })
     .limit(maximo);
   if (f.estado === "APROBADA") q = q.eq("anulada", false);

@@ -12,7 +12,7 @@ export type Configuracion = {
   dias_aviso_respaldo: number;
   /** Fecha ISO del último respaldo completo (la escribe la app). */
   ultimo_respaldo: string | null;
-  /** Porcentajes esperados en las facturas de venta (migración 0026): IVA, ReteFuente, ReteIVA, ReteICA. */
+  /** Tarifas permitidas en las facturas de venta (migración 0031; antes 0026): IVA, ReteFuente, ReteIVA, ReteICA. */
   tarifas_factura: TarifasFactura;
 };
 
@@ -32,6 +32,7 @@ export async function leerConfiguracion(): Promise<Configuracion> {
   const { data } = await supabaseAdmin().from("configuracion").select("clave, valor");
   const c = { ...PREDETERMINADA } as Record<string, unknown>;
   for (const fila of data ?? []) c[fila.clave] = fila.valor;
-  c.tarifas_factura = tarifasDesde(c.tarifas_factura);
+  // Tarifas permitidas (migración 0031, varias por impuesto); si no está, la de 0026.
+  c.tarifas_factura = tarifasDesde(c.tarifas_permitidas_factura ?? c.tarifas_factura);
   return c as Configuracion;
 }

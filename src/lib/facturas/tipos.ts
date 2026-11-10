@@ -20,6 +20,11 @@ export const FacturaLeida = z.object({
   reteiva: z.number().nullable().describe("Valor de la línea ReteIVA; 0 si no aparece"),
   reteica: z.number().nullable().describe("Valor de la línea ReteICA; 0 si no aparece"),
   total_a_pagar: z.number().nullable().describe("Total a Pagar (neto final), no el Vr. Total del ítem"),
+  // Porcentaje IMPRESO de cada impuesto (decisión del usuario, 2026-11-10): ej. «IVA 19%» → 19. Null si no se leyó.
+  iva_pct: z.number().nullable(),
+  retefuente_pct: z.number().nullable(),
+  reteiva_pct: z.number().nullable(),
+  reteica_pct: z.number().nullable(),
 });
 export type FacturaLeida = z.infer<typeof FacturaLeida>;
 

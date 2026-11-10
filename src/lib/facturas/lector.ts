@@ -17,6 +17,7 @@ Devuelve solo los campos pedidos, como están en el documento:
 - kilos siempre en kilos, aunque la unidad de medida diga "unidad". precio_kilo: el valor unitario si aparece.
 - total_a_pagar es el valor neto final ("Total a Pagar"), NO el "Vr. Total" de la línea del ítem.
 - Retenciones, cada una por separado tal como aparecen en el bloque de totales: retefuente (Retefuente), reteiva (ReteIVA), reteica (ReteICA); 0 la que no aparezca.
+- Porcentajes: el que la factura IMPRIME para cada impuesto (ej. "IVA 19%" → iva_pct 19; "ReteIVA 15%" → reteiva_pct 15). La fruta de palma suele llevar IVA del 5 % y la comisión del 19 %, pero devuelve el que diga el documento; 0 si no aparece.
 - La imagen puede venir girada, con sombra o baja resolución. Si un campo no está o no se lee con claridad, devuelve null: no inventes valores.`;
 
 /**
@@ -28,6 +29,10 @@ const FacturaIA = FacturaLeida.extend({
   retefuente: z.number().describe("Valor de la línea Retefuente del bloque de totales; 0 si no aparece"),
   reteiva: z.number().describe("Valor de la línea ReteIVA; 0 si no aparece"),
   reteica: z.number().describe("Valor de la línea ReteICA; 0 si no aparece"),
+  iva_pct: z.number().describe("Porcentaje de IVA impreso (ej. 19); 0 si no aparece"),
+  retefuente_pct: z.number().describe("Porcentaje de Retefuente impreso; 0 si no aparece"),
+  reteiva_pct: z.number().describe("Porcentaje de ReteIVA impreso (ej. 15); 0 si no aparece"),
+  reteica_pct: z.number().describe("Porcentaje de ReteICA impreso; 0 si no aparece"),
 });
 
 export type ArchivoFactura = { bytes: Buffer; tipo: "pdf" | "jpeg" | "png" | "webp" };
@@ -58,7 +63,10 @@ export async function leerFactura(a: ArchivoFactura, usuarioId: string): Promise
     });
     const consumoId = await registrarConsumo("factura", modelo(), r.usage, usuarioId, { modulo: "facturas", tipo_archivo: tipoArchivo, resultado: "ok" });
     if (r.stop_reason === "refusal" || !r.parsed_output) throw Object.assign(new Error("No se pudo leer la factura"), { registrada: true });
-    return { datos: r.parsed_output, consumoId };
+    // Un porcentaje en 0 es que la factura no lo imprime: queda «no se leyó» (null).
+    const d = r.parsed_output;
+    const pct = (n: number) => (n > 0 ? n : null);
+    return { datos: { ...d, iva_pct: pct(d.iva_pct), retefuente_pct: pct(d.retefuente_pct), reteiva_pct: pct(d.reteiva_pct), reteica_pct: pct(d.reteica_pct) }, consumoId };
   } catch (e) {
     // Las llamadas fallidas también cuentan en el contador (sin tokens si la API no respondió).
     if (!(e as { registrada?: boolean }).registrada) {

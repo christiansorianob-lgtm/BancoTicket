@@ -7,7 +7,8 @@ import type { FacturaLeida } from "./tipos";
 
 export const CAMPOS_TEXTO = ["numero_factura", "cufe", "emisor_razon_social", "emisor_nit", "extractora_razon_social", "extractora_nit"] as const;
 export const CAMPOS_FECHA = ["fecha_emision", "fecha_vencimiento", "periodo_desde", "periodo_hasta"] as const;
-export const CAMPOS_NUMERO = ["kilos", "precio_kilo", "subtotal", "iva", "retefuente", "reteiva", "reteica", "total_a_pagar"] as const;
+export const CAMPOS_NUMERO = ["kilos", "precio_kilo", "subtotal", "iva", "retefuente", "reteiva", "reteica", "total_a_pagar",
+  "iva_pct", "retefuente_pct", "reteiva_pct", "reteica_pct"] as const;
 
 /** Número para mostrar en un campo editable: 142060536.75 → "142.060.536,75". */
 export function numeroEnCampo(n: number | null | undefined): string {

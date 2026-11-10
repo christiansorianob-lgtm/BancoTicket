@@ -30,7 +30,8 @@ igual("comprador: saldo negativo", textoSaldo(-2000000, "comprador").titulo, "Me
 const fac = (numero: string, kilos: number, precio: number | null, subtotal: number, iva: number, retefuente: number, total: number, reteiva = 0) => ({
   numero_factura: numero, cufe: "x", emisor_razon_social: "E", emisor_nit: "1", extractora_razon_social: "X", extractora_nit: "2",
   fecha_emision: "2026-10-19", fecha_vencimiento: "2026-10-20", periodo_desde: "2026-10-06", periodo_hasta: "2026-10-19",
-  kilos, precio_kilo: precio, subtotal, iva, retefuente, reteiva, reteica: 0, total_a_pagar: total });
+  kilos, precio_kilo: precio, subtotal, iva, retefuente, reteiva, reteica: 0, total_a_pagar: total,
+  iva_pct: null as number | null, retefuente_pct: null as number | null, reteiva_pct: null as number | null, reteica_pct: null as number | null });
 const todasOk = (d: Parameters<typeof validarFactura>[0]) => fallasFactura(completarPrecio(d), TARIFAS_PREDETERMINADAS).length === 0;
 const calculoOk = (d: Parameters<typeof validarFactura>[0], nombre: string) => comprobarFactura(completarPrecio(d), TARIFAS_PREDETERMINADAS).find((c) => c.nombre === nombre)?.ok;
 igual("factura FEIA 669 cuadra (solo ReteIVA)", todasOk(fac("FEIA 669", 186670, 730, 136269100, 6813455, 0, 142060536.75, 1022018.25)), true);
@@ -41,6 +42,14 @@ igual("total que no cuadra: falla", calculoOk(fac("FEIA 669", 186670, 730, 13626
 igual("IVA que no es el 5 %: falla", calculoOk(fac("GLFE 7", 22300, 664, 14807200, 740000, 222108, 15325092), "IVA"), false);
 igual("ReteFuente que no es el 1,5 %: falla", calculoOk(fac("GLFE 7", 22300, 664, 14807200, 740360, 222000, 15325560), "ReteFuente"), false);
 igual("kilos × precio que no da el subtotal: falla", calculoOk(fac("GLFE 7", 22300, 700, 14807200, 740360, 222108, 15325452), "Subtotal"), false);
+// Porcentaje impreso (2026-11-10): FEIA 673 es comisión con IVA 19 % y ReteIVA 15 %; la fruta lleva IVA 5 %.
+const feia673 = fac("FEIA 673", 3152610, 25, 78815250, 14974897.5, 0, 91543912.87, 2246234.63);
+igual("FEIA 673 (comisión) con IVA 19 % y ReteIVA 15 % impresos: cuadra", todasOk({ ...feia673, iva_pct: 19, reteiva_pct: 15 }), true);
+igual("FEIA 673 sin porcentaje leído: coincide con la tarifa del 19 %", todasOk(feia673), true);
+igual("FEPA 12 (fruta) con IVA 5 % impreso: cuadra", todasOk({ ...fac("FEPA 12", 692540, 678, 469542120, 23477106, 7043131.80, 482454528.30, 3521565.90), iva_pct: 5, retefuente_pct: 1.5, reteiva_pct: 15 }), true);
+igual("IVA impreso 19 % pero el valor es del 5 %: falla", calculoOk({ ...fac("GLFE 7", 22300, 664, 14807200, 740360, 222108, 15325452), iva_pct: 19 }, "IVA"), false);
+igual("IVA impreso 12 % (no permitido): falla", calculoOk({ ...fac("X", 1000, 100, 100000, 12000, 0, 112000), iva_pct: 12 }, "IVA"), false);
+igual("IVA del 12 % sin porcentaje leído: no coincide con ninguna tarifa", calculoOk(fac("X", 1000, 100, 100000, 12000, 0, 112000), "IVA"), false);
 igual("falta el CUFE: falla", validarFactura({ ...fac("A", 1, 1, 1, 0, 0, 1), cufe: null }).find((v) => v.nombre === "Campos completos")?.ok, false);
 igual("formulario: número colombiano", facturaDesde((k) => ({ total_a_pagar: "142.060.536,75", kilos: "186.670" } as Record<string, string>)[k]).total_a_pagar, 142060536.75);
 igual("formulario: retenciones vacías = 0", [facturaDesde(() => "").retefuente, facturaDesde(() => "").reteiva, facturaDesde(() => "").reteica], [0, 0, 0]);

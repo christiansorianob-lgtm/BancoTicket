@@ -28,12 +28,14 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
   const historia = auditoria ?? [];
   const { data: archivo } = f.archivo_path ? await supabase.storage.from("facturas").createSignedUrl(f.archivo_path, 60 * 30) : { data: null };
   const n = (x: unknown) => Number(x ?? 0);
+  const pct = (x: unknown) => (x == null ? null : Number(x));
   const datos: FacturaLeida = {
     numero_factura: f.numero_factura, cufe: f.cufe, emisor_razon_social: f.emisor_razon_social, emisor_nit: f.emisor_nit,
     extractora_razon_social: f.extractora_razon_social, extractora_nit: f.extractora_nit, fecha_emision: f.fecha_emision,
     fecha_vencimiento: f.fecha_vencimiento, periodo_desde: f.periodo_desde, periodo_hasta: f.periodo_hasta,
     kilos: f.kilos == null ? null : n(f.kilos), precio_kilo: f.precio_kilo == null ? null : n(f.precio_kilo), subtotal: n(f.subtotal), iva: n(f.iva),
     retefuente: n(f.retefuente), reteiva: n(f.reteiva), reteica: n(f.reteica), total_a_pagar: n(f.total_a_pagar),
+    iva_pct: pct(f.iva_pct), retefuente_pct: pct(f.retefuente_pct), reteiva_pct: pct(f.reteiva_pct), reteica_pct: pct(f.reteica_pct),
   };
   const { tarifas_factura: tarifas } = await leerConfiguracion();
 
@@ -68,10 +70,10 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
           <Dato etiqueta="Periodo">{fecha(f.periodo_desde)} al {fecha(f.periodo_hasta)}</Dato>
           <Dato etiqueta="Kilos × precio">{n(f.kilos).toLocaleString("es-CO")} kg × {formatoPesos(f.precio_kilo)}</Dato>
           <Dato etiqueta="Subtotal (total bruto)">{formatoPesos(f.subtotal)}</Dato>
-          <Dato etiqueta="IVA">{formatoPesos(f.iva)}</Dato>
-          <Dato etiqueta="ReteFuente">{formatoPesos(f.retefuente)}</Dato>
-          <Dato etiqueta="ReteIVA">{formatoPesos(f.reteiva)}</Dato>
-          <Dato etiqueta="ReteICA">{formatoPesos(f.reteica)}</Dato>
+          <Dato etiqueta="IVA">{formatoPesos(f.iva)}{f.iva_pct != null && <span className="block text-xs text-suave">{Number(f.iva_pct).toLocaleString("es-CO")} % impreso</span>}</Dato>
+          <Dato etiqueta="ReteFuente">{formatoPesos(f.retefuente)}{f.retefuente_pct != null && <span className="block text-xs text-suave">{Number(f.retefuente_pct).toLocaleString("es-CO")} % impreso</span>}</Dato>
+          <Dato etiqueta="ReteIVA">{formatoPesos(f.reteiva)}{f.reteiva_pct != null && <span className="block text-xs text-suave">{Number(f.reteiva_pct).toLocaleString("es-CO")} % impreso</span>}</Dato>
+          <Dato etiqueta="ReteICA">{formatoPesos(f.reteica)}{f.reteica_pct != null && <span className="block text-xs text-suave">{Number(f.reteica_pct).toLocaleString("es-CO")} % impreso</span>}</Dato>
           <Dato etiqueta="Estado">{f.anulada ? "Anulada" : "Aprobada"}</Dato>
         </dl>
         <p className="break-all text-xs text-suave">CUFE: {f.cufe ?? "—"}</p>
