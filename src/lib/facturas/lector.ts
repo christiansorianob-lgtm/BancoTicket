@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import sharp from "sharp";
 import { z } from "zod";
-import { FacturaLeida } from "./tipos";
+import { clasificarFactura, FacturaLeida } from "./tipos";
 import { registrarConsumo } from "@/lib/lectura/consumo";
 
 /** Modelo configurable (decisión del usuario): Haiku por defecto, el más económico. */
@@ -17,6 +17,7 @@ Devuelve solo los campos pedidos, como están en el documento:
 - kilos siempre en kilos, aunque la unidad de medida diga "unidad". precio_kilo: el valor unitario si aparece.
 - total_a_pagar es el valor neto final ("Total a Pagar"), NO el "Vr. Total" de la línea del ítem.
 - Retenciones, cada una por separado tal como aparecen en el bloque de totales: retefuente (Retefuente), reteiva (ReteIVA), reteica (ReteICA); 0 la que no aparezca.
+- descripcion: la descripción del ítem tal como aparece (ej. "COMISION POR ABASTECIMIENTO DE FRUTA OCTUBRE 2026").
 - Porcentajes: el que la factura IMPRIME para cada impuesto (ej. "IVA 19%" → iva_pct 19; "ReteIVA 15%" → reteiva_pct 15). La fruta de palma suele llevar IVA del 5 % y la comisión del 19 %, pero devuelve el que diga el documento; 0 si no aparece.
 - La imagen puede venir girada, con sombra o baja resolución. Si un campo no está o no se lee con claridad, devuelve null: no inventes valores.`;
 
@@ -24,7 +25,7 @@ Devuelve solo los campos pedidos, como están en el documento:
  * Esquema que se pide a la IA: la API admite máximo 16 campos que pueden ser null, así que los
  * impuestos van siempre con número (0 si no aparece). Lo demás puede volver null.
  */
-const FacturaIA = FacturaLeida.extend({
+const FacturaIA = FacturaLeida.omit({ tipo: true }).extend({
   iva: z.number().describe("Valor del IVA del bloque de totales; 0 si no aparece"),
   retefuente: z.number().describe("Valor de la línea Retefuente del bloque de totales; 0 si no aparece"),
   reteiva: z.number().describe("Valor de la línea ReteIVA; 0 si no aparece"),
@@ -66,7 +67,9 @@ export async function leerFactura(a: ArchivoFactura, usuarioId: string): Promise
     // Un porcentaje en 0 es que la factura no lo imprime: queda «no se leyó» (null).
     const d = r.parsed_output;
     const pct = (n: number) => (n > 0 ? n : null);
-    return { datos: { ...d, iva_pct: pct(d.iva_pct), retefuente_pct: pct(d.retefuente_pct), reteiva_pct: pct(d.reteiva_pct), reteica_pct: pct(d.reteica_pct) }, consumoId };
+    const leida = { ...d, iva_pct: pct(d.iva_pct), retefuente_pct: pct(d.retefuente_pct), reteiva_pct: pct(d.reteiva_pct), reteica_pct: pct(d.reteica_pct) };
+    // El tipo lo propone la app (sin IA); la administradora lo confirma al aprobar.
+    return { datos: { ...leida, tipo: clasificarFactura(leida) }, consumoId };
   } catch (e) {
     // Las llamadas fallidas también cuentan en el contador (sin tokens si la API no respondió).
     if (!(e as { registrada?: boolean }).registrada) {

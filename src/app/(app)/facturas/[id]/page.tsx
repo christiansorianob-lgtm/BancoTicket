@@ -5,7 +5,7 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha, fechaHora } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
-import { formatoNit, type FacturaLeida } from "@/lib/facturas/tipos";
+import { formatoNit, NOMBRE_TIPO, type FacturaLeida, type TipoFactura } from "@/lib/facturas/tipos";
 import { actualizarFactura, anularFactura, eliminarFactura } from "../acciones";
 import { ChipsFactura } from "../estado";
 import { ComprobacionFactura } from "../comprobacion";
@@ -36,6 +36,7 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
     kilos: f.kilos == null ? null : n(f.kilos), precio_kilo: f.precio_kilo == null ? null : n(f.precio_kilo), subtotal: n(f.subtotal), iva: n(f.iva),
     retefuente: n(f.retefuente), reteiva: n(f.reteiva), reteica: n(f.reteica), total_a_pagar: n(f.total_a_pagar),
     iva_pct: pct(f.iva_pct), retefuente_pct: pct(f.retefuente_pct), reteiva_pct: pct(f.reteiva_pct), reteica_pct: pct(f.reteica_pct),
+    descripcion: f.descripcion, tipo: f.tipo,
   };
   const { tarifas_factura: tarifas } = await leerConfiguracion();
 
@@ -75,7 +76,9 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
           <Dato etiqueta="ReteIVA">{formatoPesos(f.reteiva)}{f.reteiva_pct != null && <span className="block text-xs text-suave">{Number(f.reteiva_pct).toLocaleString("es-CO")} % impreso</span>}</Dato>
           <Dato etiqueta="ReteICA">{formatoPesos(f.reteica)}{f.reteica_pct != null && <span className="block text-xs text-suave">{Number(f.reteica_pct).toLocaleString("es-CO")} % impreso</span>}</Dato>
           <Dato etiqueta="Estado">{f.anulada ? "Anulada" : "Aprobada"}</Dato>
+          <Dato etiqueta="Tipo">{f.tipo ? NOMBRE_TIPO[f.tipo as TipoFactura] : "Sin clasificar"}</Dato>
         </dl>
+        <div className="rounded-xl bg-primario-suave p-3"><p className="text-xs font-semibold text-suave">Descripción</p><p className="font-semibold text-profundo">{f.descripcion ?? "—"}</p></div>
         <p className="break-all text-xs text-suave">CUFE: {f.cufe ?? "—"}</p>
         <ComprobacionFactura datos={datos} tarifas={tarifas} />
         {!f.anulada && (

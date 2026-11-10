@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { completarPrecio, validarFactura } from "@/lib/facturas/validar";
 import { facturaDesde, numeroEnCampo } from "@/lib/facturas/formulario";
-import { formatoNit, nitDigitos, type FacturaLeida } from "@/lib/facturas/tipos";
+import { clasificarFactura, formatoNit, nitDigitos, NOMBRE_TIPO, TIPOS_FACTURA, type FacturaLeida } from "@/lib/facturas/tipos";
 
 /** Cliente ya registrado (para avisar si el NIT existe con otro nombre). */
 export type ClienteRegistrado = { nit: string; nombre: string };
@@ -73,6 +73,18 @@ export function CamposFactura({ inicial, tarifas, clientes }: { inicial: Factura
           </li>
         ))}
       </ul>
+      {/* Tipo y descripción (decisión del usuario): la app propone el tipo; la administradora lo confirma. */}
+      <div className="grid gap-3 rounded-xl border border-borde p-3 sm:grid-cols-3">
+        <label><span className="etiqueta">Tipo de factura</span>
+          <select name="tipo" defaultValue={inicial.tipo ?? clasificarFactura(inicial)} className="campo font-semibold">
+            {TIPOS_FACTURA.map((t) => <option key={t} value={t}>{NOMBRE_TIPO[t]}</option>)}
+          </select>
+        </label>
+        <label className="sm:col-span-2"><span className={`etiqueta ${inicial.descripcion ? "" : "text-alerta"}`}>Descripción del ítem{inicial.descripcion ? "" : " · no se leyó"}</span>
+          <textarea name="descripcion" rows={2} defaultValue={inicial.descripcion ?? ""} className={`campo ${inicial.descripcion ? "" : "border-alerta bg-alerta-suave"}`}
+            placeholder="Ej.: FRUTA DE PALMA DE ACEITE del 19 al 25 de octubre" />
+        </label>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {ETIQUETAS.map(([k, etiqueta, tipo]) => {
           const valor = inicial[k];

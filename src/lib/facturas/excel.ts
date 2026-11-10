@@ -2,6 +2,7 @@ import "server-only";
 import ExcelJS from "exceljs";
 import { ZONA } from "@/lib/fechas";
 import type { FilaFactura } from "./consulta";
+import { NOMBRE_TIPO } from "./tipos";
 
 const AZUL = "FF1E3A8A";
 const AZUL_SUAVE = "FFE8EEFB";
@@ -25,26 +26,26 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
   });
   hoja.columns = [
     { width: 14 }, { width: 30 }, { width: 30 }, { width: 13 }, { width: 13 }, { width: 13 },
-    { width: 19 }, { width: 17 }, { width: 17 }, { width: 17 }, { width: 17 }, { width: 19 }, { width: 13 }, { width: 30 },
+    { width: 19 }, { width: 17 }, { width: 17 }, { width: 17 }, { width: 17 }, { width: 19 }, { width: 13 }, { width: 30 }, { width: 16 }, { width: 44 },
   ];
-  hoja.mergeCells("A1:N1");
+  hoja.mergeCells("A1:P1");
   const t = hoja.getCell("A1");
   t.value = "BancoTicket · Facturas de venta";
   t.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } };
   t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
   t.alignment = { vertical: "middle", indent: 1 };
   hoja.getRow(1).height = 34;
-  hoja.mergeCells("A2:N2");
+  hoja.mergeCells("A2:P2");
   hoja.getCell("A2").value = filtros;
   hoja.getCell("A2").font = { color: { argb: GRIS } };
-  hoja.mergeCells("A3:N3");
+  hoja.mergeCells("A3:P3");
   hoja.getCell("A3").value = `Generado el ${new Intl.DateTimeFormat("es-CO", { timeZone: ZONA, dateStyle: "long", timeStyle: "short" }).format(new Date())} por ${generadoPor}`;
   hoja.getCell("A3").font = { size: 10, italic: true, color: { argb: GRIS } };
 
   const enc = hoja.getRow(5);
   // Cada impuesto en su propia columna (decisión del usuario), como el bloque de totales de la factura.
   enc.values = ["Factura", "Cliente", "Emisor", "Emisión", "Vencimiento", "Kilos", "Subtotal", "IVA", "ReteFuente", "ReteIVA", "ReteICA",
-    "Total a pagar", "Estado", "Tarifas (impresas en la factura)"];
+    "Total a pagar", "Estado", "Tarifas (impresas en la factura)", "Tipo", "Descripción"];
   enc.height = 24;
   enc.eachCell((c) => {
     c.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -62,6 +63,7 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
       anulada ? "Anulada" : "Aprobada",
       ([["IVA", f.iva_pct], ["ReteFuente", f.retefuente_pct], ["ReteIVA", f.reteiva_pct], ["ReteICA", f.reteica_pct]] as const)
         .filter(([, v]) => v != null).map(([n, v]) => `${n} ${Number(v).toLocaleString("es-CO")} %`).join(" · ") || "—",
+      f.tipo ? NOMBRE_TIPO[f.tipo] : "Sin clasificar", f.descripcion ?? "—",
     ];
     r.getCell(4).numFmt = "dd/mm/yyyy";
     r.getCell(5).numFmt = "dd/mm/yyyy";
@@ -91,6 +93,6 @@ export async function informeFacturasExcel(filas: FilaFactura[], filtros: string
     c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBE4F7" } };
     c.border = { top: { style: "double", color: { argb: AZUL } } };
   });
-  if (hay) hoja.autoFilter = { from: "A5", to: `N${ultima}` };
+  if (hay) hoja.autoFilter = { from: "A5", to: `P${ultima}` };
   return Buffer.from(await libro.xlsx.writeBuffer());
 }

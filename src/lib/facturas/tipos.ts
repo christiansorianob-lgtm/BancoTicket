@@ -25,6 +25,10 @@ export const FacturaLeida = z.object({
   retefuente_pct: z.number().nullable(),
   reteiva_pct: z.number().nullable(),
   reteica_pct: z.number().nullable(),
+  // Descripción del ítem y tipo de factura (decisión del usuario, 2026-11-10). El tipo NO lo lee la
+  // IA: lo propone la app (clasificarFactura) y la administradora lo confirma.
+  descripcion: z.string().nullable().describe("Descripción del ítem tal como aparece, ej. FRUTA DE PALMA DE ACEITE del 19 al 25 de octubre del 2026"),
+  tipo: z.enum(["FRUTA", "COMISION", "OTRO"]).nullable(),
 });
 export type FacturaLeida = z.infer<typeof FacturaLeida>;
 
@@ -53,3 +57,23 @@ export type ClienteSaldo = {
   id: string; nit: string; nombre: string; facturas: number; facturado: number; abonos: number; abonado: number;
   deuda: number; ultima_factura: string | null; ultimo_abono: string | null; facturas_vencidas: number;
 };
+
+/** Tipos de factura (decisión del usuario): compra de fruta, comisión u otro. */
+export const TIPOS_FACTURA = ["FRUTA", "COMISION", "OTRO"] as const;
+export type TipoFactura = (typeof TIPOS_FACTURA)[number];
+export const NOMBRE_TIPO: Record<TipoFactura, string> = { FRUTA: "Compra de fruta", COMISION: "Comisión", OTRO: "Otro" };
+
+/**
+ * Propone el tipo de una factura sin IA: por la descripción («comisión» / «fruta», «racimos») y, si
+ * no dice, por el IVA (19 % comisión, 5 % fruta de palma). OTRO si no se puede saber.
+ */
+export function clasificarFactura(d: Pick<FacturaLeida, "descripcion" | "iva_pct" | "iva" | "subtotal">): TipoFactura {
+  const texto = (d.descripcion ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (/comi?sion/.test(texto)) return "COMISION";
+  if (/fruta|racimo|palma/.test(texto)) return "FRUTA";
+  const pct = d.iva_pct ?? (d.iva != null && d.subtotal ? Math.round((d.iva / d.subtotal) * 10000) / 100 : null);
+  if (pct === 19) return "COMISION";
+  if (pct === 5) return "FRUTA";
+  return "OTRO";
+}
+

@@ -5,7 +5,7 @@
 import { montoDesdeTexto } from "@/lib/numeros";
 import type { FacturaLeida } from "./tipos";
 
-export const CAMPOS_TEXTO = ["numero_factura", "cufe", "emisor_razon_social", "emisor_nit", "extractora_razon_social", "extractora_nit"] as const;
+export const CAMPOS_TEXTO = ["numero_factura", "cufe", "emisor_razon_social", "emisor_nit", "extractora_razon_social", "extractora_nit", "descripcion", "tipo"] as const;
 export const CAMPOS_FECHA = ["fecha_emision", "fecha_vencimiento", "periodo_desde", "periodo_hasta"] as const;
 export const CAMPOS_NUMERO = ["kilos", "precio_kilo", "subtotal", "iva", "retefuente", "reteiva", "reteica", "total_a_pagar",
   "iva_pct", "retefuente_pct", "reteiva_pct", "reteica_pct"] as const;

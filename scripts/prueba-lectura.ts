@@ -31,7 +31,8 @@ const fac = (numero: string, kilos: number, precio: number | null, subtotal: num
   numero_factura: numero, cufe: "x", emisor_razon_social: "E", emisor_nit: "1", extractora_razon_social: "X", extractora_nit: "2",
   fecha_emision: "2026-10-19", fecha_vencimiento: "2026-10-20", periodo_desde: "2026-10-06", periodo_hasta: "2026-10-19",
   kilos, precio_kilo: precio, subtotal, iva, retefuente, reteiva, reteica: 0, total_a_pagar: total,
-  iva_pct: null as number | null, retefuente_pct: null as number | null, reteiva_pct: null as number | null, reteica_pct: null as number | null });
+  iva_pct: null as number | null, retefuente_pct: null as number | null, reteiva_pct: null as number | null, reteica_pct: null as number | null,
+  descripcion: null as string | null, tipo: null as "FRUTA" | "COMISION" | "OTRO" | null });
 const todasOk = (d: Parameters<typeof validarFactura>[0]) => fallasFactura(completarPrecio(d), TARIFAS_PREDETERMINADAS).length === 0;
 const calculoOk = (d: Parameters<typeof validarFactura>[0], nombre: string) => comprobarFactura(completarPrecio(d), TARIFAS_PREDETERMINADAS).find((c) => c.nombre === nombre)?.ok;
 igual("factura FEIA 669 cuadra (solo ReteIVA)", todasOk(fac("FEIA 669", 186670, 730, 136269100, 6813455, 0, 142060536.75, 1022018.25)), true);

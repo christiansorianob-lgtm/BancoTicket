@@ -1,6 +1,6 @@
 import "server-only";
 import type { supabaseServidor } from "@/lib/supabase/servidor";
-import type { ClienteSaldo } from "./tipos";
+import { NOMBRE_TIPO, TIPOS_FACTURA, type ClienteSaldo, type TipoFactura } from "./tipos";
 
 type Supabase = Awaited<ReturnType<typeof supabaseServidor>>;
 
@@ -8,11 +8,11 @@ type Supabase = Awaited<ReturnType<typeof supabaseServidor>>;
  * Filtros del buscador de facturas: los mismos para la pantalla y el Excel. `estado`: APROBADA o
  * ANULADA. Fechas por fecha de emisión.
  */
-export type FiltrosFacturas = { buscar: string; estado: string; cliente: string; emisor: string; desde: string; hasta: string };
+export type FiltrosFacturas = { buscar: string; estado: string; tipo: string; cliente: string; emisor: string; desde: string; hasta: string };
 
 export function filtrosFacturasDesde(leer: (k: string) => string | null | undefined): FiltrosFacturas {
   const v = (k: string) => (leer(k) ?? "").trim();
-  return { buscar: v("buscar"), estado: v("estado"), cliente: v("cliente"), emisor: v("emisor"), desde: v("desde"), hasta: v("hasta") };
+  return { buscar: v("buscar"), estado: v("estado"), tipo: v("tipo"), cliente: v("cliente"), emisor: v("emisor"), desde: v("desde"), hasta: v("hasta") };
 }
 
 export const OPCIONES_ESTADO: [string, string][] = [["APROBADA", "Aprobadas"], ["ANULADA", "Anuladas"]];
@@ -21,7 +21,7 @@ export const OPCIONES_ESTADO: [string, string][] = [["APROBADA", "Aprobadas"], [
 export function filtrosEnTexto(f: FiltrosFacturas, nombreCliente?: string): string {
   return [
     `Estado: ${OPCIONES_ESTADO.find(([v]) => v === f.estado)?.[1] ?? "todas"}`,
-    f.buscar ? `Buscar: ${f.buscar}` : null, `Cliente: ${f.cliente ? nombreCliente ?? "elegido" : "todos"}`, `Emisor: ${f.emisor || "todos"}`,
+    f.buscar ? `Buscar: ${f.buscar}` : null, f.tipo ? `Tipo: ${NOMBRE_TIPO[f.tipo as TipoFactura] ?? f.tipo}` : null, `Cliente: ${f.cliente ? nombreCliente ?? "elegido" : "todos"}`, `Emisor: ${f.emisor || "todos"}`,
     f.desde || f.hasta ? `Emisión: ${f.desde || "…"} a ${f.hasta || "…"}` : null,
   ].filter(Boolean).join("  ·  ");
 }
@@ -33,6 +33,7 @@ export type FilaFactura = {
   subtotal: number; iva: number; retefuente: number; reteiva: number; reteica: number; total_a_pagar: number;
   anulada: boolean; motivo_revision: string | null;
   iva_pct: number | null; retefuente_pct: number | null; reteiva_pct: number | null; reteica_pct: number | null;
+  descripcion: string | null; tipo: TipoFactura | null;
 };
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -41,11 +42,12 @@ const UUID = /^[0-9a-f-]{36}$/;
 /** Facturas (vista fact_facturas_estado), más recientes primero. */
 export async function consultarFacturas(supabase: Supabase, f: FiltrosFacturas, maximo = 2000) {
   let q = supabase.from("fact_facturas_estado")
-    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, cliente_id, cliente_nombre, cliente_nit, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_a_pagar, anulada, motivo_revision, iva_pct, retefuente_pct, reteiva_pct, reteica_pct")
+    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, cliente_id, cliente_nombre, cliente_nit, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_a_pagar, anulada, motivo_revision, iva_pct, retefuente_pct, reteiva_pct, reteica_pct, descripcion, tipo")
     .order("fecha_emision", { ascending: false, nullsFirst: true })
     .limit(maximo);
   if (f.estado === "APROBADA") q = q.eq("anulada", false);
   else if (f.estado === "ANULADA") q = q.eq("anulada", true);
+  if ((TIPOS_FACTURA as readonly string[]).includes(f.tipo)) q = q.eq("tipo", f.tipo);
   if (UUID.test(f.cliente)) q = q.eq("cliente_id", f.cliente);
   if (f.emisor) q = q.eq("emisor_razon_social", f.emisor);
   if (FECHA.test(f.desde)) q = q.gte("fecha_emision", f.desde);

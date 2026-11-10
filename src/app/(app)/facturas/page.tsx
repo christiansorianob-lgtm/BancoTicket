@@ -5,8 +5,8 @@ import { fecha } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Vacio } from "@/components/ui";
 import { consultarClientes, consultarFacturas, filtrosFacturasDesde, OPCIONES_ESTADO, totalesPor, type FiltrosFacturas } from "@/lib/facturas/consulta";
-import { formatoNit } from "@/lib/facturas/tipos";
-import { ChipsFactura } from "./estado";
+import { formatoNit, NOMBRE_TIPO, TIPOS_FACTURA } from "@/lib/facturas/tipos";
+import { ChipsFactura, ChipTipo } from "./estado";
 
 /** Enlace a la misma página con los filtros cambiados (vacío = se quita el filtro). */
 function conFiltros(f: FiltrosFacturas, cambios: Partial<FiltrosFacturas>) {
@@ -33,6 +33,10 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
   const aprobadas = filas.filter((x) => !x.anulada);
   const totalFiltrado = aprobadas.reduce((s, x) => s + x.total_a_pagar, 0);
   const emisores = totalesPor(filas, "emisor");
+  const porTipo = [...TIPOS_FACTURA, null].map((tipo) => {
+    const del = aprobadas.filter((x) => x.tipo === tipo);
+    return { tipo, facturas: del.length, total: del.reduce((s, x) => s + x.total_a_pagar, 0) };
+  }).filter((t) => t.facturas > 0);
   const hayFiltros = Object.values(f).some(Boolean);
   const exportar = `/api/exportar/facturas?${new URLSearchParams(Object.entries(f).filter(([, v]) => v))}`;
 
@@ -97,6 +101,9 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <label><span className="etiqueta">Estado</span>
           <select name="estado" defaultValue={f.estado} className="campo"><option value="">Todas</option>{OPCIONES_ESTADO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
         </label>
+        <label><span className="etiqueta">Tipo</span>
+          <select name="tipo" defaultValue={f.tipo} className="campo"><option value="">Todos</option>{TIPOS_FACTURA.map((t) => <option key={t} value={t}>{NOMBRE_TIPO[t]}</option>)}</select>
+        </label>
         <label><span className="etiqueta">Cliente</span>
           <select name="cliente" defaultValue={f.cliente} className="campo"><option value="">Todos</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
         </label>
@@ -112,6 +119,19 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
       </form>
 
       {error && <Vacio>No se pudo cargar: {error}</Vacio>}
+
+      {/* Total a pagar de las facturas aprobadas, por tipo (según los filtros). */}
+      {porTipo.length > 0 && (
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          {porTipo.map((t) => (
+            <div key={t.tipo ?? "sin"} className="tarjeta space-y-1">
+              <ChipTipo tipo={t.tipo} />
+              <p className="text-lg font-black tabular-nums text-profundo sm:text-xl">{formatoPesos(t.total)}</p>
+              <p className="text-xs text-suave">{t.facturas} factura{t.facturas === 1 ? "" : "s"} aprobada{t.facturas === 1 ? "" : "s"}</p>
+            </div>
+          ))}
+        </section>
+      )}
 
       {emisores.length > 0 && (
         <section className="space-y-2">
@@ -155,8 +175,10 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
                     <p className="font-bold text-profundo">{x.numero_factura} · {x.cliente_nombre ?? x.extractora_razon_social ?? "—"}</p>
                     <p className="text-sm text-suave">{x.emisor_razon_social ?? "—"} · emitida {fecha(x.fecha_emision)} · vence {fecha(x.fecha_vencimiento)}</p>
                   </div>
-                  <ChipsFactura f={x} />
+                  <div className="flex flex-wrap gap-1.5"><ChipTipo tipo={x.tipo} /><ChipsFactura f={x} /></div>
                 </div>
+                {/* La descripción del ítem, a primera vista (decisión del usuario). */}
+                <p className="line-clamp-2 rounded-lg bg-white/60 px-3 py-2 text-sm font-semibold text-profundo">{x.descripcion ?? "Sin descripción"}</p>
                 <dl className="space-y-1 rounded-xl bg-white/80 p-3 text-sm tabular-nums">
                   <div className="flex justify-between gap-2"><dt className="text-suave">Subtotal + IVA</dt><dd className="font-semibold">{formatoPesos(x.subtotal + x.iva)}</dd></div>
                   <div className="flex justify-between gap-2"><dt className="text-suave">Retenciones</dt><dd className="font-semibold">− {formatoPesos(x.retefuente + x.reteiva + x.reteica)}</dd></div>
