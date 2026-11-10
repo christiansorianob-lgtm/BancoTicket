@@ -10,8 +10,8 @@ import { MAX_BYTES_FACTURA, tipoReal } from "@/lib/facturas/validar";
 import { FORMAS_PAGO } from "@/lib/facturas/tipos";
 
 /**
- * Registrar un abono al CLIENTE (decisión del usuario: los abonos bajan la deuda total del cliente,
- * no la de una factura). Es una ruta y no una acción de servidor porque el soporte (foto o PDF)
+ * Registrar un abono de un CLIENTE a un EMISOR (decisión del usuario 2026-11-10: cada cliente con cada
+ * emisor es una cuenta independiente; el abono no va a una factura en particular). Es una ruta y no una acción de servidor porque el soporte (foto o PDF)
  * puede pesar hasta 4 MB. Las fotos se enderezan y se reducen a 2000 px.
  */
 export async function POST(request: Request) {
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   if (!(FORMAS_PAGO as readonly string[]).includes(forma)) return NextResponse.json({ error: "Elija la forma de pago" }, { status: 400 });
   const fecha = texto("fecha");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return NextResponse.json({ error: "Fecha del abono no válida" }, { status: 400 });
+  if (!texto("emisor_nit")) return NextResponse.json({ error: "Elija el emisor" }, { status: 400 });
   if (!texto("realizado_por")) return NextResponse.json({ error: "Escriba quién realiza el abono" }, { status: 400 });
 
   // Soporte opcional: se sube primero; si el abono no se registra, se borra.
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
   const supabase = await supabaseServidor();
   const { data: id, error } = await supabase.rpc("fact_registrar_abono", { p: {
-    cliente_id: texto("cliente_id"), fecha, monto, forma_pago: forma, referencia: texto("referencia"),
+    cliente_id: texto("cliente_id"), emisor_nit: texto("emisor_nit"), fecha, monto, forma_pago: forma, referencia: texto("referencia"),
     realizado_por: texto("realizado_por"), observacion: texto("observacion"), soporte_path,
   } });
   if (error) {

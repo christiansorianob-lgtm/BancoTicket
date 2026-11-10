@@ -4,9 +4,10 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Vacio } from "@/components/ui";
-import { consultarClientes, consultarFacturas, filtrosFacturasDesde, OPCIONES_ESTADO, totalesPor, type FiltrosFacturas } from "@/lib/facturas/consulta";
-import { formatoNit, NOMBRE_TIPO, TIPOS_FACTURA } from "@/lib/facturas/tipos";
+import { consultarClientes, consultarCuentas, consultarFacturas, filtrosFacturasDesde, OPCIONES_ESTADO, totalesPor, type FiltrosFacturas } from "@/lib/facturas/consulta";
+import { nitDigitos, NOMBRE_TIPO, TIPOS_FACTURA } from "@/lib/facturas/tipos";
 import { ChipsFactura, ChipTipo } from "./estado";
+import { enlaceCuenta, TarjetaCuenta } from "./tarjeta-cuenta";
 
 /** Enlace a la misma página con los filtros cambiados (vacío = se quita el filtro). */
 function conFiltros(f: FiltrosFacturas, cambios: Partial<FiltrosFacturas>) {
@@ -17,19 +18,27 @@ function conFiltros(f: FiltrosFacturas, cambios: Partial<FiltrosFacturas>) {
 const porcentaje = (parte: number, total: number) => (total > 0 ? Math.min(100, Math.round((parte / total) * 100)) : 0);
 
 /**
- * Facturas de venta (módulo aparte de los tiquetes). Arriba, lo que debe cada CLIENTE (facturas
- * aprobadas − abonos, decisión del usuario); luego buscador, panel por emisor, lista y totales por mes.
+ * Facturas de venta (módulo aparte de los tiquetes). Arriba, lo que debe cada CLIENTE a cada EMISOR
+ * (cuentas independientes: facturas aprobadas − abonos, decisión del usuario 2026-11-10); luego
+ * buscador, panel por emisor, lista y totales por mes.
  */
 export default async function Facturas({ searchParams }: PageProps<"/facturas">) {
   const sp = await searchParams;
   const f = filtrosFacturasDesde((k) => (typeof sp[k] === "string" ? (sp[k] as string) : ""));
   const supabase = await supabaseServidor();
-  const [{ filas, error }, clientes, { data: opciones }] = await Promise.all([
+  const [{ filas, error }, clientes, cuentas, { data: opciones }] = await Promise.all([
     consultarFacturas(supabase, f),
     consultarClientes(supabase),
+    consultarCuentas(supabase),
     supabase.from("fact_totales").select("dimension, clave").eq("dimension", "emisor").order("clave"),
   ]);
-  const deudaTotal = clientes.reduce((s, c) => s + Math.max(0, c.deuda), 0);
+  // Cada cuenta es independiente: un saldo a favor en una no descuenta la deuda de otra.
+  const deudaTotal = cuentas.reduce((s, c) => s + Math.max(0, c.deuda), 0);
+  // Abonado y lo que le deben a cada emisor (todas sus cuentas, sin los filtros del buscador).
+  const deEmisor = (nombre: string) => {
+    const del = cuentas.filter((c) => c.emisor_nombre === nombre);
+    return { abonado: del.reduce((s, c) => s + c.abonado, 0), leDeben: del.reduce((s, c) => s + Math.max(0, c.deuda), 0) };
+  };
   const aprobadas = filas.filter((x) => !x.anulada);
   const totalFiltrado = aprobadas.reduce((s, x) => s + x.total_a_pagar, 0);
   const emisores = totalesPor(filas, "emisor");
@@ -55,41 +64,13 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="flex items-center gap-2 font-bold text-profundo"><Users className="size-5" aria-hidden /> Lo que me deben los clientes</h2>
-            <p className="text-sm text-suave">Facturas aprobadas menos abonos. Toque un cliente para ver su cuenta.</p>
+            <p className="text-sm text-suave">Una cuenta por cada cliente con cada emisor (independientes): facturas aprobadas menos abonos.</p>
           </div>
           <p className="text-right"><span className="block text-xs text-suave">Total por cobrar</span><span className="text-xl font-black tabular-nums text-alerta">{formatoPesos(deudaTotal)}</span></p>
         </div>
-        {clientes.length === 0 ? <Vacio>Aún no hay clientes: se registran al aprobar su primera factura.</Vacio> : (
+        {cuentas.length === 0 ? <Vacio>Aún no hay cuentas: se crean al aprobar la primera factura.</Vacio> : (
           <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {clientes.map((c) => {
-              const debe = c.deuda > 1, aFavor = c.deuda < -1;
-              return (
-                <li key={c.id} className="tarjeta space-y-3">
-                  <div>
-                    <p className="font-bold text-profundo">{c.nombre}</p>
-                    <p className="text-xs text-suave">NIT {formatoNit(c.nit)}</p>
-                  </div>
-                  <div className={`rounded-xl p-3 ${debe ? "bg-alerta-suave" : "bg-ok-suave"}`}>
-                    <p className="text-xs font-semibold text-suave">{debe ? "Le debe" : aFavor ? "Saldo a favor del cliente" : "Cuenta al día"}</p>
-                    <p className={`text-2xl font-black tabular-nums ${debe ? "text-alerta" : "text-ok"}`}>{formatoPesos(Math.abs(c.deuda))}</p>
-                    {c.facturas_vencidas > 0 && <p className="text-xs font-semibold text-error">{c.facturas_vencidas} factura(s) vencida(s) sin cubrir</p>}
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs text-suave"><span>Abonado de lo facturado</span><span className="font-semibold">{porcentaje(c.abonado, c.facturado)} %</span></div>
-                    <div className="h-2 overflow-hidden rounded-full bg-borde/60"><div className="h-full rounded-full bg-ok" style={{ width: `${porcentaje(c.abonado, c.facturado)}%` }} /></div>
-                  </div>
-                  <dl className="space-y-1 text-sm tabular-nums">
-                    <div className="flex justify-between gap-2"><dt className="text-suave">Facturado ({c.facturas})</dt><dd className="font-semibold">{formatoPesos(c.facturado)}</dd></div>
-                    <div className="flex justify-between gap-2"><dt className="text-suave">Abonado ({c.abonos})</dt><dd className="font-semibold text-ok">{formatoPesos(c.abonado)}</dd></div>
-                    <div className="flex justify-between gap-2"><dt className="text-suave">Último abono</dt><dd>{c.ultimo_abono ? fecha(c.ultimo_abono) : "—"}</dd></div>
-                  </dl>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link href={`/facturas/clientes/${c.id}`} className="boton-secundario min-h-10 text-sm"><Eye className="size-4" aria-hidden /> Ver cuenta</Link>
-                    <Link href={`/facturas/abonos/nuevo?cliente=${c.id}`} className="boton-primario min-h-10 text-sm"><HandCoins className="size-4" aria-hidden /> Abonar</Link>
-                  </div>
-                </li>
-              );
-            })}
+            {cuentas.map((c) => <TarjetaCuenta key={`${c.cliente_id}-${c.emisor_nit}`} c={c} />)}
           </ul>
         )}
       </section>
@@ -137,12 +118,13 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
         <section className="space-y-2">
           <div>
             <h2 className="flex items-center gap-2 font-bold text-profundo"><Building2 className="size-5" aria-hidden /> Por emisor</h2>
-            <p className="text-sm text-suave">Total a pagar de las facturas aprobadas. Toque un emisor para ver solo sus facturas.</p>
+            <p className="text-sm text-suave">Total a pagar de las facturas aprobadas; abonado y «Le deben» suman todas sus cuentas. Toque un emisor para ver solo sus facturas.</p>
           </div>
           <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {emisores.map((e) => {
               const elegido = f.emisor === e.clave;
               const participa = porcentaje(e.total, totalFiltrado);
+              const { abonado, leDeben } = deEmisor(e.clave);
               return (
                 <li key={e.clave}>
                   <Link href={conFiltros(f, { emisor: elegido ? "" : e.clave })} className={`tarjeta block space-y-2 transition hover:shadow-md ${elegido ? "ring-2 ring-primario" : ""}`}>
@@ -155,6 +137,10 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
                       <div className="flex justify-between text-xs text-suave"><span>Participación · {e.kilos.toLocaleString("es-CO")} kg</span><span className="font-semibold">{participa} %</span></div>
                       <div className="h-2 overflow-hidden rounded-full bg-borde/60"><div className="h-full rounded-full bg-primario" style={{ width: `${participa}%` }} /></div>
                     </div>
+                    <dl className="space-y-1 text-sm tabular-nums">
+                      <div className="flex justify-between gap-2"><dt className="text-suave">Abonado</dt><dd className="font-semibold text-ok">{formatoPesos(abonado)}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-suave">Le deben</dt><dd className="font-semibold text-alerta">{formatoPesos(leDeben)}</dd></div>
+                    </dl>
                   </Link>
                 </li>
               );
@@ -186,7 +172,7 @@ export default async function Facturas({ searchParams }: PageProps<"/facturas">)
                 </dl>
                 <div className="grid grid-cols-2 gap-2">
                   <Link href={`/facturas/${x.id}`} className="boton-secundario min-h-10 text-sm"><Eye className="size-4" aria-hidden /> Ver detalle</Link>
-                  {x.cliente_id && <Link href={`/facturas/clientes/${x.cliente_id}`} className="boton-secundario min-h-10 text-sm"><Users className="size-4" aria-hidden /> Cuenta del cliente</Link>}
+                  {x.cliente_id && <Link href={enlaceCuenta({ cliente_id: x.cliente_id, emisor_nit: nitDigitos(x.emisor_nit) })} className="boton-secundario min-h-10 text-sm"><Users className="size-4" aria-hidden /> Cuenta del cliente</Link>}
                 </div>
               </li>
             ))}

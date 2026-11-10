@@ -5,16 +5,16 @@ import { hoyColombia } from "@/lib/fechas";
 import { cuentaCliente } from "@/lib/facturas/cuenta";
 import { cuentaClienteExcel } from "@/lib/facturas/cuenta-excel";
 
-/** Excel de la cuenta de un cliente de facturas (facturas y abonos con saldo). Solo administración. */
+/** Excel de la cuenta de un cliente con un emisor (facturas y abonos con saldo). Solo administración. */
 export async function GET(request: NextRequest) {
   const perfil = await perfilActual();
   if (!perfil || !esGestor(perfil.rol)) return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   const id = request.nextUrl.searchParams.get("id") ?? "";
   if (!/^[0-9a-f-]{36}$/.test(id)) return NextResponse.json({ error: "Cliente no válido" }, { status: 400 });
-  const cuenta = await cuentaCliente(await supabaseServidor(), id);
-  if (!cuenta) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
-  const archivo = await cuentaClienteExcel(cuenta.cliente, cuenta.movimientos, perfil.nombre);
-  const nombre = cuenta.cliente.nombre.normalize("NFD").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  const datos = await cuentaCliente(await supabaseServidor(), id, request.nextUrl.searchParams.get("emisor") ?? "");
+  if (!datos?.cuenta) return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
+  const archivo = await cuentaClienteExcel(datos.cuenta, datos.movimientos, perfil.nombre);
+  const nombre = `${datos.cuenta.cliente_nombre}-${datos.cuenta.emisor_nombre}`.normalize("NFD").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
   return new NextResponse(new Uint8Array(archivo), {
     headers: {
       "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

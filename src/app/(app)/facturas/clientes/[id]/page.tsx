@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileSpreadsheet, FileText, HandCoins, Paperclip } from "lucide-react";
+import { ArrowLeft, Building2, FileSpreadsheet, FileText, HandCoins, Paperclip } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha, fechaHora } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
@@ -9,17 +9,42 @@ import { cuentaCliente } from "@/lib/facturas/cuenta";
 import { formatoNit, NOMBRE_FORMA_PAGO } from "@/lib/facturas/tipos";
 import { anularAbono, eliminarAbono } from "../../acciones";
 import { ConMotivo } from "../../[id]/formularios";
+import { TarjetaCuenta } from "../../tarjeta-cuenta";
 
 /**
- * Cuenta del cliente (decisión del usuario): facturas aprobadas suben la deuda, abonos la bajan.
- * Movimientos por fecha con el saldo acumulado, como un extracto. Los anulados se ven pero no cuentan.
+ * Cuentas del cliente (decisión del usuario 2026-11-10): una por cada emisor, independientes entre sí.
+ * Sin `?emisor=` muestra las cuentas del cliente con cada emisor; con `?emisor=<nit>`, la cuenta con
+ * ese emisor: sus facturas aprobadas suben la deuda y sus abonos la bajan. Movimientos por fecha con el
+ * saldo acumulado, como un extracto. Los anulados se ven pero no cuentan.
  */
-export default async function CuentaCliente({ params }: PageProps<"/facturas/clientes/[id]">) {
+export default async function CuentaCliente({ params, searchParams }: PageProps<"/facturas/clientes/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const emisorNit = typeof sp.emisor === "string" ? sp.emisor : undefined;
   const supabase = await supabaseServidor();
-  const cuenta = await cuentaCliente(supabase, id);
-  if (!cuenta) notFound();
-  const { cliente: c, movimientos } = cuenta;
+  const datos = await cuentaCliente(supabase, id, emisorNit);
+  if (!datos) notFound();
+  const { cliente, cuentas, cuenta: c, movimientos } = datos;
+
+  if (!c) {
+    return (
+      <>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="titulo">Cuentas del cliente</h1>
+          <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
+        </div>
+        <section className="tarjeta">
+          <p className="text-lg font-black text-profundo">{cliente.nombre}</p>
+          <p className="text-sm text-suave">NIT {formatoNit(cliente.nit)}</p>
+          <p className="mt-2 text-sm text-suave">Cada emisor lleva una cuenta aparte con este cliente. Elija una para ver sus facturas y abonos.</p>
+        </section>
+        <h2 className="flex items-center gap-2 font-bold text-profundo"><Building2 className="size-5" aria-hidden /> Cuentas por emisor</h2>
+        {cuentas.length === 0 ? <Vacio>Este cliente aún no tiene facturas aprobadas ni abonos.</Vacio> : (
+          <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">{cuentas.map((x) => <TarjetaCuenta key={x.emisor_nit} c={x} titulo="emisor" />)}</ul>
+        )}
+      </>
+    );
+  }
   const rutas = movimientos.map((m) => m.soporte_path).filter((r): r is string => !!r);
   const { data: firmadas } = rutas.length ? await supabase.storage.from("facturas").createSignedUrls(rutas, 60 * 30) : { data: [] };
   const urlDe = (ruta: string | null | undefined) => firmadas?.find((x) => x.path === ruta)?.signedUrl;
@@ -28,14 +53,19 @@ export default async function CuentaCliente({ params }: PageProps<"/facturas/cli
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="titulo">Cuenta del cliente</h1>
-        <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
+        <h1 className="titulo">Cuenta del cliente con el emisor</h1>
+        <div className="flex flex-wrap gap-2">
+          {cuentas.length > 1 && <Link href={`/facturas/clientes/${id}`} className="boton-secundario min-h-9 text-sm"><Building2 className="size-4" aria-hidden /> Otras cuentas del cliente</Link>}
+          <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
+        </div>
       </div>
 
       <section className="tarjeta space-y-3">
         <div>
-          <p className="text-lg font-black text-profundo">{c.nombre}</p>
-          <p className="text-sm text-suave">NIT {formatoNit(c.nit)}</p>
+          <p className="text-lg font-black text-profundo">{c.cliente_nombre}</p>
+          <p className="text-sm text-suave">Cliente · NIT {formatoNit(c.cliente_nit)}</p>
+          <p className="mt-1 font-bold text-primario">Emisor: {c.emisor_nombre}</p>
+          <p className="text-sm text-suave">NIT {formatoNit(c.emisor_nit)} · cuenta independiente de las demás</p>
         </div>
         <div className={`rounded-xl p-3 ${debe ? "bg-alerta-suave" : "bg-ok-suave"}`}>
           <p className="text-sm font-semibold text-suave">{debe ? "Le debe" : aFavor ? "Saldo a favor del cliente" : "Cuenta al día"}</p>
@@ -49,8 +79,8 @@ export default async function CuentaCliente({ params }: PageProps<"/facturas/cli
           <div><dt className="text-suave">Último abono</dt><dd className="font-bold">{c.ultimo_abono ? fecha(c.ultimo_abono) : "—"}</dd></div>
         </dl>
         <div className="grid gap-2 sm:flex">
-          <Link href={`/facturas/abonos/nuevo?cliente=${c.id}`} className="boton-primario"><HandCoins className="size-5" aria-hidden /> Registrar abono</Link>
-          <a href={`/api/exportar/cuenta-cliente?id=${c.id}`} className="boton-secundario" download><FileSpreadsheet className="size-5" aria-hidden /> Exportar a Excel</a>
+          <Link href={`/facturas/abonos/nuevo?cliente=${c.cliente_id}&emisor=${c.emisor_nit}`} className="boton-primario"><HandCoins className="size-5" aria-hidden /> Registrar abono</Link>
+          <a href={`/api/exportar/cuenta-cliente?id=${c.cliente_id}&emisor=${c.emisor_nit}`} className="boton-secundario" download><FileSpreadsheet className="size-5" aria-hidden /> Exportar a Excel</a>
         </div>
       </section>
 
@@ -85,7 +115,7 @@ export default async function CuentaCliente({ params }: PageProps<"/facturas/cli
                       <div className="mt-2">
                         {m.vigente ? (
                           <ConMotivo accion={anularAbono.bind(null, m.id)} boton="Anular abono" placeholder="Ej.: valor mal digitado"
-                            pregunta={`Va a anular el abono de ${formatoPesos(m.abono)}: la deuda del cliente sube otra vez. Después podrá eliminarlo.`} />
+                            pregunta={`Va a anular el abono de ${formatoPesos(m.abono)}: la deuda con ${c.emisor_nombre} sube otra vez. Después podrá eliminarlo.`} />
                         ) : (
                           <ConMotivo accion={eliminarAbono.bind(null, m.id)} boton="Eliminar abono" placeholder="Ej.: se registró de nuevo"
                             pregunta={`Va a eliminar el abono anulado de ${formatoPesos(m.abono)} y su soporte. No se puede deshacer.`} />

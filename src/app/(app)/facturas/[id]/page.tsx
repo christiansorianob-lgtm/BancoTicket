@@ -5,7 +5,7 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { fecha, fechaHora } from "@/lib/fechas";
 import { formatoPesos } from "@/lib/numeros";
 import { Dato, Mensaje } from "@/components/ui";
-import { formatoNit, NOMBRE_TIPO, type FacturaLeida, type TipoFactura } from "@/lib/facturas/tipos";
+import { formatoNit, nitDigitos, NOMBRE_TIPO, type FacturaLeida, type TipoFactura } from "@/lib/facturas/tipos";
 import { actualizarFactura, anularFactura, eliminarFactura } from "../acciones";
 import { ChipsFactura } from "../estado";
 import { ComprobacionFactura } from "../comprobacion";
@@ -45,7 +45,7 @@ export default async function DetalleFactura({ params }: PageProps<"/facturas/[i
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="titulo">Factura {f.numero_factura}</h1>
         <div className="flex flex-wrap gap-2">
-          {f.cliente_id && <Link href={`/facturas/clientes/${f.cliente_id}`} className="boton-primario min-h-9 text-sm"><Users className="size-4" aria-hidden /> Cuenta del cliente</Link>}
+          {f.cliente_id && <Link href={`/facturas/clientes/${f.cliente_id}?emisor=${nitDigitos(f.emisor_nit)}`} className="boton-primario min-h-9 text-sm"><Users className="size-4" aria-hidden /> Cuenta del cliente</Link>}
           <Link href="/facturas" className="boton-secundario min-h-9 text-sm"><ArrowLeft className="size-4" aria-hidden /> Volver a facturas</Link>
         </div>
       </div>

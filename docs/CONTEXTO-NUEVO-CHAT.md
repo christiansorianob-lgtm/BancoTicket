@@ -1,7 +1,7 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
 > **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-11-10 (para continuar en el chat «BancoTicket V5»). **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta con abonos por cliente y respaldo completo). Migraciones aplicadas: **0001 a 0033**.
+> **Fecha de corte:** 2026-11-10 (para continuar en el chat «BancoTicket V5»). **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta con abonos por cliente y respaldo completo). Migraciones aplicadas: **0001 a 0034**.
 > La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
@@ -97,9 +97,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0033.** Nunca editar una aplicada; crear la siguiente (`0034_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0034.** Nunca editar una aplicada; crear la siguiente (`0035_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0034_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0035_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING`). Al crear una migración, actualizar también `MIGRACIONES` en `src/app/(app)/admin/backups/respaldo.tsx` (va en el resumen del respaldo). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
@@ -128,6 +128,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0034_nomb
 | 0031 | facturas: porcentaje impreso de cada impuesto (`iva_pct`…) y `configuracion.tarifas_permitidas_factura` (IVA 5 % fruta / 19 % comisión) |
 | 0032 | facturas: `descripcion` del ítem y `tipo` (FRUTA, COMISION, OTRO) |
 | 0033 | `configuracion.tarifas_por_tipo_factura`: fruta IVA 5 % / ReteFuente 1,5 %; comisión IVA 19 % / ReteFuente 11 %; retención en $ 0 = no aplicada |
+| 0034 | abonos de un cliente a UN emisor: `fact_abonos.emisor_nit`/`emisor_nombre`, vistas `fact_emisores` y `fact_cuentas_saldo` (cuenta por cliente + emisor, independientes) |
 
 Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `pendiente|confirmado|en_disputa`, `soporte_ruta`), `tiquetes_pendientes` y `tiquetes` (kilos enteros, `neto_impreso_kg`, `requiere_revision` + `motivo_revision` «Verificar: …», `datos_leidos.nota_ia`), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia`, `recargas_ia` (solo agregar; solo dev), `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`). Facturas: `fact_clientes` (uno por NIT, solo dígitos), `fact_facturas` (APROBADA o `anulada`, `cliente_id`, impuestos + `*_pct` impresos, `descripcion`, `tipo` FRUTA/COMISION/OTRO, `motivo_revision` = diferencias al aprobar), `fact_abonos` (al cliente; VIGENTE/ANULADO, soporte), `fact_auditoria` (`datos` = copia al eliminar). Vistas `saldos`, `extracto`, `consumo_ia_totales`, `tiquetes_reporte`, `anticipos_reporte`, `fact_facturas_estado`, `fact_totales`, `fact_clientes_saldo` (deuda = Σ total a pagar aprobadas − Σ abonos vigentes; `facturas_vencidas`). Funciones de totales `reporte_tiquetes_totales`, `reporte_anticipos_totales`. Configuración relevante: `tarifas_por_tipo_factura` (0033, la que usa la app), `meses_conservacion_fotos` (6), `dias_aviso_respaldo` (15), `compradores_ocultos_consultor`. Buckets privados `tiquetes` (`<comprador>/…`, `<comprador>/anticipos/…`, `formatos/…`) y `facturas` (`<año>/…`, `abonos/<año>/…`).
 
@@ -161,7 +162,7 @@ Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `p
   - **Subir:** PDF o imagen **elegida (sin cámara)**, máx. 4 MB → IA → formulario con **Tipo** (lista: Compra de fruta / Comisión / Otro, propuesto por `clasificarFactura` según descripción e IVA), **Descripción**, cada impuesto con su **% impreso** y la **Comprobación de cálculos** en vivo → **«Aprobar factura»** (Sí/No; si algo no cuadra lo lista y queda anotado). Solo se guarda al aprobar. CUFE único. **NIT del cliente obligatorio**; si el NIT ya existe con otro nombre, aviso con «Usar «nombre registrado»».
   - **Comprobación** (`src/lib/facturas/comprobacion.ts`, sin IA): kilos × precio = subtotal; cada impuesto con el **% impreso** (o, si no se leyó, el que coincida) validado contra las **tarifas del tipo**: **Compra de fruta IVA 5 %, ReteFuente 1,5 %; Comisión IVA 19 %, ReteFuente 11 %; ReteIVA 15 % del IVA**; una retención en $ 0 = «no se aplicó» (hay empresas que no la practican); total = subtotal + IVA − retenciones (± $ 1).
   - **Estados:** solo **Aprobada** o **Anulada** (con motivo, en cualquier momento; deja de sumar). Anulada → **Eliminar** (borra registro y archivo; copia en auditoría) para subirla de nuevo.
-  - **Abonos al CLIENTE** (no a la factura): «Registrar abono» → cliente («NOMBRE – NIT»), monto, forma (Transferencia, Consignación, Cheque, Efectivo, Otro), N° de referencia, quién abona, fecha, observación, soporte opcional (foto/PDF) → Sí/No con la deuda antes y después. Abono mal hecho: anular con motivo → eliminar.
+  - **Abonos de un CLIENTE a un EMISOR** (no a la factura; cada cliente + emisor es una cuenta independiente, vista `fact_cuentas_saldo`): «Registrar abono» → cliente y emisor (dos listas libres), monto, forma (Transferencia, Consignación, Cheque, Efectivo, Otro), N° de referencia, quién abona, fecha, observación, soporte opcional (foto/PDF) → Sí/No con la deuda antes y después. Abono mal hecho: anular con motivo → eliminar.
   - **Pestaña Facturas:** «Lo que me deben los clientes» (tarjeta por cliente: Le debe / Saldo a favor, vencidas sin cubrir, % abonado, Ver cuenta, Abonar), buscador (N°/CUFE, estado, **tipo**, cliente, emisor, fechas), totales por tipo, panel por emisor, tarjetas de factura (fondo azul, tipo, **descripción**, Ver detalle / Cuenta del cliente), totales por mes y Excel (impuestos, tarifas, tipo, descripción). **Cuenta del cliente:** facturas y abonos con saldo acumulado + Excel.
 
 **Desarrollador además:**
@@ -179,7 +180,7 @@ Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `p
 - WhatsApp solo con botón (§8).
 - **En producción no se borran tablas ni registros** salvo lo que el usuario pida explícitamente (eliminar tiquete aprobado, anticipo en disputa), siempre con motivo y en el historial. Antes de cambiar la base: probar con transacción deshecha y cuadrar saldos.
 - Un administrador y un desarrollador; consultores varios; contraseña por defecto 12345678; correo opcional.
-- Facturas: módulo **independiente de los tiquetes** (prefijo `fact_`; al tocarlo, no tocar nada de tiquetes); cada impuesto en su campo con su % impreso; tarifas por tipo (fruta 5 % / 1,5 %; comisión 19 % / 11 %); abonos al cliente (una sola deuda por cliente aunque facturen varias empresas del mismo dueño); solo Aprobada/Anulada.
+- Facturas: módulo **independiente de los tiquetes** (prefijo `fact_`; al tocarlo, no tocar nada de tiquetes); cada impuesto en su campo con su % impreso; tarifas por tipo (fruta 5 % / 1,5 %; comisión 19 % / 11 %); abonos de un cliente a un emisor: **cada cliente con cada emisor es una cuenta independiente** (desde 2026-11-10; antes era una sola deuda por cliente); solo Aprobada/Anulada.
 - Paginación de 10 filas (25/50) con totales y Excel de todo el filtro.
 - Nada se borra solo en producción (fotos incluidas); cualquier limpieza es manual y con el usuario.
 - La administradora no ve el consumo de IA; solo el desarrollador.

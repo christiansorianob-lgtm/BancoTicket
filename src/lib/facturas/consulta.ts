@@ -1,6 +1,6 @@
 import "server-only";
 import type { supabaseServidor } from "@/lib/supabase/servidor";
-import { NOMBRE_TIPO, TIPOS_FACTURA, type ClienteSaldo, type TipoFactura } from "./tipos";
+import { NOMBRE_TIPO, TIPOS_FACTURA, type ClienteSaldo, type CuentaSaldo, type Emisor, type TipoFactura } from "./tipos";
 
 type Supabase = Awaited<ReturnType<typeof supabaseServidor>>;
 
@@ -27,7 +27,7 @@ export function filtrosEnTexto(f: FiltrosFacturas, nombreCliente?: string): stri
 }
 
 export type FilaFactura = {
-  id: string; numero_factura: string; emisor_razon_social: string | null; extractora_razon_social: string | null;
+  id: string; numero_factura: string; emisor_razon_social: string | null; emisor_nit: string | null; extractora_razon_social: string | null;
   cliente_id: string | null; cliente_nombre: string | null; cliente_nit: string | null;
   fecha_emision: string | null; fecha_vencimiento: string | null; kilos: number | null;
   subtotal: number; iva: number; retefuente: number; reteiva: number; reteica: number; total_a_pagar: number;
@@ -42,7 +42,7 @@ const UUID = /^[0-9a-f-]{36}$/;
 /** Facturas (vista fact_facturas_estado), más recientes primero. */
 export async function consultarFacturas(supabase: Supabase, f: FiltrosFacturas, maximo = 2000) {
   let q = supabase.from("fact_facturas_estado")
-    .select("id, numero_factura, emisor_razon_social, extractora_razon_social, cliente_id, cliente_nombre, cliente_nit, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_a_pagar, anulada, motivo_revision, iva_pct, retefuente_pct, reteiva_pct, reteica_pct, descripcion, tipo")
+    .select("id, numero_factura, emisor_razon_social, emisor_nit, extractora_razon_social, cliente_id, cliente_nombre, cliente_nit, fecha_emision, fecha_vencimiento, kilos, subtotal, iva, retefuente, reteiva, reteica, total_a_pagar, anulada, motivo_revision, iva_pct, retefuente_pct, reteiva_pct, reteica_pct, descripcion, tipo")
     .order("fecha_emision", { ascending: false, nullsFirst: true })
     .limit(maximo);
   if (f.estado === "APROBADA") q = q.eq("anulada", false);
@@ -75,7 +75,24 @@ export async function consultarClientes(supabase: Supabase): Promise<ClienteSald
   })) as ClienteSaldo[];
 }
 
-export type TotalGrupo = { clave: string; facturas: number; kilos: number; total: number };
+/** Cuentas de cada cliente con cada emisor, las que más deben primero. */
+export async function consultarCuentas(supabase: Supabase): Promise<CuentaSaldo[]> {
+  const { data } = await supabase.from("fact_cuentas_saldo").select("*").order("deuda", { ascending: false });
+  return (data ?? []).map(numerosCuenta);
+}
+
+export const numerosCuenta = (c: Record<string, unknown>) => ({
+  ...c, facturas: Number(c.facturas), facturado: Number(c.facturado), abonos: Number(c.abonos), abonado: Number(c.abonado),
+  deuda: Number(c.deuda), facturas_vencidas: Number(c.facturas_vencidas),
+}) as CuentaSaldo;
+
+/** Emisores (empresas que facturan), por nombre. */
+export async function consultarEmisores(supabase: Supabase): Promise<Emisor[]> {
+  const { data } = await supabase.from("fact_emisores").select("nit, nombre").order("nombre");
+  return (data ?? []) as Emisor[];
+}
+
+export type TotalGrupo ={ clave: string; facturas: number; kilos: number; total: number };
 
 /** Total a pagar de las facturas APROBADAS (las anuladas no suman) agrupado por emisor o por mes. */
 export function totalesPor(filas: FilaFactura[], dimension: "emisor" | "mes"): TotalGrupo[] {

@@ -58,6 +58,19 @@ export type ClienteSaldo = {
   deuda: number; ultima_factura: string | null; ultimo_abono: string | null; facturas_vencidas: number;
 };
 
+/**
+ * Cuenta de un CLIENTE con un EMISOR (vista fact_cuentas_saldo; decisión del usuario 2026-11-10): cada
+ * cuenta es independiente. Deuda negativa = saldo a favor del cliente.
+ */
+export type CuentaSaldo = {
+  cliente_id: string; cliente_nit: string; cliente_nombre: string; emisor_nit: string; emisor_nombre: string;
+  facturas: number; facturado: number; abonos: number; abonado: number; deuda: number;
+  ultima_factura: string | null; ultimo_abono: string | null; facturas_vencidas: number;
+};
+
+/** Emisor (empresa que factura), vista fact_emisores. */
+export type Emisor = { nit: string; nombre: string };
+
 /** Tipos de factura (decisión del usuario): compra de fruta, comisión u otro. */
 export const TIPOS_FACTURA = ["FRUTA", "COMISION", "OTRO"] as const;
 export type TipoFactura = (typeof TIPOS_FACTURA)[number];

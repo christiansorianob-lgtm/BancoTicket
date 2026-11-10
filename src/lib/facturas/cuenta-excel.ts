@@ -1,7 +1,7 @@
 import "server-only";
 import ExcelJS from "exceljs";
 import { ZONA } from "@/lib/fechas";
-import { formatoNit, NOMBRE_FORMA_PAGO, type ClienteSaldo } from "./tipos";
+import { formatoNit, NOMBRE_FORMA_PAGO, type CuentaSaldo } from "./tipos";
 import type { Movimiento } from "./cuenta";
 
 const AZUL = "FF1E3A8A";
@@ -11,8 +11,8 @@ const BORDE = { style: "thin" as const, color: { argb: "FFCBD5E1" } };
 const PESOS = '"$" #,##0.00';
 const dia = (f: string | null) => (f ? new Date(`${f}T00:00:00Z`) : null);
 
-/** Excel de la cuenta de un cliente: facturas y abonos por fecha con el saldo acumulado. */
-export async function cuentaClienteExcel(c: ClienteSaldo, movimientos: Movimiento[], generadoPor: string): Promise<Buffer> {
+/** Excel de la cuenta de un cliente con un emisor: facturas y abonos por fecha con el saldo acumulado. */
+export async function cuentaClienteExcel(c: CuentaSaldo, movimientos: Movimiento[], generadoPor: string): Promise<Buffer> {
   const libro = new ExcelJS.Workbook();
   libro.creator = "BancoTicket";
   const hoja = libro.addWorksheet("Cuenta", {
@@ -22,13 +22,13 @@ export async function cuentaClienteExcel(c: ClienteSaldo, movimientos: Movimient
   hoja.columns = [{ width: 13 }, { width: 22 }, { width: 30 }, { width: 34 }, { width: 18 }, { width: 18 }, { width: 19 }, { width: 14 }];
   hoja.mergeCells("A1:H1");
   const t = hoja.getCell("A1");
-  t.value = `BancoTicket · Cuenta de ${c.nombre}`;
+  t.value = `BancoTicket · Cuenta de ${c.cliente_nombre} con ${c.emisor_nombre}`;
   t.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
   t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
   t.alignment = { vertical: "middle", indent: 1 };
   hoja.getRow(1).height = 32;
   hoja.mergeCells("A2:H2");
-  hoja.getCell("A2").value = `NIT ${formatoNit(c.nit)}`;
+  hoja.getCell("A2").value = `Cliente NIT ${formatoNit(c.cliente_nit)} · Emisor ${c.emisor_nombre} NIT ${formatoNit(c.emisor_nit)}`;
   hoja.mergeCells("A3:H3");
   hoja.getCell("A3").value = c.deuda > 1 ? `Le debe: $ ${c.deuda.toLocaleString("es-CO", { maximumFractionDigits: 2 })}`
     : c.deuda < -1 ? `Saldo a favor del cliente: $ ${(-c.deuda).toLocaleString("es-CO", { maximumFractionDigits: 2 })}` : "Cuenta al día";
