@@ -7,7 +7,7 @@ import { clasificarFactura, formatoNit, nitDigitos, NOMBRE_TIPO, TIPOS_FACTURA, 
 
 /** Cliente ya registrado (para avisar si el NIT existe con otro nombre). */
 export type ClienteRegistrado = { nit: string; nombre: string };
-import type { TarifasFactura } from "@/lib/facturas/comprobacion";
+import type { TarifasPorTipo } from "@/lib/facturas/comprobacion";
 import { ComprobacionFactura } from "./comprobacion";
 
 const ETIQUETAS: [keyof FacturaLeida, string, "texto" | "fecha" | "numero"][] = [
@@ -29,7 +29,7 @@ const ETIQUETAS: [keyof FacturaLeida, string, "texto" | "fecha" | "numero"][] = 
  * Campos editables de la factura con las validaciones en vivo (las mismas que aplica el servidor al
  * guardar). Un campo vacío es «no se leyó»: queda resaltado.
  */
-export function CamposFactura({ inicial, tarifas, clientes }: { inicial: FacturaLeida; tarifas: TarifasFactura; clientes: ClienteRegistrado[] }) {
+export function CamposFactura({ inicial, tarifas, clientes }: { inicial: FacturaLeida; tarifas: TarifasPorTipo; clientes: ClienteRegistrado[] }) {
   const caja = useRef<HTMLDivElement>(null);
   const [datos, setDatos] = useState<FacturaLeida>(() => completarPrecio(inicial));
 

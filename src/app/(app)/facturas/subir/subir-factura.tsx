@@ -7,7 +7,7 @@ import { Mensaje } from "@/components/ui";
 import { completarPrecio, fallasFactura, MAX_BYTES_FACTURA, type Validacion } from "@/lib/facturas/validar";
 import { facturaDesde } from "@/lib/facturas/formulario";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
-import { pesos, type TarifasFactura } from "@/lib/facturas/comprobacion";
+import { pesos, type TarifasPorTipo } from "@/lib/facturas/comprobacion";
 import { aprobarFactura, descartarArchivo } from "../acciones";
 import { CamposFactura, type ClienteRegistrado } from "../campos-factura";
 
@@ -19,7 +19,7 @@ type Lectura =
  * Subir una factura (decisión del usuario): se ELIGE el archivo de la galería o de los archivos del
  * celular o computador. Sin cámara: el selector no lleva «capture» ni se usa getUserMedia.
  */
-export function SubirFactura({ tarifas, clientes }: { tarifas: TarifasFactura; clientes: ClienteRegistrado[] }) {
+export function SubirFactura({ tarifas, clientes }: { tarifas: TarifasPorTipo; clientes: ClienteRegistrado[] }) {
   const router = useRouter();
   const entrada = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<{ url: string; tipo: string; verPdf: boolean } | null>(null);

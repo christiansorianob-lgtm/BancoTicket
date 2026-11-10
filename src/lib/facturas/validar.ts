@@ -3,7 +3,7 @@
  * Lo que falte o no cuadre se muestra al aprobar y queda anotado en la factura (motivo_revision).
  */
 import type { FacturaLeida } from "./tipos";
-import { comprobarFactura, pesos, type TarifasFactura } from "./comprobacion";
+import { comprobarFactura, pesos, type TarifasPorTipo } from "./comprobacion";
 
 export type Validacion = { nombre: string; ok: boolean; mensaje: string };
 
@@ -30,7 +30,7 @@ export function validarFactura(d: FacturaLeida): Validacion[] {
 }
 
 /** Validaciones + cada cálculo de la comprobación que no coincide (decide si la factura queda en revisión). */
-export function fallasFactura(d: FacturaLeida, t: TarifasFactura): string[] {
+export function fallasFactura(d: FacturaLeida, t: TarifasPorTipo): string[] {
   return [
     ...validarFactura(d).filter((v) => !v.ok).map((v) => `${v.nombre}: ${v.mensaje}`),
     ...comprobarFactura(d, t).filter((c) => !c.ok).map((c) => `${c.nombre}: ${c.diferencia == null ? "falta un dato" : `diferencia ${pesos(Math.abs(c.diferencia))}`}`),

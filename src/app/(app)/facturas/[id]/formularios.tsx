@@ -4,7 +4,7 @@ import type { Resultado } from "@/app/(app)/admin/acciones";
 import { FormAccion } from "@/components/form-accion";
 import { CamposFactura, type ClienteRegistrado } from "../campos-factura";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
-import type { TarifasFactura } from "@/lib/facturas/comprobacion";
+import type { TarifasPorTipo } from "@/lib/facturas/comprobacion";
 
 /** Anular o eliminar con motivo obligatorio y confirmación Sí / No. */
 export function ConMotivo({ accion, boton, pregunta, placeholder }: {
@@ -21,7 +21,7 @@ export function ConMotivo({ accion, boton, pregunta, placeholder }: {
 }
 
 /** Corregir los datos de la factura (las validaciones se ven en vivo). */
-export function CorregirFactura({ accion, inicial, tarifas, clientes }: { accion: (form: FormData) => Promise<Resultado>; inicial: FacturaLeida; tarifas: TarifasFactura; clientes: ClienteRegistrado[] }) {
+export function CorregirFactura({ accion, inicial, tarifas, clientes }: { accion: (form: FormData) => Promise<Resultado>; inicial: FacturaLeida; tarifas: TarifasPorTipo; clientes: ClienteRegistrado[] }) {
   return (
     <FormAccion accion={accion} boton="Guardar corrección">
       <CamposFactura inicial={inicial} tarifas={tarifas} clientes={clientes} />

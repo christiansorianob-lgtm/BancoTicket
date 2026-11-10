@@ -1,14 +1,17 @@
 import { CheckCircle2, Calculator, XCircle } from "lucide-react";
 import { Chip } from "@/components/ui";
-import { comprobarFactura, listaTarifas, pesos, type TarifasFactura } from "@/lib/facturas/comprobacion";
+import { comprobarFactura, listaTarifas, pesos, tipoDe, type TarifasPorTipo } from "@/lib/facturas/comprobacion";
+import { NOMBRE_TIPO } from "@/lib/facturas/tipos";
 import type { FacturaLeida } from "@/lib/facturas/tipos";
 
 /**
  * «Comprobación de cálculos» (decisión del usuario): cada cuenta de la factura rehecha por la app,
  * paso a paso, con el resultado frente a lo facturado. Sin IA. Sirve en el navegador y el servidor.
  */
-export function ComprobacionFactura({ datos, tarifas }: { datos: FacturaLeida; tarifas: TarifasFactura }) {
+export function ComprobacionFactura({ datos, tarifas }: { datos: FacturaLeida; tarifas: TarifasPorTipo }) {
   const calculos = comprobarFactura(datos, tarifas);
+  const tipo = tipoDe(datos);
+  const t = tarifas[tipo];
   const fallan = calculos.filter((c) => !c.ok).length;
   const total = calculos[calculos.length - 1];
   const rf = datos.retefuente ?? 0, ri = datos.reteiva ?? 0, rc = datos.reteica ?? 0;
@@ -20,9 +23,9 @@ export function ComprobacionFactura({ datos, tarifas }: { datos: FacturaLeida; t
         <Chip tono={fallan ? "error" : "ok"}>{fallan ? `${fallan} no coincide${fallan === 1 ? "" : "n"}` : "Todo coincide"}</Chip>
       </div>
       <p className="text-xs text-suave">
-        La app rehízo cada cuenta con el porcentaje que imprime la factura y revisó que sea una tarifa permitida: IVA {listaTarifas(tarifas.iva)} (5 % fruta
-        de palma, 19 % comisión) y ReteFuente {listaTarifas(tarifas.retefuente)} del subtotal, ReteIVA {listaTarifas(tarifas.reteiva)} del IVA y ReteICA {listaTarifas(tarifas.reteica)}.
-        Si no se leyó el porcentaje, se prueba con las tarifas permitidas. Una retención en $ 0 es que no se aplicó. Se acepta hasta $ 1 de diferencia por redondeo.
+        La app rehízo cada cuenta con el porcentaje que imprime la factura y revisó que sea una tarifa de <b>{NOMBRE_TIPO[tipo]}</b>: IVA {listaTarifas(t.iva)} y
+        ReteFuente {listaTarifas(t.retefuente)} del subtotal, ReteIVA {listaTarifas(t.reteiva)} del IVA y ReteICA {listaTarifas(t.reteica)}. Una retención en $ 0
+        es que esa empresa no la aplicó. Si no se leyó el porcentaje, se prueba con estas tarifas. Se acepta hasta $ 1 de diferencia por redondeo.
       </p>
 
       <ol className="space-y-2">

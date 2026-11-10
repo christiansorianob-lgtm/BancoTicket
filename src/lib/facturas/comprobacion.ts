@@ -4,7 +4,7 @@
  * verifica que sea una tarifa permitida (configuración `tarifas_permitidas_factura`); si no se leyó,
  * prueba con las tarifas permitidas. Dice si coincide con lo facturado.
  */
-import type { FacturaLeida } from "./tipos";
+import { clasificarFactura, NOMBRE_TIPO, type FacturaLeida, type TipoFactura } from "./tipos";
 
 /**
  * Tarifas permitidas por impuesto (5 = 5 %). ReteIVA es sobre el IVA; los demás, sobre el subtotal.
@@ -12,6 +12,21 @@ import type { FacturaLeida } from "./tipos";
  */
 export type TarifasFactura = { iva: number[]; retefuente: number[]; reteiva: number[]; reteica: number[] };
 export const TARIFAS_PREDETERMINADAS: TarifasFactura = { iva: [5, 19], retefuente: [0, 1.5], reteiva: [15], reteica: [] };
+
+/**
+ * Tarifas permitidas según el TIPO de factura (decisión del usuario, 2026-11-10, migración 0033):
+ * compra de fruta IVA 5 % y ReteFuente 1,5 %; comisión IVA 19 % y ReteFuente 11 %. Una retención en
+ * $ 0 siempre se acepta: hay empresas que no la practican.
+ */
+export type TarifasPorTipo = Record<TipoFactura, TarifasFactura>;
+export const TARIFAS_POR_TIPO_PREDETERMINADAS: TarifasPorTipo = {
+  FRUTA: { iva: [5], retefuente: [1.5], reteiva: [15], reteica: [] },
+  COMISION: { iva: [19], retefuente: [11], reteiva: [15], reteica: [] },
+  OTRO: { iva: [5, 19], retefuente: [1.5, 11], reteiva: [15], reteica: [] },
+};
+
+/** El tipo con que se comprueba la factura: el elegido o, si no hay, el que propone la app. */
+export const tipoDe = (d: FacturaLeida): TipoFactura => d.tipo ?? clasificarFactura(d);
 
 /** «5 % o 19 %»; «cualquiera» si la lista está vacía. */
 export const listaTarifas = (l: number[]) => (l.length ? l.map((n) => porcentaje(n)).join(" o ") : "cualquiera");
@@ -57,7 +72,7 @@ const mismo = (a: number, b: number) => Math.abs(a - b) < 0.0005;
  * Un impuesto: con el porcentaje impreso si se leyó (y que sea una tarifa permitida); si no, con la
  * tarifa permitida que coincida. Una retención en 0 es que no se aplicó.
  */
-function impuesto(nombre: string, base: number | null, nombreBase: string, valor: number | null, impreso: number | null | undefined, permitidas: number[], retencion: boolean): Calculo {
+function impuesto(nombre: string, base: number | null, nombreBase: string, valor: number | null, impreso: number | null | undefined, permitidas: number[], retencion: boolean, tipo: string): Calculo {
   if (retencion && valor === 0) return { nombre, cuenta: "No se aplicó en esta factura", calculado: 0, facturado: 0, diferencia: 0, ok: true };
   if (base == null || valor == null) return calculo(nombre, `${nombreBase} × porcentaje`, null, null);
   const real = base ? realDe(valor, base) : 0;
@@ -66,7 +81,7 @@ function impuesto(nombre: string, base: number | null, nombreBase: string, valor
     const k = calculo(nombre, `${pesos(base)} × ${porcentaje(impreso)} (como dice la factura)`, (base * impreso) / 100, valor);
     if (permitidas.length && !permitidas.some((t) => mismo(t, impreso))) {
       k.ok = false;
-      k.nota = `El ${porcentaje(impreso)} que trae la factura no es una tarifa permitida (${listaTarifas(permitidas)}).`;
+      k.nota = `El ${porcentaje(impreso)} que trae la factura no es una tarifa permitida para ${tipo} (${listaTarifas(permitidas)}).`;
     } else if (!k.ok) k.nota = `No da el ${porcentaje(impreso)} del ${nombreBase} que dice la factura: equivale al ${porcentaje(real)}.`;
     return k;
   }
@@ -81,11 +96,14 @@ function impuesto(nombre: string, base: number | null, nombreBase: string, valor
   if (!permitidas.length) return { nombre, cuenta: `${pesos(valor)} sobre ${pesos(base)}`, calculado: valor, facturado: valor, diferencia: 0, ok: true, nota: `Sin porcentaje para comprobar: equivale al ${porcentaje(real)} del ${nombreBase}.` };
   const k = calculo(nombre, `${pesos(base)} × ${porcentaje(permitidas[0])}`, (base * permitidas[0]) / 100, valor);
   k.ok = false;
-  k.nota = `No coincide con ninguna tarifa permitida (${listaTarifas(permitidas)}): la factura equivale al ${porcentaje(real)} del ${nombreBase}.`;
+  k.nota = `No coincide con la tarifa de ${tipo} (${listaTarifas(permitidas)}): la factura equivale al ${porcentaje(real)} del ${nombreBase}.`;
   return k;
 }
 
-export function comprobarFactura(d: FacturaLeida, t: TarifasFactura): Calculo[] {
+export function comprobarFactura(d: FacturaLeida, tarifas: TarifasPorTipo): Calculo[] {
+  const tipo = tipoDe(d);
+  const t = tarifas[tipo];
+  const nombreTipo = NOMBRE_TIPO[tipo].toLowerCase();
   const { kilos, precio_kilo: precio, subtotal, iva, total_a_pagar: total } = d;
   const rf = d.retefuente ?? 0, ri = d.reteiva ?? 0, rc = d.reteica ?? 0;
   const c: Calculo[] = [];
@@ -96,11 +114,11 @@ export function comprobarFactura(d: FacturaLeida, t: TarifasFactura): Calculo[] 
   if (st.ok && st.diferencia) st.nota = "Diferencia mínima aceptada: el precio por kilo viene redondeado.";
   c.push(st);
 
-  c.push(impuesto("IVA", subtotal, "subtotal", iva, d.iva_pct, t.iva, false));
+  c.push(impuesto("IVA", subtotal, "subtotal", iva, d.iva_pct, t.iva, false, nombreTipo));
   // Cada retención se aplica o no según la factura (las reales traen unas sí y otras no).
-  c.push(impuesto("ReteFuente", subtotal, "subtotal", rf, d.retefuente_pct, t.retefuente, true));
-  c.push(impuesto("ReteIVA", iva, "IVA", ri, d.reteiva_pct, t.reteiva, true));
-  c.push(impuesto("ReteICA", subtotal, "subtotal", rc, d.reteica_pct, t.reteica, true));
+  c.push(impuesto("ReteFuente", subtotal, "subtotal", rf, d.retefuente_pct, t.retefuente, true, nombreTipo));
+  c.push(impuesto("ReteIVA", iva, "IVA", ri, d.reteiva_pct, t.reteiva, true, nombreTipo));
+  c.push(impuesto("ReteICA", subtotal, "subtotal", rc, d.reteica_pct, t.reteica, true, nombreTipo));
 
   c.push(calculo("Total a pagar",
     subtotal != null && iva != null ? `${pesos(subtotal)} + ${pesos(iva)} − ${pesos(rf)} − ${pesos(ri)} − ${pesos(rc)}` : "subtotal + IVA − ReteFuente − ReteIVA − ReteICA",
@@ -122,3 +140,14 @@ export function tarifasDesde(valor: unknown): TarifasFactura {
   };
   return { iva: l("iva"), retefuente: l("retefuente"), reteiva: l("reteiva"), reteica: l("reteica") };
 }
+
+/**
+ * Tarifas por tipo de la configuración (`tarifas_por_tipo_factura`, migración 0033). Si no está o le
+ * falta un tipo, usa `respaldo` (la lista única de antes) o la predeterminada.
+ */
+export function tarifasPorTipoDesde(valor: unknown, respaldo?: TarifasFactura): TarifasPorTipo {
+  const v = (valor ?? {}) as Partial<Record<TipoFactura, unknown>>;
+  const de = (k: TipoFactura) => (v[k] && typeof v[k] === "object" ? tarifasDesde(v[k]) : respaldo ?? TARIFAS_POR_TIPO_PREDETERMINADAS[k]);
+  return { FRUTA: de("FRUTA"), COMISION: de("COMISION"), OTRO: de("OTRO") };
+}
+
