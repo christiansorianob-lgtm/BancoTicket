@@ -13,7 +13,7 @@ import { CamposFactura, type ClienteRegistrado } from "../campos-factura";
 
 type Lectura =
   | { duplicado: { id: string; numero_factura: string }; datos: FacturaLeida }
-  | { duplicado?: undefined; datos: FacturaLeida; validaciones: Validacion[]; archivo_path: string; tipo_archivo: "pdf" | "imagen"; consumoId: number | null };
+  | { duplicado?: undefined; datos: FacturaLeida; avisos?: string[]; validaciones: Validacion[]; archivo_path: string; tipo_archivo: "pdf" | "imagen"; consumoId: number | null };
 
 /**
  * Subir una factura (decisión del usuario): se ELIGE el archivo de la galería o de los archivos del
@@ -99,6 +99,8 @@ export function SubirFactura({ tarifas, clientes }: { tarifas: TarifasPorTipo; c
             <input type="hidden" name="tipo_archivo" value={lectura.tipo_archivo} />
             <input type="hidden" name="consumo_id" value={lectura.consumoId ?? ""} />
             <Mensaje tono="alerta">Compare los datos con la factura y corrija lo que haga falta. La factura solo se guarda al aprobarla.</Mensaje>
+            {/* Ajustes que hizo la app a lo leído (sin IA): revisar que correspondan a la factura. */}
+            {lectura.avisos?.map((a) => <Mensaje key={a} tono="alerta">{a}</Mensaje>)}
             <CamposFactura inicial={lectura.datos} tarifas={tarifas} clientes={clientes} />
             {confirmar ? (
               <div className={`space-y-3 rounded-xl border-2 p-3 ${confirmar.fallas.length ? "border-error bg-error-suave" : "border-alerta bg-alerta-suave"}`} role="alertdialog" aria-label="Confirmar aprobación">

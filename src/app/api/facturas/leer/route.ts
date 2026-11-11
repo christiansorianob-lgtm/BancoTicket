@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { esGestor, perfilActual } from "@/lib/sesion";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { leerFactura } from "@/lib/facturas/lector";
-import { completarPrecio, fallasFactura, MAX_BYTES_FACTURA, tipoReal, validarFactura } from "@/lib/facturas/validar";
+import { ajustarLectura, completarPrecio, fallasFactura, MAX_BYTES_FACTURA, tipoReal, validarFactura } from "@/lib/facturas/validar";
 import { leerConfiguracion } from "@/lib/config";
 import { anotarConsumo } from "@/lib/lectura/consumo";
 
@@ -32,7 +32,9 @@ export async function POST(request: Request) {
     console.error("Fallo de lectura de factura", e);
     return NextResponse.json({ error: "No se pudo leer la factura. Intente de nuevo o con un archivo más claro." }, { status: 502 });
   }
-  const datos = completarPrecio(lectura.datos);
+  // Ajustes sin IA (NIT sin dígito de verificación, total antes de retenciones), con su aviso.
+  const { datos: ajustados, avisos } = ajustarLectura(lectura.datos);
+  const datos = completarPrecio(ajustados);
 
   const db = supabaseAdmin();
   const cufe = datos.cufe?.trim();
@@ -52,5 +54,5 @@ export async function POST(request: Request) {
 
   const validaciones = validarFactura(datos);
   if (fallasFactura(datos, (await leerConfiguracion()).tarifas_factura).length) await anotarConsumo(lectura.consumoId, { resultado: "revision" });
-  return NextResponse.json({ datos, validaciones, archivo_path: ruta, tipo_archivo: tipo === "pdf" ? "pdf" : "imagen", consumoId: lectura.consumoId });
+  return NextResponse.json({ datos, avisos, validaciones, archivo_path: ruta, tipo_archivo: tipo === "pdf" ? "pdf" : "imagen", consumoId: lectura.consumoId });
 }

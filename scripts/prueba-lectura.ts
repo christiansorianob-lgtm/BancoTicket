@@ -6,7 +6,7 @@ import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
 import { sonParecidos } from "../src/lib/lectura/parecidos";
 import { armarCuenta } from "../src/lib/informes/movimientos";
-import { completarPrecio, fallasFactura, tipoReal, validarFactura } from "../src/lib/facturas/validar";
+import { ajustarLectura, completarNit, completarPrecio, digitoVerificacion, fallasFactura, tipoReal, validarFactura } from "../src/lib/facturas/validar";
 import { comprobarFactura, TARIFAS_POR_TIPO_PREDETERMINADAS } from "../src/lib/facturas/comprobacion";
 import { facturaDesde, numeroEnCampo } from "../src/lib/facturas/formulario";
 import { formatearMonto, montoEnLetras, textoMonto } from "../src/lib/monto";
@@ -58,6 +58,22 @@ igual("Comisión con ReteFuente 11 % sin porcentaje leído: cuadra", todasOk(com
 igual("Comisión sin ReteFuente (la empresa no la cobra): cuadra", todasOk(comision(0, null)), true);
 igual("Comisión con ReteFuente del 1,5 %: falla (para comisión es 11 %)", calculoOk(comision(375000, 1.5), "ReteFuente"), false);
 igual("Marcada como Fruta pero con IVA 19 %: falla", calculoOk(comision(2750000, 11, "FRUTA"), "IVA"), false);
+// Formato «Solución Gratuita DIAN» (2026-11-10): FESA-180 de Agrovaspalma, NIT sin dígito de verificación
+// y «Total factura» antes de retenciones.
+igual("dígito de verificación de SAF (901253217)", digitoVerificacion("901253217"), 5);
+igual("dígito de verificación de GL Palma (902081862)", digitoVerificacion("902081862"), 0);
+igual("NIT sin dígito se completa", completarNit("901253217"), "901.253.217-5");
+igual("NIT con guion no cambia", completarNit("901.253.217-5"), "901.253.217-5");
+igual("NIT de 10 dígitos no cambia", completarNit("9012532175"), "9012532175");
+const fesa180 = { ...fac("FESA-180", 21730, 25, 543250, 103217.5, 59757.5, 646467.5, 15482.63), emisor_nit: "901666764", extractora_nit: "901253217", iva_pct: 19, tipo: "COMISION" as const };
+const ajustada = ajustarLectura(fesa180);
+igual("FESA-180: total a pagar = total − retenciones", ajustada.datos.total_a_pagar, 571227.37);
+igual("FESA-180: NIT del cliente completado", ajustada.datos.extractora_nit, "901.253.217-5");
+igual("FESA-180: NIT del emisor completado", ajustada.datos.emisor_nit, "901.666.764-5");
+igual("FESA-180: 3 avisos", ajustada.avisos.length, 3);
+igual("FESA-180 ajustada cuadra (comisión)", todasOk(ajustada.datos), true);
+igual("factura con Total a pagar correcto no se ajusta", ajustarLectura(fac("GLFE 7", 22300, 664, 14807200, 740360, 222108, 15325452)).avisos.length, 0);
+igual("factura sin retenciones no se ajusta", ajustarLectura(fac("X", 1000, 100, 100000, 5000, 0, 105000)).datos.total_a_pagar, 105000);
 igual("FEIA 673 como Comisión (sin ReteFuente): cuadra", todasOk({ ...feia673, iva_pct: 19, reteiva_pct: 15, tipo: "COMISION" }), true);
 igual("FEPA 12 como Compra de fruta (ReteFuente 1,5 %): cuadra", todasOk({ ...fac("FEPA 12", 692540, 678, 469542120, 23477106, 7043131.80, 482454528.30, 3521565.90), tipo: "FRUTA" }), true);
 igual("falta el CUFE: falla", validarFactura({ ...fac("A", 1, 1, 1, 0, 0, 1), cufe: null }).find((v) => v.nombre === "Campos completos")?.ok, false);

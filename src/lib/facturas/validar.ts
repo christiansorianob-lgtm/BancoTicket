@@ -2,7 +2,7 @@
  * Validaciones de una factura antes de guardarla (sin dependencias: navegador, servidor y pruebas).
  * Lo que falte o no cuadre se muestra al aprobar y queda anotado en la factura (motivo_revision).
  */
-import type { FacturaLeida } from "./tipos";
+import { formatoNit, nitDigitos, totalRetenciones, type FacturaLeida } from "./tipos";
 import { comprobarFactura, pesos, type TarifasPorTipo } from "./comprobacion";
 
 export type Validacion = { nombre: string; ok: boolean; mensaje: string };
@@ -11,6 +11,51 @@ export type Validacion = { nombre: string; ok: boolean; mensaje: string };
 export function completarPrecio<T extends Pick<FacturaLeida, "kilos" | "precio_kilo" | "subtotal">>(d: T): T {
   if (d.precio_kilo == null && d.kilos && d.subtotal != null) return { ...d, precio_kilo: Math.round((d.subtotal / d.kilos) * 100) / 100 };
   return d;
+}
+
+/** Dígito de verificación de un NIT colombiano (algoritmo de la DIAN). */
+export function digitoVerificacion(base: string): number {
+  const pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  const r = [...base].reverse().reduce((s, d, i) => s + Number(d) * pesos[i], 0) % 11;
+  return r < 2 ? r : 11 - r;
+}
+
+/**
+ * NIT de empresa leído SIN dígito de verificación (9 dígitos y sin guion, como en las facturas de
+ * «Solución Gratuita DIAN»): se le agrega el dígito calculado para que sea el mismo cliente o emisor que
+ * ya está registrado con él (901253217 → 901.253.217-5). Si trae guion o no tiene 9 dígitos, no cambia.
+ */
+export function completarNit(nit: string | null): string | null {
+  const d = nitDigitos(nit);
+  if (!nit || nit.includes("-") || d.length !== 9) return nit;
+  return formatoNit(`${d}${digitoVerificacion(d)}`);
+}
+
+/**
+ * Ajustes sin IA a lo leído (decisión del usuario 2026-11-10), con un aviso por cada uno:
+ *  - NIT del cliente y del emisor sin dígito de verificación → se completa.
+ *  - Facturas sin «Total a pagar» (Solución Gratuita DIAN): su «Total factura» es subtotal + IVA y las
+ *    retenciones van aparte. Si el total leído es subtotal + IVA (± $ 1) y hay retenciones, el total a
+ *    pagar es ese total menos las retenciones.
+ */
+export function ajustarLectura(d: FacturaLeida): { datos: FacturaLeida; avisos: string[] } {
+  const avisos: string[] = [];
+  const datos = { ...d };
+  for (const [campo, nombre] of [["extractora_nit", "del cliente"], ["emisor_nit", "del emisor"]] as const) {
+    const completo = completarNit(datos[campo]);
+    if (completo !== datos[campo]) {
+      avisos.push(`El NIT ${nombre} venía sin dígito de verificación (${datos[campo]}): se completó como ${completo}.`);
+      datos[campo] = completo;
+    }
+  }
+  const ret = totalRetenciones(datos);
+  if (ret > 0 && datos.subtotal != null && datos.iva != null && datos.total_a_pagar != null
+      && Math.abs(datos.total_a_pagar - (datos.subtotal + datos.iva)) <= 1) {
+    const neto = Math.round((datos.total_a_pagar - ret) * 100) / 100;
+    avisos.push(`Esta factura no trae «Total a pagar»: su total (${pesos(datos.total_a_pagar)}) es antes de retenciones. Se calculó el total a pagar restando las retenciones: ${pesos(neto)}.`);
+    datos.total_a_pagar = neto;
+  }
+  return { datos, avisos };
 }
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
