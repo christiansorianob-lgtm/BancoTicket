@@ -14,6 +14,8 @@ export type Configuracion = {
   ultimo_respaldo: string | null;
   /** Tarifas permitidas en las facturas de venta según su tipo (migración 0033; antes 0031 y 0026). */
   tarifas_factura: TarifasPorTipo;
+  /** Usuarios de compradores de pruebas (migración 0019): no los ve el Consultor ni, en Saldos, la administradora. */
+  compradores_ocultos_consultor: string[];
 };
 
 const PREDETERMINADA: Configuracion = {
@@ -25,6 +27,7 @@ const PREDETERMINADA: Configuracion = {
   dias_aviso_respaldo: 15,
   ultimo_respaldo: null,
   tarifas_factura: TARIFAS_POR_TIPO_PREDETERMINADAS,
+  compradores_ocultos_consultor: [],
 };
 
 /** Valores pendientes de decisión: viven en la tabla `configuracion`. */

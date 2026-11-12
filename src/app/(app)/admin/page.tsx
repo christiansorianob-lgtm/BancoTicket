@@ -5,6 +5,7 @@ import { Vacio } from "@/components/ui";
 import type { FilaSaldo } from "@/components/saldo";
 import { textoSaldo } from "@/lib/saldo";
 import { perfilActual } from "@/lib/sesion";
+import { leerConfiguracion } from "@/lib/config";
 import { fotosAntiguas } from "@/lib/fotos-antiguas";
 import { AvisoFotosAntiguas } from "@/components/aviso-fotos-antiguas";
 import { TarjetaIA } from "./tarjeta-ia";
@@ -24,7 +25,18 @@ export default async function PanelAdmin() {
   // Solo para el desarrollador: aviso de fotos antiguas (solo cuenta) y consumo de IA.
   const esDesarrollador = (await perfilActual())?.rol === "desarrollador";
   const fotos = esDesarrollador ? await fotosAntiguas() : null;
-  const filas = (saldos ?? []) as FilaSaldo[];
+  // Decisión del usuario (2026-11-12): la administradora no ve en Saldos a los compradores de pruebas
+  // (configuracion.compradores_ocultos_consultor, hoy «prueba») ni los cuenta en los totales. El
+  // desarrollador sí los ve. Solo cambia la pantalla.
+  let ocultos = new Set<string>();
+  if (!esDesarrollador) {
+    const usuarios = (await leerConfiguracion()).compradores_ocultos_consultor;
+    if (Array.isArray(usuarios) && usuarios.length) {
+      const { data } = await supabase.from("perfiles").select("id").in("usuario", usuarios);
+      ocultos = new Set((data ?? []).map((p) => p.id));
+    }
+  }
+  const filas = ((saldos ?? []) as FilaSaldo[]).filter((f) => !ocultos.has(f.comprador_id));
   const totalFondos = filas.reduce((s, f) => s + Math.max(0, Number(f.saldo)), 0);
   const totalDeuda = filas.reduce((s, f) => s + Math.min(0, Number(f.saldo)), 0);
 
