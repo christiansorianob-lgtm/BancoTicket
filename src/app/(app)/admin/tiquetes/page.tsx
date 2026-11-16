@@ -20,7 +20,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
   const sp = await searchParams;
   const f = {
     desde: texto(sp.desde), hasta: texto(sp.hasta), extractora: texto(sp.extractora),
-    comprador: texto(sp.comprador), sinPrecio: texto(sp.sin_precio) === "1", estado: texto(sp.estado) || "vigente",
+    comprador: texto(sp.comprador), numero: texto(sp.numero).trim(), sinPrecio: texto(sp.sin_precio) === "1", estado: texto(sp.estado) || "vigente",
   };
   const pagina = paginaDesde(leerParametros(sp));
   const supabase = await supabaseServidor();
@@ -28,6 +28,8 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
   const estado = f.estado === "anulado" ? "anulado" : "vigente";
   const desdeISO = f.desde ? `${f.desde}T00:00:00-05:00` : null;
   const hastaISO = f.hasta ? `${f.hasta}T23:59:59.999-05:00` : null;
+  // N° de tiquete: todo o parte del número (como en Reportes); se quitan los comodines % y _.
+  const numero = f.numero.replace(/[%_]/g, "");
 
   // Solo la página que se ve (de a 10, con sus fotos).
   let consultaPagina = supabase.from("tiquetes").select("*, extractoras(nombre), perfiles!tiquetes_comprador_id_fkey(nombre, celular)", { count: "exact" }).eq("estado", estado);
@@ -36,6 +38,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
   if (f.extractora) consultaPagina = consultaPagina.eq("extractora_id", f.extractora);
   if (f.comprador) consultaPagina = consultaPagina.eq("comprador_id", f.comprador);
   if (f.sinPrecio) consultaPagina = consultaPagina.is("precio_tonelada", null);
+  if (numero) consultaPagina = consultaPagina.ilike("numero", `%${numero}%`);
 
   /** Totales de todo el filtro con una consulta liviana (solo peso y valor, sin fotos ni nombres). */
   async function totales() {
@@ -47,6 +50,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
       if (f.extractora) q = q.eq("extractora_id", f.extractora);
       if (f.comprador) q = q.eq("comprador_id", f.comprador);
       if (f.sinPrecio) q = q.is("precio_tonelada", null);
+      if (numero) q = q.ilike("numero", `%${numero}%`);
       const { data } = await q.order("id").range(d, d + 999);
       for (const t of data ?? []) { toneladas += Number(t.peso_neto_t); valor += Number(t.valor ?? 0); }
       if (!data || data.length < 1000) return { toneladas, valor };
@@ -76,7 +80,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
         </Link>
       </div>
 
-      <form className="tarjeta grid gap-3 sm:grid-cols-2 lg:grid-cols-6" method="get">
+      <form className="tarjeta grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
         <label><span className="etiqueta">Desde (fecha de entrada)</span><input type="date" name="desde" defaultValue={f.desde} className="campo" /></label>
         <label><span className="etiqueta">Hasta</span><input type="date" name="hasta" defaultValue={f.hasta} className="campo" /></label>
         <label><span className="etiqueta">Extractora</span>
@@ -85,6 +89,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
         <label><span className="etiqueta">Comprador</span>
           <select name="comprador" defaultValue={f.comprador} className="campo"><option value="">Todos</option>{compradores?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
         </label>
+        <label><span className="etiqueta">N° de tiquete</span><input name="numero" defaultValue={f.numero} className="campo" placeholder="Todo o parte del número" /></label>
         <label><span className="etiqueta">Estado</span>
           <select name="estado" defaultValue={f.estado} className="campo"><option value="vigente">Vigentes</option><option value="anulado">Anulados</option></select>
         </label>
@@ -94,7 +99,12 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
         </div>
       </form>
 
-      {f.estado === "vigente" && (
+      {/* El precio en bloque no filtra por N° de tiquete: con ese filtro se oculta para no aplicar el
+          precio a más tiquetes de los que se ven. Para uno solo, «Cambiar precio» en su tarjeta. */}
+      {f.estado === "vigente" && numero && (
+        <p className="tarjeta text-sm text-suave">Con el filtro de N° de tiquete no se ofrece el precio en bloque. Use «Cambiar precio» en el tiquete, o quite ese filtro para asignar precio en bloque.</p>
+      )}
+      {f.estado === "vigente" && !numero && (
         <details className="tarjeta" open={f.sinPrecio}>
           <summary className="cursor-pointer font-bold text-profundo">Asignar precio en bloque a los tiquetes de este filtro</summary>
           <FormAccion accion={asignarPrecioBloque} boton="Aplicar precio" className="mt-3"
@@ -138,7 +148,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
         ))}
       </ul>
       <Paginacion total={total} pagina={pagina} base="/admin/tiquetes"
-        parametros={Object.fromEntries(Object.entries({ desde: f.desde, hasta: f.hasta, extractora: f.extractora, comprador: f.comprador, estado: f.estado === "anulado" ? "anulado" : "", sin_precio: f.sinPrecio ? "1" : "" }).filter(([, v]) => v))} />
+        parametros={Object.fromEntries(Object.entries({ desde: f.desde, hasta: f.hasta, extractora: f.extractora, comprador: f.comprador, numero: f.numero, estado: f.estado === "anulado" ? "anulado" : "", sin_precio: f.sinPrecio ? "1" : "" }).filter(([, v]) => v))} />
     </>
   );
 }
