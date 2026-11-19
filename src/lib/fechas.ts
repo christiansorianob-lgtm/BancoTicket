@@ -62,20 +62,46 @@ const MESES: Record<string, number> = {
  * Devuelve un ISO con zona de Colombia, o null si no es una fecha válida.
  */
 export function interpretarFechaTiquete(texto: string | null | undefined): string | null {
+  return leerFechaTiquete(texto)?.iso ?? null;
+}
+
+/**
+ * Como interpretarFechaTiquete, con la opción `completarAnio` (decisión del usuario 2026-11-19, solo
+ * para las extractoras de configuracion.extractoras_anio_incompleto): si el día y el mes se leen pero
+ * el año viene CORTADO (menos de 4 cifras, ej. «19-noviembre-20»), se usa el año actual de Colombia,
+ * o el anterior si la fecha quedara en el futuro. `anioCompletado` dice qué año se puso y `anioImpreso`
+ * lo que traía el tiquete. Sin la opción, el comportamiento es el de siempre.
+ */
+export function leerFechaTiquete(texto: string | null | undefined, opciones: { completarAnio?: boolean; ahora?: Date } = {}):
+  { iso: string; anioCompletado: number | null; anioImpreso: string } | null {
   if (!texto) return null;
   const t = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+  const completar = !!opciones.completarAnio;
 
-  let dia: number, mes: number, anio: number;
+  let dia: number, mes: number, anio: number, anioImpreso: string;
   let m = t.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
   if (m) {
     [anio, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  } else if ((m = t.match(/(\d{1,2})[-/. ](?:de )?([a-z]+)\.?[-/. ](?:de |del )?(\d{4})/)) && MESES[m[2]]) {
+    anioImpreso = m[1];
+  } else if ((m = t.match(/(\d{1,2})[-/. ](?:de )?([a-z]+)\.?[-/. ](?:de |del )?(\d{1,4})(?!\d)/)) && MESES[m[2]] && (m[3].length === 4 || completar)) {
     [dia, mes, anio] = [Number(m[1]), MESES[m[2]], Number(m[3])];
+    anioImpreso = m[3];
   } else if ((m = t.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/))) {
     [dia, mes, anio] = [Number(m[1]), Number(m[2]), Number(m[3])];
-    if (anio < 100) anio += 2000;
+    anioImpreso = m[3];
+    if (anio < 100 && !completar) anio += 2000;
   } else {
     return null;
+  }
+
+  // Año cortado (solo con la opción): el actual de Colombia; el anterior si la fecha quedara en el futuro.
+  let anioCompletado: number | null = null;
+  if (completar && anioImpreso.length < 4) {
+    const ahora = opciones.ahora ?? new Date();
+    anio = Number(new Intl.DateTimeFormat("en-CA", { timeZone: ZONA, year: "numeric" }).format(ahora));
+    const p2 = (n: number) => String(n).padStart(2, "0");
+    if (new Date(`${anio}-${p2(mes)}-${p2(Math.min(dia, 28))}T00:00:00${OFFSET_COLOMBIA}`).getTime() > ahora.getTime() + 36e5) anio -= 1;
+    anioCompletado = anio;
   }
 
   if (mes < 1 || mes > 12 || dia < 1 || dia > 31 || anio < 2000 || anio > 2100) return null;
@@ -91,5 +117,5 @@ export function interpretarFechaTiquete(texto: string | null | undefined): strin
     if (hora > 23 || minuto > 59 || segundo > 59) { hora = 0; minuto = 0; segundo = 0; }
   }
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${anio}-${p(mes)}-${p(dia)}T${p(hora)}:${p(minuto)}:${p(segundo)}${OFFSET_COLOMBIA}`;
+  return { iso: `${anio}-${p(mes)}-${p(dia)}T${p(hora)}:${p(minuto)}:${p(segundo)}${OFFSET_COLOMBIA}`, anioCompletado, anioImpreso };
 }

@@ -1,7 +1,7 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
 > **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-11-10 (para continuar en el chat «BancoTicket V5»). **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta con abonos por cliente y respaldo completo). Migraciones aplicadas: **0001 a 0034**.
+> **Fecha de corte:** 2026-11-10 (para continuar en el chat «BancoTicket V5»). **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta con abonos por cliente y respaldo completo). Migraciones aplicadas: **0001 a 0035**.
 > La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
@@ -97,9 +97,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0034.** Nunca editar una aplicada; crear la siguiente (`0035_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0035.** Nunca editar una aplicada; crear la siguiente (`0036_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0035_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0036_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING`). Al crear una migración, actualizar también `MIGRACIONES` en `src/app/(app)/admin/backups/respaldo.tsx` (va en el resumen del respaldo). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
@@ -128,6 +128,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0035_nomb
 | 0031 | facturas: porcentaje impreso de cada impuesto (`iva_pct`…) y `configuracion.tarifas_permitidas_factura` (IVA 5 % fruta / 19 % comisión) |
 | 0032 | facturas: `descripcion` del ítem y `tipo` (FRUTA, COMISION, OTRO) |
 | 0033 | `configuracion.tarifas_por_tipo_factura`: fruta IVA 5 % / ReteFuente 1,5 %; comisión IVA 19 % / ReteFuente 11 %; retención en $ 0 = no aplicada |
+| 0035 | `configuracion.extractoras_anio_incompleto` (Oleoflores): año cortado en la fecha se completa con el año actual, con nota |
 | 0034 | abonos de un cliente a UN emisor: `fact_abonos.emisor_nit`/`emisor_nombre`, vistas `fact_emisores` y `fact_cuentas_saldo` (cuenta por cliente + emisor, independientes) |
 
 Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `pendiente|confirmado|en_disputa`, `soporte_ruta`), `tiquetes_pendientes` y `tiquetes` (kilos enteros, `neto_impreso_kg`, `requiere_revision` + `motivo_revision` «Verificar: …», `datos_leidos.nota_ia`), `formatos_no_reconocidos`, `notificaciones`, `configuracion`, `consumo_ia`, `recargas_ia` (solo agregar; solo dev), `solicitudes_clave`, `historial` (disparadores; motivo con `fijar_contexto(accion, motivo)`). Facturas: `fact_clientes` (uno por NIT, solo dígitos), `fact_facturas` (APROBADA o `anulada`, `cliente_id`, impuestos + `*_pct` impresos, `descripcion`, `tipo` FRUTA/COMISION/OTRO, `motivo_revision` = diferencias al aprobar), `fact_abonos` (al cliente; VIGENTE/ANULADO, soporte), `fact_auditoria` (`datos` = copia al eliminar). Vistas `saldos`, `extracto`, `consumo_ia_totales`, `tiquetes_reporte`, `anticipos_reporte`, `fact_facturas_estado`, `fact_totales`, `fact_clientes_saldo` (deuda = Σ total a pagar aprobadas − Σ abonos vigentes; `facturas_vencidas`). Funciones de totales `reporte_tiquetes_totales`, `reporte_anticipos_totales`. Configuración relevante: `tarifas_por_tipo_factura` (0033, la que usa la app), `meses_conservacion_fotos` (6), `dias_aviso_respaldo` (15), `compradores_ocultos_consultor`. Buckets privados `tiquetes` (`<comprador>/…`, `<comprador>/anticipos/…`, `formatos/…`) y `facturas` (`<año>/…`, `abonos/<año>/…`).
@@ -200,7 +201,7 @@ Tablas: `perfiles`, `extractoras`, `formatos_extractora`, `anticipos` (estado `p
 |---|---|---|
 | Babú Palm | 901249632 | número en rojo «N° Tiquete» |
 | Palnorte | 900486803-8 | «ENTRADA DE MATERIA PRIMA No.», coma de miles |
-| Oleoflores | 8901021101 | número = GUÍA TRANSPORTE VEHICULO |
+| Oleoflores | 8901021101 | número = GUÍA TRANSPORTE VEHICULO; fecha «19-noviembre-20» con el año cortado → se completa (0035) |
 | Agrovaspalma | 901.666.764-5 | el usuario la llama NodoLa4 |
 | Lukeoil | (sin NIT) | papel térmico, suele venir girado |
 

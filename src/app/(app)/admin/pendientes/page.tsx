@@ -119,6 +119,9 @@ export default async function Pendientes() {
                       <Dato etiqueta="Fecha de entrada" revisar={r.has("fecha")}>
                         {fechaHora(t.fecha_entrada)}
                         <EtiquetaAntiguedad fecha={t.fecha_entrada} />
+                        {(t.datos_leidos as { nota_fecha?: string } | null)?.nota_fecha && (
+                          <span className="mt-1 block text-xs font-semibold text-primario">{(t.datos_leidos as { nota_fecha: string }).nota_fecha}</span>
+                        )}
                       </Dato>
                       <Dato etiqueta="Placa" revisar={r.has("placa")}>{t.placa ?? "—"}</Dato>
                       <Dato etiqueta="Bruto" revisar={r.has("peso bruto")}>{formatoToneladas(t.peso_bruto_kg / 1000)}</Dato>

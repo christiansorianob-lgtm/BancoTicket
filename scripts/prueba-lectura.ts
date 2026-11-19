@@ -1,6 +1,6 @@
 // Prueba rápida de normalización con los formatos reales del documento: npx tsx scripts/prueba-lectura.ts
 import { kilosDesdeTexto, montoDesdeTexto } from "../src/lib/numeros";
-import { antiguedad, interpretarFechaTiquete } from "../src/lib/fechas";
+import { antiguedad, interpretarFechaTiquete, leerFechaTiquete } from "../src/lib/fechas";
 import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
@@ -148,6 +148,24 @@ igual("Lukeoil", interpretarFechaTiquete("08-09-2026 13:27:50"), "2026-09-08T13:
 igual("fecha inválida", interpretarFechaTiquete("31/02/2026"), null);
 
 const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, proveedor: "INVERSIONES AGROPALNORT S.A.S.", bascula: null, observaciones: null, extractora_impresa: "Babú Palm", nit_extractora: "901249632", extractora: "Babú Palm", campos_dudosos: [] as LecturaCruda["campos_dudosos"] };
+// Año cortado (2026-11-19, Oleoflores «19-noviembre-20 / 06:22:47»): solo con completarAnio.
+const hoy19 = new Date("2026-11-19T12:00:00-05:00");
+igual("Oleoflores: año cortado se completa", leerFechaTiquete("19-noviembre-20 / 06:22:47", { completarAnio: true, ahora: hoy19 })?.iso, "2026-11-19T06:22:47-05:00");
+igual("Oleoflores: dice qué año se puso", leerFechaTiquete("19-noviembre-20 / 06:22:47", { completarAnio: true, ahora: hoy19 })?.anioCompletado, 2026);
+igual("año cortado a 3 cifras (202)", leerFechaTiquete("19-noviembre-202", { completarAnio: true, ahora: hoy19 })?.iso, "2026-11-19T00:00:00-05:00");
+igual("año cortado numérico 19/11/20", leerFechaTiquete("19/11/20 06:22", { completarAnio: true, ahora: hoy19 })?.iso, "2026-11-19T06:22:00-05:00");
+igual("fin de año: 28-diciembre-20 subido el 2 de enero → año anterior", leerFechaTiquete("28-diciembre-20", { completarAnio: true, ahora: new Date("2027-01-02T09:00:00-05:00") })?.iso, "2026-12-28T00:00:00-05:00");
+igual("año completo no se toca", leerFechaTiquete("19-noviembre-2026 06:22:47", { completarAnio: true, ahora: hoy19 })?.anioCompletado, null);
+igual("sin la opción, mes en letras con año cortado sigue sin ser fecha", interpretarFechaTiquete("19-noviembre-20 / 06:22:47"), null);
+igual("sin la opción, 19/11/20 sigue siendo 2020", interpretarFechaTiquete("19/11/20"), "2020-11-19T00:00:00-05:00");
+igual("con la opción, sin día no hay fecha", leerFechaTiquete("noviembre-20", { completarAnio: true, ahora: hoy19 }), null);
+const ole = { ...base, fecha_entrada: "19-noviembre-20 / 06:22:47", peso_bruto_kg: "20.480", tara_kg: "7.330", peso_neto_impreso_kg: "12.750", placa: "UPJ861" };
+const rOle = aplicarControles(ole, { placaObligatoria: true, completarAnio: true, ahora: hoy19 });
+igual("tiquete Oleoflores pasa con la nota del año", rOle.ok && rOle.notaFecha, "Año completado con 2026: el tiquete imprime solo «20»");
+igual("tiquete Oleoflores: fecha 2026-11-19", rOle.ok && rOle.datos.fecha_entrada, "2026-11-19T06:22:47-05:00");
+igual("tiquete Oleoflores sin la opción: se rechaza (fecha no válida)", aplicarControles(ole, { placaObligatoria: true, ahora: hoy19 }).ok, false);
+const oleDudosa = aplicarControles({ ...ole, campos_dudosos: ["fecha_entrada"] as LecturaCruda["campos_dudosos"] }, { placaObligatoria: true, completarAnio: true, ahora: hoy19 });
+igual("día o mes dudoso: sigue pasando a revisión", oleDudosa.ok && oleDudosa.dudosos.includes("fecha"), true);
 const r1 = aplicarControles({ ...base, peso_bruto_kg: "2,070", tara_kg: "680", peso_neto_impreso_kg: "1,390" }, { placaObligatoria: true });
 igual("Palnorte controles ok", r1.ok, true);
 igual("Palnorte neto", r1.ok && r1.datos.peso_bruto_kg - r1.datos.tara_kg, 1390);

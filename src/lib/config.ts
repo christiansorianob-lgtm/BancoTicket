@@ -16,6 +16,8 @@ export type Configuracion = {
   tarifas_factura: TarifasPorTipo;
   /** Usuarios de compradores de pruebas (migración 0019): no los ve el Consultor ni, en Saldos, la administradora. */
   compradores_ocultos_consultor: string[];
+  /** Extractoras (id) que imprimen el año cortado: se completa con el año actual (migración 0035). */
+  extractoras_anio_incompleto: string[];
 };
 
 const PREDETERMINADA: Configuracion = {
@@ -28,6 +30,7 @@ const PREDETERMINADA: Configuracion = {
   ultimo_respaldo: null,
   tarifas_factura: TARIFAS_POR_TIPO_PREDETERMINADAS,
   compradores_ocultos_consultor: [],
+  extractoras_anio_incompleto: [],
 };
 
 /** Valores pendientes de decisión: viven en la tabla `configuracion`. */

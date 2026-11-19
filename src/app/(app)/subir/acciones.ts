@@ -29,7 +29,8 @@ export async function enviarTiquete(token: string): Promise<ResultadoEnvio> {
       requiere_revision: aVerificar.length > 0,
       motivo_revision: aVerificar.length > 0 ? `Verificar: ${aVerificar.join(", ")}` : null,
       // nota_ia: qué dígito dudó la IA en los datos vitales; se le muestra a la administradora.
-      datos_leidos: l.notaIA ? { ...l.datos, nota_ia: l.notaIA } : l.datos,
+      // nota_fecha: el año venía cortado y se completó (extractoras_anio_incompleto).
+      datos_leidos: { ...l.datos, ...(l.notaIA ? { nota_ia: l.notaIA } : {}), ...(l.notaFecha ? { nota_fecha: l.notaFecha } : {}) },
     },
   });
   if (error) {

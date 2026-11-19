@@ -92,7 +92,10 @@ export async function POST(request: Request) {
   }
 
   const resultado = cruda
-    ? aplicarControles(cruda, { placaObligatoria: config.placa_obligatoria })
+    ? aplicarControles(cruda, {
+      placaObligatoria: config.placa_obligatoria,
+      completarAnio: !!extractora && (config.extractoras_anio_incompleto ?? []).includes(extractora.id),
+    })
     : { ok: false as const, motivo: motivoFallo, controles: [], cruda: null };
   const detectada = extractora ? { id: extractora.id, nombre: extractora.nombre } : null;
 
@@ -141,6 +144,6 @@ export async function POST(request: Request) {
     dudosos: resultado.dudosos,
     extractora: ext,
     posiblesDuplicados: parecidos ?? [],
-    token: firmar({ ...base, tipo: "lectura", extractora_id: ext.id, datos: resultado.datos, dudosos: resultado.dudosos, notaIA: resultado.notaIA }),
+    token: firmar({ ...base, tipo: "lectura", extractora_id: ext.id, datos: resultado.datos, dudosos: resultado.dudosos, notaIA: resultado.notaIA, notaFecha: resultado.notaFecha ?? null }),
   });
 }

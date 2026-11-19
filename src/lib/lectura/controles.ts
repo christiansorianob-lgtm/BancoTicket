@@ -1,4 +1,4 @@
-import { fechaHora, interpretarFechaTiquete } from "@/lib/fechas";
+import { fechaHora, leerFechaTiquete } from "@/lib/fechas";
 import { kilosDesdeTexto } from "@/lib/numeros";
 import type { Control, LecturaCruda, ResultadoLectura } from "./tipos";
 
@@ -30,7 +30,7 @@ export function normalizarPlaca(p: string | null | undefined) {
  * Valida y normaliza la lectura. Bruto = mayor de los dos pesos y tara = menor,
  * así no importa cómo los rotule cada extractora.
  */
-export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligatoria: boolean }): ResultadoLectura {
+export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligatoria: boolean; completarAnio?: boolean; ahora?: Date }): ResultadoLectura {
   const controles: Control[] = [];
   const add = (nombre: string, ok: boolean, mensaje: string) => controles.push({ nombre, ok, mensaje });
 
@@ -42,9 +42,14 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   const numero = (cruda.numero_tiquete ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
   add("Número", numero.length > 0, numero ? `N° ${numero}` : "No se leyó el número de tiquete");
 
-  const fecha = interpretarFechaTiquete(cruda.fecha_entrada);
-  const fechaOk = !!fecha && new Date(fecha).getTime() <= Date.now() + 36e5;
-  add("Fecha", fechaOk, fechaOk ? "Fecha válida" : `Fecha no válida: "${cruda.fecha_entrada ?? ""}"`);
+  // Extractoras que imprimen el año cortado (configuracion.extractoras_anio_incompleto): se completa
+  // con el año actual y se avisa. La legibilidad del día y el mes se revisa igual que siempre.
+  const leida = leerFechaTiquete(cruda.fecha_entrada, { completarAnio: opciones.completarAnio, ahora: opciones.ahora });
+  const fecha = leida?.iso ?? null;
+  const fechaOk = !!fecha && new Date(fecha).getTime() <= (opciones.ahora ?? new Date()).getTime() + 36e5;
+  const notaFecha = fechaOk && leida?.anioCompletado != null
+    ? `Año completado con ${leida.anioCompletado}: el tiquete imprime solo «${leida.anioImpreso}»` : null;
+  add("Fecha", fechaOk, fechaOk ? (notaFecha ? `Fecha válida · ${notaFecha}` : "Fecha válida") : `Fecha no válida: "${cruda.fecha_entrada ?? ""}"`);
   const dudososIA = new Set(cruda.campos_dudosos ?? []);
   const vitalesDudosos: string[] = [];
   // Fecha dudosa: pasa a revisión. Se revisa antes del límite de 6 meses para que una fecha mal
@@ -53,7 +58,7 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
   if (fechaDudosa) vitalesDudosos.push(VITALES.fecha_entrada);
 
   // Decisión del usuario: un tiquete de más de 6 meses es síntoma de fraude y no se puede subir.
-  const limite = new Date();
+  const limite = new Date(opciones.ahora ?? new Date());
   limite.setMonth(limite.getMonth() - MESES_MAXIMOS);
   const pareceViejo = fechaOk && new Date(fecha!).getTime() < limite.getTime();
   if (pareceViejo && fechaDudosa) {
@@ -142,6 +147,7 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
     dudosos: [...dudosos],
     // Lo que explicó la IA de sus dudas en los datos vitales, para mostrárselo a la administradora.
     notaIA: vitalesDudosos.length > 0 ? cruda.observaciones?.trim() || null : null,
+    notaFecha,
     datos: {
       numero,
       fecha_entrada: fecha!,
