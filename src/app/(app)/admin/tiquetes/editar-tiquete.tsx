@@ -1,20 +1,33 @@
 "use client";
 import { useState } from "react";
-import { editarTiquete } from "../acciones";
+import { editarTiquete, ponerObservacion } from "../acciones";
 import { FormAccion } from "@/components/form-accion";
 import { CamposTiquete } from "@/components/campos-tiquete";
 import { CampoPrecio } from "@/components/campo-precio";
 
-type T = Parameters<typeof CamposTiquete>[0]["t"] & { id: string; precio_tonelada: number | null; comprador_id: string; estado: string };
+type T = Parameters<typeof CamposTiquete>[0]["t"] & { id: string; precio_tonelada: number | null; comprador_id: string; estado: string; observacion?: string | null };
 
 export function EditarTiquete({ tiquete, extractoras, compradores }: { tiquete: T; extractoras: { id: string; nombre: string }[]; compradores: { id: string; nombre: string }[] }) {
-  const [modo, setModo] = useState<"ninguno" | "precio" | "todo">("ninguno");
+  const [modo, setModo] = useState<"ninguno" | "precio" | "todo" | "observacion">("ninguno");
   return (
     <div className="mt-3 border-t border-borde pt-3">
       <div className="flex flex-wrap gap-2">
         <button className="boton-secundario min-h-9 text-sm" onClick={() => setModo(modo === "precio" ? "ninguno" : "precio")}>Cambiar precio</button>
         <button className="boton-secundario min-h-9 text-sm" onClick={() => setModo(modo === "todo" ? "ninguno" : "todo")}>Editar datos</button>
+        <button className="boton-secundario min-h-9 text-sm" onClick={() => setModo(modo === "observacion" ? "ninguno" : "observacion")}>
+          {tiquete.observacion ? "Cambiar observación" : "Agregar observación"}
+        </button>
       </div>
+      {/* Observación de la administración (opcional); vacía = se quita. */}
+      {modo === "observacion" && (
+        <FormAccion accion={ponerObservacion.bind(null, tiquete.id)} boton="Guardar observación" className="mt-3">
+          <label className="block">
+            <span className="etiqueta">Observación (de la administración)</span>
+            <textarea name="observacion" rows={2} maxLength={1000} defaultValue={tiquete.observacion ?? ""} className="campo"
+              placeholder="Déjela vacía para quitarla" />
+          </label>
+        </FormAccion>
+      )}
       {modo === "precio" && (
         <FormAccion accion={editarTiquete.bind(null, tiquete.id)} boton="Guardar precio" className="mt-3">
           <div className="grid gap-3 sm:grid-cols-2">

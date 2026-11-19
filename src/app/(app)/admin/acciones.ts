@@ -67,11 +67,15 @@ type FilaDetalle = {
   peso_bruto_kg: number; tara_kg: number; neto_impreso_kg: number | null; placa: string | null; conductor: string | null; extractoras: { nombre?: string } | null;
 };
 
-export async function aprobarTiquete(id: string): Promise<Resultado> {
+/** Aprueba un pendiente. `observacion` (opcional, solo de la administración) se guarda en el mismo paso. */
+export async function aprobarTiquete(id: string, observacion = ""): Promise<Resultado> {
   await exigirAdmin();
   const supabase = await supabaseServidor();
   const { data: tp } = await supabase.from("tiquetes_pendientes").select(CAMPOS_DETALLE).eq("id", id).single<FilaDetalle>();
-  const { error } = await supabase.rpc("aprobar_tiquete", { p_id: id });
+  const nota = observacion.trim();
+  const { error } = nota
+    ? await supabase.rpc("aprobar_tiquete_con_observacion", { p_id: id, p_observacion: nota })
+    : await supabase.rpc("aprobar_tiquete", { p_id: id });
   if (error) return fallo(error.message);
   if (!tp) return { ok: true };
   const comprador = await perfilDestino(tp.comprador_id);
@@ -79,6 +83,17 @@ export async function aprobarTiquete(id: string): Promise<Resultado> {
   if (comprador) await avisar([comprador], "Tiquete aprobado", `Su tiquete N° ${tp.numero} de ${extractora} fue aprobado.`, "/mis-tiquetes?estado=vigente");
   revalidatePath("/admin", "layout");
   return { ok: true, mensaje: "Tiquete aprobado. El comprador recibe el aviso en la app." };
+}
+
+/** Pone, cambia o quita (vacía) la observación de la administración en un tiquete aprobado. */
+export async function ponerObservacion(id: string, form: FormData): Promise<Resultado> {
+  await exigirAdmin();
+  const supabase = await supabaseServidor();
+  const nota = String(form.get("observacion") ?? "").trim();
+  const { error } = await supabase.rpc("poner_observacion_tiquete", { p_id: id, p_observacion: nota });
+  if (error) return fallo(error.message);
+  revalidatePath("/admin", "layout");
+  return { ok: true, mensaje: nota ? "Observación guardada" : "Observación quitada" };
 }
 
 export async function rechazarTiquete(id: string, motivo: string): Promise<Resultado> {

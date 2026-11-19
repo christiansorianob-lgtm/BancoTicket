@@ -13,6 +13,7 @@ type Props = {
 export function AccionesPendiente({ tiquete, extractoras }: Props) {
   const [modo, setModo] = useState<"ninguno" | "rechazar" | "editar">("ninguno");
   const [motivo, setMotivo] = useState("");
+  const [observacion, setObservacion] = useState("");
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [cargando, iniciar] = useTransition();
 
@@ -20,8 +21,14 @@ export function AccionesPendiente({ tiquete, extractoras }: Props) {
 
   return (
     <div className="space-y-3 border-t border-borde pt-3">
+      {/* Nota opcional de la administración (decisión del usuario 2026-11-19); se guarda al aprobar. */}
+      <label className="block">
+        <span className="etiqueta">Observación (opcional, de la administración)</span>
+        <textarea className="campo" rows={2} maxLength={1000} value={observacion} onChange={(e) => setObservacion(e.target.value)}
+          placeholder="Ej.: se verificó el peso con la extractora por teléfono" />
+      </label>
       <div className="flex flex-wrap gap-2">
-        <button className="boton-primario" disabled={cargando} onClick={() => iniciar(async () => setResultado(await aprobarTiquete(tiquete.id)))}>
+        <button className="boton-primario" disabled={cargando} onClick={() => iniciar(async () => setResultado(await aprobarTiquete(tiquete.id, observacion)))}>
           <Check className="size-5" /> Aprobar
         </button>
         <button className="boton-peligro" onClick={() => setModo(modo === "rechazar" ? "ninguno" : "rechazar")}><X className="size-5" /> Rechazar</button>

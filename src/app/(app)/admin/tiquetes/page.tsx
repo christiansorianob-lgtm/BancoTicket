@@ -135,6 +135,11 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
               <p className="mt-1 text-sm text-suave">{fechaHora(t.fecha_entrada)} · Placa {t.placa ?? "—"}</p>
             </div>
             <ValorTiquete toneladas={Number(t.peso_neto_t)} precio={t.precio_tonelada} valor={t.valor} />
+            {t.observacion && (
+              <p className="mt-2 whitespace-pre-line rounded-xl border border-primario/25 bg-primario-suave px-3 py-2 text-sm text-profundo">
+                <b>Observación:</b> {t.observacion}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <EstadoChip estado={t.estado} />
               {t.imagen_ruta && fotos[t.imagen_ruta] && <>
