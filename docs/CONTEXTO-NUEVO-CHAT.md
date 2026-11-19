@@ -44,7 +44,7 @@ Problema que resuelve: los tiquetes son físicos y se podían pagar dos veces. L
 
 ## 4. Pila
 
-- **Next.js 16.4** (App Router, TypeScript, Turbopack). ⚠️ `middleware` se llama **`proxy`** (`src/proxy.ts`; deja pasar sin sesión `/ingresar/*` y archivos .png/.webp/.ico/.jpg/.svg). Leer `node_modules/next/dist/docs/` antes de usar APIs nuevas. `cacheComponents` desactivado. Tras crear una página: `npx next typegen`.
+- **Next.js 16.4** (16.4.6 desde el 2026-11-19) (App Router, TypeScript, Turbopack). ⚠️ `middleware` se llama **`proxy`** (`src/proxy.ts`; deja pasar sin sesión `/ingresar/*` y archivos .png/.webp/.ico/.jpg/.svg). Leer `node_modules/next/dist/docs/` antes de usar APIs nuevas. `cacheComponents` desactivado. Tras crear una página: `npx next typegen`.
 - **Tailwind 4**; clases propias `tarjeta`, `boton-primario`, `boton-secundario`, `boton-peligro`, `boton-whatsapp`, `campo`, `etiqueta`, `titulo` en `src/app/globals.css`.
 - **Supabase** (Postgres + Auth + Storage) con `@supabase/ssr`; RLS en todas las tablas. La app **no usa Realtime ni consultas automáticas**: solo consume recursos cuando alguien hace algo.
 - **Anthropic SDK** — **la IA se usa SOLO para leer tiquetes y facturas de venta** (decisión del usuario; cada lectura cuenta en `consumo_ia` con su `modulo`):
