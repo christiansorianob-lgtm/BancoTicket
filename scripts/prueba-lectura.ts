@@ -8,6 +8,7 @@ import { sonParecidos } from "../src/lib/lectura/parecidos";
 import { armarCuenta } from "../src/lib/informes/movimientos";
 import { ajustarLectura, completarNit, completarPrecio, digitoVerificacion, fallasFactura, tipoReal, validarFactura } from "../src/lib/facturas/validar";
 import { comprobarFactura, TARIFAS_POR_TIPO_PREDETERMINADAS } from "../src/lib/facturas/comprobacion";
+import { clasificarFactura } from "../src/lib/facturas/tipos";
 import { facturaDesde, numeroEnCampo } from "../src/lib/facturas/formulario";
 import { formatearMonto, montoEnLetras, textoMonto } from "../src/lib/monto";
 
@@ -58,6 +59,17 @@ igual("Comisión con ReteFuente 11 % sin porcentaje leído: cuadra", todasOk(com
 igual("Comisión sin ReteFuente (la empresa no la cobra): cuadra", todasOk(comision(0, null)), true);
 igual("Comisión con ReteFuente del 1,5 %: falla (para comisión es 11 %)", calculoOk(comision(375000, 1.5), "ReteFuente"), false);
 igual("Marcada como Fruta pero con IVA 19 %: falla", calculoOk(comision(2750000, 11, "FRUTA"), "IVA"), false);
+// Transporte (2026-11-24): FEPA 18, Palmali a Palnorte: 288.050 × $ 40, sin IVA, ReteFuente 1 %.
+const fepa18 = { ...fac("FEPA 18", 288050, 40, 11522000, 0, 115220, 11406780), descripcion: "Transporte de Carga por Carretera del 01 al 19 de nov-2026", retefuente_pct: 1 };
+igual("FEPA 18: la app propone Transporte", clasificarFactura(fepa18), "TRANSPORTE");
+igual("FEPA 18 como Transporte: todo coincide", todasOk({ ...fepa18, tipo: "TRANSPORTE" as const }), true);
+igual("FEPA 18 sin porcentaje leído: coincide (1 %)", todasOk({ ...fepa18, retefuente_pct: null, tipo: "TRANSPORTE" as const }), true);
+igual("FEPA 18 marcada como Fruta: falla el IVA", calculoOk({ ...fepa18, tipo: "FRUTA" as const }, "IVA"), false);
+igual("«transporte de fruta de palma» es Transporte", clasificarFactura({ descripcion: "SERVICIO DE TRANSPORTE DE FRUTA DE PALMA", iva_pct: null, iva: 0, subtotal: 1 }), "TRANSPORTE");
+igual("flete es Transporte", clasificarFactura({ descripcion: "Flete Tibú - Palnorte", iva_pct: null, iva: 0, subtotal: 1 }), "TRANSPORTE");
+igual("comisión sigue siendo Comisión", clasificarFactura({ descripcion: "COMISION POR ABASTECIMIENTO DE FRUTA", iva_pct: 19, iva: 1, subtotal: 1 }), "COMISION");
+igual("fruta sigue siendo Fruta", clasificarFactura({ descripcion: "FRUTA DE PALMA DE ACEITE DEL 01 AL 15 DE NOVIEMBRE 2026", iva_pct: 5, iva: 1, subtotal: 1 }), "FRUTA");
+igual("FEPA 17 (fruta) cuadra", todasOk({ ...fac("FEPA 17", 135980, 690.8, 93934984, 4696749.2, 1409024.76, 96518196.06, 704512.38), tipo: "FRUTA" as const }), true);
 // Formato «Solución Gratuita DIAN» (2026-11-10): FESA-180 de Agrovaspalma, NIT sin dígito de verificación
 // y «Total factura» antes de retenciones.
 igual("dígito de verificación de SAF (901253217)", digitoVerificacion("901253217"), 5);

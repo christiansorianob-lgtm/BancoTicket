@@ -8,7 +8,7 @@ export function ChipsFactura({ f }: { f: { anulada: boolean } }) {
 
 /** Colores por tipo: verde la compra de fruta, morado la comisión, gris lo demás. */
 const COLOR_TIPO: Record<TipoFactura, string> = {
-  FRUTA: "bg-emerald-100 text-emerald-800", COMISION: "bg-violet-100 text-violet-800", OTRO: "bg-slate-100 text-slate-600",
+  FRUTA: "bg-emerald-100 text-emerald-800", COMISION: "bg-violet-100 text-violet-800", TRANSPORTE: "bg-sky-100 text-sky-800", OTRO: "bg-slate-100 text-slate-600",
 };
 
 /** Tipo de factura (decisión del usuario): Compra de fruta, Comisión u Otro. */

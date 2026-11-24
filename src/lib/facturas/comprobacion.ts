@@ -22,7 +22,9 @@ export type TarifasPorTipo = Record<TipoFactura, TarifasFactura>;
 export const TARIFAS_POR_TIPO_PREDETERMINADAS: TarifasPorTipo = {
   FRUTA: { iva: [5], retefuente: [1.5], reteiva: [15], reteica: [] },
   COMISION: { iva: [19], retefuente: [11], reteiva: [15], reteica: [] },
-  OTRO: { iva: [5, 19], retefuente: [1.5, 11], reteiva: [15], reteica: [] },
+  // Transporte (2026-11-24, migración 0037): sin IVA y ReteFuente 1 %.
+  TRANSPORTE: { iva: [0], retefuente: [1], reteiva: [15], reteica: [] },
+  OTRO: { iva: [0, 5, 19], retefuente: [1, 1.5, 11], reteiva: [15], reteica: [] },
 };
 
 /** El tipo con que se comprueba la factura: el elegido o, si no hay, el que propone la app. */
@@ -147,7 +149,9 @@ export function tarifasDesde(valor: unknown): TarifasFactura {
  */
 export function tarifasPorTipoDesde(valor: unknown, respaldo?: TarifasFactura): TarifasPorTipo {
   const v = (valor ?? {}) as Partial<Record<TipoFactura, unknown>>;
-  const de = (k: TipoFactura) => (v[k] && typeof v[k] === "object" ? tarifasDesde(v[k]) : respaldo ?? TARIFAS_POR_TIPO_PREDETERMINADAS[k]);
-  return { FRUTA: de("FRUTA"), COMISION: de("COMISION"), OTRO: de("OTRO") };
+  // Transporte no existía en las tarifas de antes: si falta, usa la predeterminada (no la lista única).
+  const de = (k: TipoFactura) => (v[k] && typeof v[k] === "object" ? tarifasDesde(v[k])
+    : k === "TRANSPORTE" ? TARIFAS_POR_TIPO_PREDETERMINADAS[k] : respaldo ?? TARIFAS_POR_TIPO_PREDETERMINADAS[k]);
+  return { FRUTA: de("FRUTA"), COMISION: de("COMISION"), TRANSPORTE: de("TRANSPORTE"), OTRO: de("OTRO") };
 }
 

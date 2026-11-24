@@ -40,6 +40,7 @@ export async function leerConfiguracion(): Promise<Configuracion> {
   for (const fila of data ?? []) c[fila.clave] = fila.valor;
   // Tarifas por tipo de factura (0033); si no está, la lista única de 0031 o la de 0026.
   const anterior = c.tarifas_permitidas_factura ?? (c.tarifas_factura !== PREDETERMINADA.tarifas_factura ? c.tarifas_factura : undefined);
-  c.tarifas_factura = tarifasPorTipoDesde(c.tarifas_por_tipo_factura, anterior ? tarifasDesde(anterior) : undefined);
+  // 0037 agregó Transporte en una fila nueva (la de 0033 queda de respaldo).
+  c.tarifas_factura = tarifasPorTipoDesde(c.tarifas_por_tipo_factura_2 ?? c.tarifas_por_tipo_factura, anterior ? tarifasDesde(anterior) : undefined);
   return c as Configuracion;
 }

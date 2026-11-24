@@ -1,7 +1,7 @@
 # BancoTicket — contexto para continuar en un chat nuevo de Claude Code
 
 > **Cómo usarlo:** abre el chat nuevo **en la carpeta `C:\PROYECTOS WEB\BANCOTICKET`** (así carga `CLAUDE.md` y `AGENTS.md`) y escribe: «Lee `docs/CONTEXTO-NUEVO-CHAT.md` y continuemos».
-> **Fecha de corte:** 2026-11-10 (para continuar en el chat «BancoTicket V5»). **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta con abonos por cliente y respaldo completo). Migraciones aplicadas: **0001 a 0036**.
+> **Fecha de corte:** 2026-11-10 (para continuar en el chat «BancoTicket V5»). **Estado:** **en producción** desde el 21-oct (tiquetes, anticipos, reportes, consultor, facturas de venta con abonos por cliente y respaldo completo). Migraciones aplicadas: **0001 a 0037**.
 > La bitácora completa de decisiones está en `docs/NOTAS.md` (lo más reciente arriba). Guía de respaldo y restauración: `docs/RESPALDO.md`.
 
 ---
@@ -97,9 +97,9 @@ tiquetes-ejemplo/                     fotos reales con datos personales (en .git
 
 ## 6. Base de datos
 
-**Migraciones aplicadas: 0001 a 0036.** Nunca editar una aplicada; crear la siguiente (`0037_nombre.sql`) y aplicarla con:
+**Migraciones aplicadas: 0001 a 0037.** Nunca editar una aplicada; crear la siguiente (`0038_nombre.sql`) y aplicarla con:
 ```
-node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0037_nombre.sql
+node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0038_nombre.sql
 ```
 (una transacción; usa `POSTGRES_URL_NON_POOLING`). Al crear una migración, actualizar también `MIGRACIONES` en `src/app/(app)/admin/backups/respaldo.tsx` (va en el resumen del respaldo). Un valor nuevo de un enum no se puede usar en la misma transacción en que se agrega.
 
@@ -129,6 +129,7 @@ node --env-file=.env.local scripts/aplicar-sql.mjs supabase/migrations/0037_nomb
 | 0032 | facturas: `descripcion` del ítem y `tipo` (FRUTA, COMISION, OTRO) |
 | 0033 | `configuracion.tarifas_por_tipo_factura`: fruta IVA 5 % / ReteFuente 1,5 %; comisión IVA 19 % / ReteFuente 11 %; retención en $ 0 = no aplicada |
 | 0035 | `configuracion.extractoras_anio_incompleto` (Oleoflores): año cortado en la fecha se completa con el año actual, con nota |
+| 0037 | facturas: tipo TRANSPORTE (IVA 0 %, ReteFuente 1 %); tarifas en `configuracion.tarifas_por_tipo_factura_2` (la de 0033 queda de respaldo) |
 | 0036 | `tiquetes.observacion` (nota opcional de la administración), `aprobar_tiquete_con_observacion`, `poner_observacion_tiquete` |
 | 0034 | abonos de un cliente a UN emisor: `fact_abonos.emisor_nit`/`emisor_nombre`, vistas `fact_emisores` y `fact_cuentas_saldo` (cuenta por cliente + emisor, independientes) |
 
