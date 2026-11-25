@@ -162,9 +162,9 @@ igual("fecha inválida", interpretarFechaTiquete("31/02/2026"), null);
 
 const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, proveedor: "INVERSIONES AGROPALNORT S.A.S.", bascula: null, observaciones: null, extractora_impresa: "Babú Palm", nit_extractora: "901249632", extractora: "Babú Palm", campos_dudosos: [] as LecturaCruda["campos_dudosos"] };
 // Proveedores oficiales (2026-11-25, migración 0038): todas las variantes guardadas hoy.
-const OFICIALES = ["CONSORCIO AGROPALMA S.A.S.", "GL PALMA ASOCIADOS S.A.S.", "INVERSIONES AGROPALNORT S.A.S.", "OLEUM FOODS S.A.S.", "PALMALI ASOCIADOS S.A.S.", "SOCIEDAD AGROVASPALMA S.A.S."];
+// 0039: se quitó «CONSORCIO AGROPALMA» (era una mala lectura de un tiquete borroso).
+const OFICIALES = ["GL PALMA ASOCIADOS S.A.S.", "INVERSIONES AGROPALNORT S.A.S.", "OLEUM FOODS S.A.S.", "PALMALI ASOCIADOS S.A.S.", "SOCIEDAD AGROVASPALMA S.A.S."];
 for (const [leido, oficial] of [
-  ["CONSORCIO AGROPALMA SAS", "CONSORCIO AGROPALMA S.A.S."],
   ["GL PALMA ASOCIADOS S.A.S.", "GL PALMA ASOCIADOS S.A.S."],
   ["IND - SOCIEDAD AGROVASPALMA S", "SOCIEDAD AGROVASPALMA S.A.S."],
   ["INVERSIONES AGROPALNORT S.A.S", "INVERSIONES AGROPALNORT S.A.S."],
@@ -177,6 +177,7 @@ for (const [leido, oficial] of [
   ["SOCIEDAD AGROVASPALMA SAS", "SOCIEDAD AGROVASPALMA S.A.S."],
   ["  palmali  asociados ", "PALMALI ASOCIADOS S.A.S."],
 ]) igual(`proveedor «${leido}» → oficial`, estandarizarProveedor(leido, OFICIALES), { nombre: oficial, nuevo: false });
+igual("«CONSORCIO AGROPALMA SAS» ya no es oficial: se avisa como nuevo", estandarizarProveedor("CONSORCIO AGROPALMA SAS", OFICIALES), { nombre: "CONSORCIO AGROPALMA SAS", nuevo: true });
 igual("proveedor que no está en la lista: se guarda sin prefijo y avisa", estandarizarProveedor("SAF - AGRICOLA LA ESPERANZA S.A.S", OFICIALES), { nombre: "AGRICOLA LA ESPERANZA S.A.S", nuevo: true });
 igual("sin lista oficial: se guarda como venga, sin aviso", estandarizarProveedor("OLEUM FOODS S.A.S", []), { nombre: "OLEUM FOODS S.A.S", nuevo: false });
 igual("proveedor vacío o solo prefijo: no leído", estandarizarProveedor("SAF - ", OFICIALES), { nombre: null, nuevo: false });
