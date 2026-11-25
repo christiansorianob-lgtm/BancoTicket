@@ -1,5 +1,6 @@
 import { fechaHora, leerFechaTiquete } from "@/lib/fechas";
 import { kilosDesdeTexto } from "@/lib/numeros";
+import { estandarizarProveedor } from "./proveedores";
 import type { Control, LecturaCruda, ResultadoLectura } from "./tipos";
 
 /** Antigüedad máxima de un tiquete para poder subirlo. */
@@ -30,7 +31,7 @@ export function normalizarPlaca(p: string | null | undefined) {
  * Valida y normaliza la lectura. Bruto = mayor de los dos pesos y tara = menor,
  * así no importa cómo los rotule cada extractora.
  */
-export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligatoria: boolean; completarAnio?: boolean; ahora?: Date }): ResultadoLectura {
+export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligatoria: boolean; completarAnio?: boolean; ahora?: Date; proveedoresOficiales?: readonly string[] }): ResultadoLectura {
   const controles: Control[] = [];
   const add = (nombre: string, ok: boolean, mensaje: string) => controles.push({ nombre, ok, mensaje });
 
@@ -119,9 +120,14 @@ export function aplicarControles(cruda: LecturaCruda, opciones: { placaObligator
     controles.push({ nombre: "Placa", ok: true, dudoso: true, mensaje: "No se leyó la placa" });
   }
 
-  // Proveedor: sin listas de referencia (decisión del usuario). Si no se leyó, se marca; si la IA
-  // dudó de alguna letra, ya viene en los dudosos.
-  const proveedor = cruda.proveedor?.trim().replace(/\s+/g, " ") || null;
+  // Proveedor (decisión del usuario 2026-11-25): se guarda con el nombre oficial de
+  // configuracion.proveedores_oficiales (sin prefijos «SAF - »/«IND - » ni variaciones de puntos). Si no
+  // está en la lista, se guarda como venga y se avisa. Si no se leyó, se marca; si la IA dudó de
+  // alguna letra, ya viene en los dudosos.
+  const { nombre: proveedor, nuevo: proveedorNuevo } = estandarizarProveedor(cruda.proveedor, opciones.proveedoresOficiales ?? []);
+  if (proveedorNuevo) {
+    controles.push({ nombre: "Proveedor", ok: true, mensaje: `Proveedor nuevo (no está en la lista oficial): ${proveedor}. La administración lo revisa.` });
+  }
   if (!proveedor) {
     dudosos.add(OTROS.proveedor);
     controles.push({ nombre: "Proveedor", ok: true, dudoso: true, mensaje: "No se leyó el proveedor" });

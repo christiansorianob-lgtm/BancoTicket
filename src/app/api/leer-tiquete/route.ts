@@ -95,6 +95,7 @@ export async function POST(request: Request) {
     ? aplicarControles(cruda, {
       placaObligatoria: config.placa_obligatoria,
       completarAnio: !!extractora && (config.extractoras_anio_incompleto ?? []).includes(extractora.id),
+      proveedoresOficiales: Array.isArray(config.proveedores_oficiales) ? config.proveedores_oficiales : [],
     })
     : { ok: false as const, motivo: motivoFallo, controles: [], cruda: null };
   const detectada = extractora ? { id: extractora.id, nombre: extractora.nombre } : null;

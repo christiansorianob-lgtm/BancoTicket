@@ -7,6 +7,8 @@ import { Chip, Dato, Mensaje, Vacio } from "@/components/ui";
 import { AccionesPendiente } from "./acciones-pendiente";
 import { sonParecidos } from "@/lib/lectura/parecidos";
 import { EnviarFoto } from "@/components/enviar-tiquete";
+import { leerConfiguracion } from "@/lib/config";
+import { proveedorOficial } from "@/lib/lectura/proveedores";
 
 /** Campos que la lectura no leyó 100 % segura, guardados como «Verificar: número, tara». */
 function camposARevisar(motivo: string | null): Set<string> {
@@ -30,6 +32,9 @@ function EtiquetaAntiguedad({ fecha }: { fecha: string }) {
 
 export default async function Pendientes() {
   const supabase = await supabaseServidor();
+  // Proveedores oficiales (migración 0038): un proveedor que no está en la lista se marca «nuevo».
+  const oficiales = (await leerConfiguracion()).proveedores_oficiales;
+  const esNuevo = (p: string | null) => !!p && Array.isArray(oficiales) && oficiales.length > 0 && !proveedorOficial(p, oficiales);
   const { data } = await supabase
     .from("tiquetes_pendientes")
     .select("*, extractoras(nombre), perfiles!tiquetes_pendientes_comprador_id_fkey(nombre, celular)")
@@ -87,6 +92,7 @@ export default async function Pendientes() {
                     Proveedor: {t.proveedor ?? "no leído"}
                   </span>
                 )}
+                {esNuevo(t.proveedor) && <Chip tono="alerta">Proveedor nuevo: no está en la lista oficial</Chip>}
                 {t.requiere_revision && <Chip tono="alerta">{t.motivo_revision ?? "Revisar"}</Chip>}
                 <Chip tono={t.origen === "camara" ? "primario" : "alerta"}>{t.origen === "camara" ? "Cámara" : "Galería"}</Chip>
               </div>

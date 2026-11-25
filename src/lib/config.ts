@@ -18,6 +18,8 @@ export type Configuracion = {
   compradores_ocultos_consultor: string[];
   /** Extractoras (id) que imprimen el año cortado: se completa con el año actual (migración 0035). */
   extractoras_anio_incompleto: string[];
+  /** Nombres oficiales de los proveedores (migración 0038): el de cada tiquete nuevo se estandariza. */
+  proveedores_oficiales: string[];
 };
 
 const PREDETERMINADA: Configuracion = {
@@ -31,6 +33,7 @@ const PREDETERMINADA: Configuracion = {
   tarifas_factura: TARIFAS_POR_TIPO_PREDETERMINADAS,
   compradores_ocultos_consultor: [],
   extractoras_anio_incompleto: [],
+  proveedores_oficiales: [],
 };
 
 /** Valores pendientes de decisión: viven en la tabla `configuracion`. */

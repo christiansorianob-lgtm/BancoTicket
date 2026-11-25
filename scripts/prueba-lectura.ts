@@ -5,6 +5,7 @@ import { aplicarControles } from "../src/lib/lectura/controles";
 import type { LecturaCruda } from "../src/lib/lectura/tipos";
 import { textoSaldo } from "../src/lib/saldo";
 import { sonParecidos } from "../src/lib/lectura/parecidos";
+import { estandarizarProveedor } from "../src/lib/lectura/proveedores";
 import { armarCuenta } from "../src/lib/informes/movimientos";
 import { ajustarLectura, completarNit, completarPrecio, digitoVerificacion, fallasFactura, tipoReal, validarFactura } from "../src/lib/facturas/validar";
 import { comprobarFactura, TARIFAS_POR_TIPO_PREDETERMINADAS } from "../src/lib/facturas/comprobacion";
@@ -160,6 +161,29 @@ igual("Lukeoil", interpretarFechaTiquete("08-09-2026 13:27:50"), "2026-09-08T13:
 igual("fecha inválida", interpretarFechaTiquete("31/02/2026"), null);
 
 const base = { es_tiquete: true, numero_tiquete: "402909", fecha_entrada: "27 de julio de 2026", placa: "TKL-482", conductor: null, proveedor: "INVERSIONES AGROPALNORT S.A.S.", bascula: null, observaciones: null, extractora_impresa: "Babú Palm", nit_extractora: "901249632", extractora: "Babú Palm", campos_dudosos: [] as LecturaCruda["campos_dudosos"] };
+// Proveedores oficiales (2026-11-25, migración 0038): todas las variantes guardadas hoy.
+const OFICIALES = ["CONSORCIO AGROPALMA S.A.S.", "GL PALMA ASOCIADOS S.A.S.", "INVERSIONES AGROPALNORT S.A.S.", "OLEUM FOODS S.A.S.", "PALMALI ASOCIADOS S.A.S.", "SOCIEDAD AGROVASPALMA S.A.S."];
+for (const [leido, oficial] of [
+  ["CONSORCIO AGROPALMA SAS", "CONSORCIO AGROPALMA S.A.S."],
+  ["GL PALMA ASOCIADOS S.A.S.", "GL PALMA ASOCIADOS S.A.S."],
+  ["IND - SOCIEDAD AGROVASPALMA S", "SOCIEDAD AGROVASPALMA S.A.S."],
+  ["INVERSIONES AGROPALNORT S.A.S", "INVERSIONES AGROPALNORT S.A.S."],
+  ["INVERSIONES AGROPALNORT S.A.S.", "INVERSIONES AGROPALNORT S.A.S."],
+  ["OLEUM FOODS S.A.S", "OLEUM FOODS S.A.S."],
+  ["PALMALI ASOCIADOS SAS", "PALMALI ASOCIADOS S.A.S."],
+  ["SAF - GL PALMA ASOCIADOS S.A.S", "GL PALMA ASOCIADOS S.A.S."],
+  ["SAF - SOCIEDAD AGROVASPALMA S", "SOCIEDAD AGROVASPALMA S.A.S."],
+  ["SOCIEDAD AGROVASPALMA S.A.S.", "SOCIEDAD AGROVASPALMA S.A.S."],
+  ["SOCIEDAD AGROVASPALMA SAS", "SOCIEDAD AGROVASPALMA S.A.S."],
+  ["  palmali  asociados ", "PALMALI ASOCIADOS S.A.S."],
+]) igual(`proveedor «${leido}» → oficial`, estandarizarProveedor(leido, OFICIALES), { nombre: oficial, nuevo: false });
+igual("proveedor que no está en la lista: se guarda sin prefijo y avisa", estandarizarProveedor("SAF - AGRICOLA LA ESPERANZA S.A.S", OFICIALES), { nombre: "AGRICOLA LA ESPERANZA S.A.S", nuevo: true });
+igual("sin lista oficial: se guarda como venga, sin aviso", estandarizarProveedor("OLEUM FOODS S.A.S", []), { nombre: "OLEUM FOODS S.A.S", nuevo: false });
+igual("proveedor vacío o solo prefijo: no leído", estandarizarProveedor("SAF - ", OFICIALES), { nombre: null, nuevo: false });
+igual("nombre parecido pero distinto no se confunde", estandarizarProveedor("GL PALMA ASOCIADOS DEL NORTE S.A.S.", OFICIALES).nuevo, true);
+const rProv = aplicarControles({ ...base, peso_bruto_kg: "2,070", tara_kg: "680", peso_neto_impreso_kg: "1,390", proveedor: "SAF - SOCIEDAD AGROVASPALMA S" }, { placaObligatoria: true, proveedoresOficiales: OFICIALES });
+igual("al leer el tiquete se guarda el nombre oficial", rProv.ok && rProv.datos.proveedor, "SOCIEDAD AGROVASPALMA S.A.S.");
+igual("los demás datos del tiquete no cambian", rProv.ok && [rProv.datos.numero, rProv.datos.neto_impreso_kg, rProv.datos.placa], ["402909", 1390, "TKL482"]);
 // Año cortado (2026-11-19, Oleoflores «19-noviembre-20 / 06:22:47»): solo con completarAnio.
 const hoy19 = new Date("2026-11-19T12:00:00-05:00");
 igual("Oleoflores: año cortado se completa", leerFechaTiquete("19-noviembre-20 / 06:22:47", { completarAnio: true, ahora: hoy19 })?.iso, "2026-11-19T06:22:47-05:00");
