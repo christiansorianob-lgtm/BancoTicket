@@ -13,6 +13,7 @@ import { asignarPrecioBloque } from "../acciones";
 import { EditarTiquete } from "./editar-tiquete";
 import { Paginacion } from "@/components/paginacion";
 import { leerParametros, paginaDesde } from "@/lib/paginacion";
+import { leerConfiguracion } from "@/lib/config";
 
 const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
@@ -24,6 +25,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
   };
   const pagina = paginaDesde(leerParametros(sp));
   const supabase = await supabaseServidor();
+  const proveedores = (await leerConfiguracion()).proveedores_oficiales;
 
   const estado = f.estado === "anulado" ? "anulado" : "vigente";
   const desdeISO = f.desde ? `${f.desde}T00:00:00-05:00` : null;
@@ -148,7 +150,7 @@ export default async function TiquetesAdmin({ searchParams }: PageProps<"/admin/
                 <EnviarFoto celular={t.perfiles?.celular ?? null} numero={t.numero} foto={fotos[t.imagen_ruta]} fotoEnlace={fotosEnlace[t.imagen_ruta]} />
               </>}
             </div>
-            <EditarTiquete tiquete={t} extractoras={extractoras ?? []} compradores={compradores ?? []} />
+            <EditarTiquete tiquete={t} extractoras={extractoras ?? []} compradores={compradores ?? []} proveedores={proveedores} />
           </li>
         ))}
       </ul>

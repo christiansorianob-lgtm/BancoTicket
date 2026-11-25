@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { leerConfiguracion } from "@/lib/config";
 import { FileSpreadsheet, Image as ImageIcon } from "lucide-react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { urlsFotos } from "@/lib/fotos";
@@ -25,6 +26,7 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
   const f = filtrosDesde(leer);
   const pagina = paginaDesde(leer);
   const supabase = await supabaseServidor();
+  const proveedoresOficiales = soloLectura ? [] : (await leerConfiguracion()).proveedores_oficiales;
 
   // Solo la página que se ve (de a 10); los totales son de todo el filtro (los suma la base).
   const [{ filas, total: cantidad, error }, totales, { data: compradores }, { data: extractoras }, { data: conProveedor }] = await Promise.all([
@@ -109,7 +111,7 @@ export async function ReporteTiquetes({ sp, base, soloLectura = false }: {
                   <td className="p-3 text-right whitespace-nowrap font-semibold">{t.valor == null ? "—" : formatoPesos(t.valor)}</td>
                   <td className="p-2 text-center whitespace-nowrap">
                     {!soloLectura && <>
-                      <EditarFila t={t} foto={t.imagen_ruta ? fotos[t.imagen_ruta] : undefined} extractoras={extractoras ?? []} compradores={compradores ?? []} />
+                      <EditarFila t={t} foto={t.imagen_ruta ? fotos[t.imagen_ruta] : undefined} extractoras={extractoras ?? []} compradores={compradores ?? []} proveedores={proveedoresOficiales} />
                       <EliminarFila t={t} />
                     </>}
                     {t.imagen_ruta && fotos[t.imagen_ruta] ? (

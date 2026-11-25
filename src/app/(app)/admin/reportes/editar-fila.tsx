@@ -12,8 +12,8 @@ import type { FilaReporte } from "@/lib/informes/consulta";
  * mismo formulario de «Tiquetes y precios» en una ventana sobre la tabla; al guardar, la tabla
  * se actualiza y el cambio queda en el historial con su motivo.
  */
-export function EditarFila({ t, foto, extractoras, compradores }: {
-  t: FilaReporte; foto?: string; extractoras: { id: string; nombre: string }[]; compradores: { id: string; nombre: string }[];
+export function EditarFila({ t, foto, extractoras, compradores, proveedores }: {
+  t: FilaReporte; foto?: string; extractoras: { id: string; nombre: string }[]; compradores: { id: string; nombre: string }[]; proveedores?: string[];
 }) {
   const ventana = useRef<HTMLDialogElement>(null);
   return (
@@ -37,7 +37,7 @@ export function EditarFila({ t, foto, extractoras, compradores }: {
             </a>
           ) : <p className="text-sm text-suave">Sin foto</p>}
           <FormAccion accion={editarTiquete.bind(null, t.id)} boton="Guardar cambios">
-            <CamposTiquete t={t} extractoras={extractoras} />
+            <CamposTiquete t={t} extractoras={extractoras} proveedores={proveedores} />
             <div className="grid gap-3 sm:grid-cols-2">
               <label><span className="etiqueta">Comprador</span>
                 <select name="comprador_id" className="campo" defaultValue={t.comprador_id}>

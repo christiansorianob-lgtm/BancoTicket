@@ -8,9 +8,11 @@ import { CamposTiquete } from "@/components/campos-tiquete";
 type Props = {
   tiquete: Parameters<typeof CamposTiquete>[0]["t"] & { id: string };
   extractoras: { id: string; nombre: string }[];
+  /** Nombres oficiales de proveedores (lista desplegable al corregir). */
+  proveedores?: string[];
 };
 
-export function AccionesPendiente({ tiquete, extractoras }: Props) {
+export function AccionesPendiente({ tiquete, extractoras, proveedores }: Props) {
   const [modo, setModo] = useState<"ninguno" | "rechazar" | "editar">("ninguno");
   const [motivo, setMotivo] = useState("");
   const [observacion, setObservacion] = useState("");
@@ -47,7 +49,7 @@ export function AccionesPendiente({ tiquete, extractoras }: Props) {
 
       {modo === "editar" && (
         <FormAccion accion={editarPendiente.bind(null, tiquete.id)} boton="Guardar corrección">
-          <CamposTiquete t={tiquete} extractoras={extractoras} />
+          <CamposTiquete t={tiquete} extractoras={extractoras} proveedores={proveedores} />
         </FormAccion>
       )}
 

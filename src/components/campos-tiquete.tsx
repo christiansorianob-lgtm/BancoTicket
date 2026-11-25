@@ -1,4 +1,5 @@
 import { AvisoResta } from "@/components/aviso-resta";
+import { CampoProveedor } from "@/components/campo-proveedor";
 
 /** Campos editables de un tiquete (el administrador puede cambiar cualquier dato). */
 type Tiquete = {
@@ -13,7 +14,8 @@ function aLocalColombia(iso?: string) {
   return d.toISOString().slice(0, 16);
 }
 
-export function CamposTiquete({ t = {}, extractoras }: { t?: Tiquete; extractoras: { id: string; nombre: string }[] }) {
+/** `proveedores`: nombres oficiales; si se pasan, el proveedor se elige de una lista desplegable. */
+export function CamposTiquete({ t = {}, extractoras, proveedores }: { t?: Tiquete; extractoras: { id: string; nombre: string }[]; proveedores?: string[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label><span className="etiqueta">Extractora</span>
@@ -27,7 +29,9 @@ export function CamposTiquete({ t = {}, extractoras }: { t?: Tiquete; extractora
       <label><span className="etiqueta">Peso bruto (kg)</span><input name="peso_bruto_kg" inputMode="numeric" className="campo" defaultValue={t.peso_bruto_kg} required /></label>
       <label><span className="etiqueta">Tara (kg)</span><input name="tara_kg" inputMode="numeric" className="campo" defaultValue={t.tara_kg} required /></label>
       <label><span className="etiqueta">Neto impreso (kg, el que se cobra)</span><input name="neto_impreso_kg" inputMode="numeric" className="campo" defaultValue={t.neto_impreso_kg ?? ""} /></label>
-      <label><span className="etiqueta">Proveedor</span><input name="proveedor" className="campo" defaultValue={t.proveedor ?? ""} /></label>
+      {proveedores?.length
+        ? <CampoProveedor actual={t.proveedor} oficiales={proveedores} />
+        : <label><span className="etiqueta">Proveedor</span><input name="proveedor" className="campo" defaultValue={t.proveedor ?? ""} /></label>}
       <label><span className="etiqueta">Conductor</span><input name="conductor" className="campo" defaultValue={t.conductor ?? ""} /></label>
       <label><span className="etiqueta">Báscula</span><input name="bascula" className="campo" defaultValue={t.bascula ?? ""} /></label>
       <label><span className="etiqueta">Motivo del cambio</span><input name="motivo" className="campo" placeholder="Ej.: corrección de lectura" /></label>

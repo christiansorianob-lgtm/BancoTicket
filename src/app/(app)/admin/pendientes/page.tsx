@@ -143,7 +143,7 @@ export default async function Pendientes() {
                   </>
                 );
               })()}
-              <AccionesPendiente tiquete={t} extractoras={extractoras ?? []} />
+              <AccionesPendiente tiquete={t} extractoras={extractoras ?? []} proveedores={oficiales} />
             </div>
           </li>
         ))}

@@ -7,7 +7,7 @@ import { CampoPrecio } from "@/components/campo-precio";
 
 type T = Parameters<typeof CamposTiquete>[0]["t"] & { id: string; precio_tonelada: number | null; comprador_id: string; estado: string; observacion?: string | null };
 
-export function EditarTiquete({ tiquete, extractoras, compradores }: { tiquete: T; extractoras: { id: string; nombre: string }[]; compradores: { id: string; nombre: string }[] }) {
+export function EditarTiquete({ tiquete, extractoras, compradores, proveedores }: { tiquete: T; extractoras: { id: string; nombre: string }[]; compradores: { id: string; nombre: string }[]; proveedores?: string[] }) {
   const [modo, setModo] = useState<"ninguno" | "precio" | "todo" | "observacion">("ninguno");
   return (
     <div className="mt-3 border-t border-borde pt-3">
@@ -38,7 +38,7 @@ export function EditarTiquete({ tiquete, extractoras, compradores }: { tiquete: 
       )}
       {modo === "todo" && (
         <FormAccion accion={editarTiquete.bind(null, tiquete.id)} boton="Guardar cambios" className="mt-3">
-          <CamposTiquete t={tiquete} extractoras={extractoras} />
+          <CamposTiquete t={tiquete} extractoras={extractoras} proveedores={proveedores} />
           <div className="grid gap-3 sm:grid-cols-2">
             <label><span className="etiqueta">Comprador</span>
               <select name="comprador_id" className="campo" defaultValue={tiquete.comprador_id}>

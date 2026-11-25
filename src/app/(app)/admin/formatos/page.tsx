@@ -1,4 +1,5 @@
 import { supabaseServidor } from "@/lib/supabase/servidor";
+import { leerConfiguracion } from "@/lib/config";
 import { urlsFotos } from "@/lib/fotos";
 import { fechaHora } from "@/lib/fechas";
 import { Vacio } from "@/components/ui";
@@ -12,6 +13,7 @@ import { aprenderDesdeNoReconocido, descartarFormato, registrarDesdeFormato } fr
  */
 export default async function Formatos() {
   const supabase = await supabaseServidor();
+  const proveedores = (await leerConfiguracion()).proveedores_oficiales;
   const [{ data }, { data: extractoras }] = await Promise.all([
     supabase.from("formatos_no_reconocidos").select("*, extractoras(nombre), perfiles(nombre)").eq("estado", "nuevo").order("creado_en"),
     supabase.from("extractoras").select("id, nombre").order("nombre"),
@@ -47,7 +49,7 @@ export default async function Formatos() {
                 <FormAccion accion={aprenderDesdeNoReconocido.bind(null, f.id)} boton="Aprender este formato" tonoBoton="secundario" />
               )}
               <FormAccion accion={registrarDesdeFormato.bind(null, f.id)} boton="Registrar tiquete como pendiente">
-                <CamposTiquete t={{ extractora_id: f.extractora_id ?? undefined }} extractoras={extractoras ?? []} />
+                <CamposTiquete t={{ extractora_id: f.extractora_id ?? undefined }} extractoras={extractoras ?? []} proveedores={proveedores} />
               </FormAccion>
               <FormAccion accion={descartarFormato.bind(null, f.id)} boton="Descartar" tonoBoton="secundario" confirmar="¿Descartar esta foto?" />
             </div>
